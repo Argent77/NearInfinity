@@ -189,21 +189,20 @@ public class ResourceRef extends Datatype
     JButton bUpdate = new JButton("Update value", Icons.getIcon(Icons.ICON_REFRESH_16));
     bUpdate.addActionListener(container);
     bUpdate.setActionCommand(StructViewer.UPDATE_VALUE);
+
     bView = new JButton("View/Edit", Icons.getIcon(Icons.ICON_ZOOM_16));
     bView.addActionListener(this);
     bView.setEnabled(isEditable(list.getSelectedValue()));
     list.addListSelectionListener(this);
 
-    GridBagLayout gbl = new GridBagLayout();
-    GridBagConstraints gbc = new GridBagConstraints();
-    JPanel panel = new JPanel(gbl);
+    final GridBagConstraints gbc = new GridBagConstraints();
+    final JPanel panel = new JPanel(new GridBagLayout());
 
     gbc.weightx = 1.0;
     gbc.weighty = 1.0;
     gbc.fill = GridBagConstraints.BOTH;
     gbc.gridheight = 2;
-    gbl.setConstraints(list, gbc);
-    panel.add(list);
+    panel.add(list, gbc);
 
     gbc.gridheight = 1;
     gbc.weightx = 0.0;
@@ -211,14 +210,12 @@ public class ResourceRef extends Datatype
     gbc.insets = new Insets(3, 6, 3, 0);
     gbc.anchor = GridBagConstraints.SOUTH;
     gbc.gridwidth = GridBagConstraints.REMAINDER;
-    gbl.setConstraints(bUpdate, gbc);
-    panel.add(bUpdate);
+    panel.add(bUpdate, gbc);
 
     gbc.gridx = 1;
     gbc.gridy = 1;
     gbc.anchor = GridBagConstraints.NORTH;
-    gbl.setConstraints(bView, gbc);
-    panel.add(bView);
+    panel.add(bView, gbc);
 
     panel.setMinimumSize(Misc.getScaledDimension(DIM_MEDIUM));
     return panel;

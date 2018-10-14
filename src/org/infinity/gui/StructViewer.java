@@ -10,8 +10,6 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
@@ -144,13 +142,13 @@ public final class StructViewer extends JPanel implements ListSelectionListener,
   private final JMenuItem miShowViewer = createMenuItem(CMD_SHOWVIEWER, "Show in viewer", null, this);
   private final JMenuItem miShowNewViewer = createMenuItem(CMD_COPYVALUE, "Show in new viewer", null, this);
   private final JPanel lowerpanel = new JPanel(cards);
-  private final JPanel editpanel = new JPanel();
+  private final JPanel editpanel = new JPanel(new BorderLayout());
   private final ButtonPanel buttonPanel = new ButtonPanel();
   private final JPopupMenu popupmenu = new JPopupMenu();
   private final InfinityTextArea tatext = new InfinityTextArea(true);
   private final StructTable table = new StructTable();
-  private final HashMap<Integer, StructEntry> entryMap = new HashMap<Integer, StructEntry>();
-  private final HashMap<Viewable, ViewFrame> viewMap = new HashMap<Viewable, ViewFrame>();
+  private final HashMap<Integer, StructEntry> entryMap = new HashMap<>();
+  private final HashMap<Viewable, ViewFrame> viewMap = new HashMap<>();
   private AddRemovable emptyTypes[];
   private JMenuItem miFindAttribute, miFindReferences, miFindStateReferences, miFindRefToItem;
   private Editable editable;
@@ -262,6 +260,8 @@ public final class StructViewer extends JPanel implements ListSelectionListener,
     if (table.getColumnCount() == 3) {
       table.getColumnModel().getColumn(2).setPreferredWidth(NearInfinity.getInstance().getTableColumnWidth(2));
     }
+
+    editpanel.setBorder(BorderFactory.createEmptyBorder(3, 3, 3, 3));
 
     lowerpanel.add(scroll, CARD_TEXT);
     lowerpanel.add(editpanel, CARD_EDIT);
@@ -1248,20 +1248,7 @@ public final class StructViewer extends JPanel implements ListSelectionListener,
     // Save for handle UPDATE_VALUE events later
     this.editable = editable;
     editpanel.removeAll();
-
-    final JComponent editor = editable.edit(this);
-
-    final GridBagLayout gbl = new GridBagLayout();
-    final GridBagConstraints gbc = new GridBagConstraints();
-    editpanel.setLayout(gbl);
-    gbc.weightx = 1.0;
-    gbc.weighty = 1.0;
-    gbc.fill = GridBagConstraints.VERTICAL;
-    gbc.gridwidth = GridBagConstraints.REMAINDER;
-    gbc.insets = new Insets(3, 3, 3, 3);
-    gbl.setConstraints(editor, gbc);
-    editpanel.add(editor);
-
+    editpanel.add(editable.edit(this));
     editpanel.revalidate();
     editpanel.repaint();
     cards.show(lowerpanel, CARD_EDIT);
