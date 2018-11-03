@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.gui.hexview;
@@ -227,11 +227,11 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
         boolean b;
         String s = null;
         if (getFindData().getDataType() == FindDataDialog.Type.TEXT) {
-          b = !getFindData().getText().isEmpty();
           s = getFindData().getText();
+          b = !s.isEmpty();
         } else {
-          b = (getFindData().getBytes().length > 0);
-          if (getFindData().getBytes().length > 0) {
+          b = getFindData().getBytes().length > 0;
+          if (b) {
             s = byteArrayToString(getFindData().getBytes());
           }
         }
@@ -273,7 +273,7 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
             return;
           }
         }
-        outPath = FileManager.query(overridePath, entry.toString());
+        outPath = FileManager.query(overridePath, entry.getResourceName());
         ((BIFFResourceEntry)entry).setOverride(true);
       } else {
         outPath = entry.getActualPath();
@@ -559,8 +559,8 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
   /** Panel component showing information about the currently selected data. */
   private final class InfoPanel extends JPanel
   {
-    private final List<StructEntryTableModel> listModels = new ArrayList<StructEntryTableModel>();
-    private final List<Component> listComponents = new ArrayList<Component>();
+    private final List<StructEntryTableModel> listModels = new ArrayList<>();
+    private final List<Component> listComponents = new ArrayList<>();
 
     private JPanel mainPanel;
     private int offset;

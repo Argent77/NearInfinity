@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.gui.converter;
@@ -2348,7 +2348,7 @@ public class ConvertToBam extends ChildFrame
   {
     if (entries != null) {
       outputSetModified(true);
-      List<String> skippedFiles = new ArrayList<String>();
+      final List<ResourceEntry> skippedFiles = new ArrayList<>();
       int insertIndex = listFrames.getSelectedIndex();
       int idx = insertIndex;
       if (idx < 0) idx = modelFrames.getSize() - 1;
@@ -2360,7 +2360,7 @@ public class ConvertToBam extends ChildFrame
               // adding remaining files to skip list
               for (int j = i; j < entries.length; j++) {
                 if (entries[j] != null) {
-                  skippedFiles.add(entries[j].toString());
+                  skippedFiles.add(entries[j]);
                 }
               }
               break;
@@ -2374,13 +2374,13 @@ public class ConvertToBam extends ChildFrame
               if (decoder != null) {
                 idx += decoder.frameCount();
               } else {
-                skippedFiles.add(entries[i].toString());
+                skippedFiles.add(entries[i]);
               }
             } else {
               if (framesAddImage(idx + 1, entries[i], -1)) {
                 idx++;
               } else {
-                skippedFiles.add(entries[i].toString());
+                skippedFiles.add(entries[i]);
               }
             }
           }
@@ -2404,18 +2404,19 @@ public class ConvertToBam extends ChildFrame
       listFrames.requestFocusInWindow();
 
       // error handling
-      if (!skippedFiles.isEmpty()) {
-        StringBuilder sb = new StringBuilder();
-        if (skippedFiles.size() == 1) {
-          sb.append(String.format("%d file has been skipped:\n", skippedFiles.size()));
+      final int size = skippedFiles.size();
+      if (size != 0) {
+        final StringBuilder sb = new StringBuilder();
+        if (size == 1) {
+          sb.append("1 file has been skipped:\n");
         } else {
-          sb.append(String.format("%d files have been skipped:\n", skippedFiles.size()));
+          sb.append(String.format("%d files have been skipped:\n", size));
         }
-        int count = Math.min(5, skippedFiles.size());
+        final int count = Math.min(5, size);
         for (int i = 0; i < count; i++) {
           sb.append(String.format("  - %s\n", skippedFiles.get(i)));
         }
-        if (skippedFiles.size() > 5) {
+        if (size > 5) {
           sb.append("  - ...\n");
         }
         JOptionPane.showMessageDialog(this, sb.toString(), "Error", JOptionPane.ERROR_MESSAGE);

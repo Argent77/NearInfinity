@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.graphics;
@@ -16,6 +16,7 @@ import java.beans.PropertyChangeListener;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -118,7 +119,7 @@ public class MosResource implements Resource, ActionListener, PropertyChangeList
           try {
             ByteBuffer buffer = entry.getResourceBuffer();
             buffer = Compressor.decompress(buffer);
-            ResourceFactory.exportResource(entry, buffer, entry.toString(), panel.getTopLevelAncestor());
+            ResourceFactory.exportResource(entry, buffer, entry.getResourceName(), panel.getTopLevelAncestor());
           } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(panel.getTopLevelAncestor(),
@@ -138,7 +139,7 @@ public class MosResource implements Resource, ActionListener, PropertyChangeList
         try {
           ByteBuffer buffer = entry.getResourceBuffer();
           buffer = Compressor.compress(buffer, "MOSC", "V1  ");
-          ResourceFactory.exportResource(entry, buffer, entry.toString(), panel.getTopLevelAncestor());
+          ResourceFactory.exportResource(entry, buffer, entry.getResourceName(), panel.getTopLevelAncestor());
         } catch (Exception e) {
           e.printStackTrace();
           JOptionPane.showMessageDialog(panel.getTopLevelAncestor(),
@@ -147,9 +148,8 @@ public class MosResource implements Resource, ActionListener, PropertyChangeList
         }
       }
     } else if (event.getSource() == miExportPNG) {
-      try {
-        ByteArrayOutputStream os = new ByteArrayOutputStream();
-        String fileName = entry.toString().replace(".MOS", ".PNG");
+      try (final ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+        final String fileName = StreamUtils.replaceFileExtension(entry.getResourceName(), "PNG");
         boolean bRet = false;
         WindowBlocker.blockWindow(true);
         try {
@@ -167,8 +167,6 @@ public class MosResource implements Resource, ActionListener, PropertyChangeList
                                         "Error while exporting " + entry, "Error",
                                         JOptionPane.ERROR_MESSAGE);
         }
-        os.close();
-        os = null;
       } catch (Exception e) {
         e.printStackTrace();
       }
@@ -203,7 +201,7 @@ public class MosResource implements Resource, ActionListener, PropertyChangeList
         if (mosData != null) {
           if (mosData.length > 0) {
             ResourceFactory.exportResource(entry, StreamUtils.getByteBuffer(mosData),
-                                           entry.toString(), panel.getTopLevelAncestor());
+                                           entry.getResourceName(), panel.getTopLevelAncestor());
           } else {
             JOptionPane.showMessageDialog(panel.getTopLevelAncestor(),
                                           "Export has been cancelled." + entry, "Information",

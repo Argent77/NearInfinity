@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.util;
@@ -435,7 +435,7 @@ public final class MassExporter extends ChildFrame implements ActionListener, Li
   private void mosToPng(ResourceEntry entry, Path output) throws Exception
   {
     if (entry != null && entry.getExtension().equalsIgnoreCase("MOS")) {
-      output = outputPath.resolve(StreamUtils.replaceFileExtension(entry.toString(), "PNG"));
+      output = outputPath.resolve(StreamUtils.replaceFileExtension(entry.getResourceName(), "PNG"));
       if (Files.exists(output) && !cbOverwrite.isSelected()) {
         return;
       }
@@ -460,7 +460,7 @@ public final class MassExporter extends ChildFrame implements ActionListener, Li
   private void pvrzToPng(ResourceEntry entry, Path output) throws Exception
   {
     if (entry != null && entry.getExtension().equalsIgnoreCase("PVRZ")) {
-      output = outputPath.resolve(StreamUtils.replaceFileExtension(entry.toString(), "PNG"));
+      output = outputPath.resolve(StreamUtils.replaceFileExtension(entry.getResourceName(), "PNG"));
       if (Files.exists(output) && !cbOverwrite.isSelected()) {
         return;
       }
@@ -482,7 +482,7 @@ public final class MassExporter extends ChildFrame implements ActionListener, Li
   private void tisToPng(ResourceEntry entry, Path output) throws Exception
   {
     if (entry != null && entry.getExtension().equalsIgnoreCase("TIS")) {
-      output = outputPath.resolve(StreamUtils.replaceFileExtension(entry.toString(), "PNG"));
+      output = outputPath.resolve(StreamUtils.replaceFileExtension(entry.getResourceName(), "PNG"));
       if (Files.exists(output) && !cbOverwrite.isSelected()) {
         return;
       }
@@ -558,19 +558,19 @@ public final class MassExporter extends ChildFrame implements ActionListener, Li
 
   private void chrToCre(ResourceEntry entry, Path output) throws Exception
   {
-    output = outputPath.resolve(StreamUtils.replaceFileExtension(entry.toString(), "CRE"));
+    output = outputPath.resolve(StreamUtils.replaceFileExtension(entry.getResourceName(), "CRE"));
     if (Files.exists(output) && !cbOverwrite.isSelected()) {
       return;
     }
     CreResource crefile = new CreResource(entry);
-    java.util.List<StructEntry> flatList = crefile.getFlatList();
+    final List<StructEntry> flatList = crefile.getFlatList();
     while (!flatList.get(0).toString().equals("CRE ")) {
       flatList.remove(0);
     }
     // Keep trying. File may be in use by another thread.
     try (OutputStream os = tryOpenOutputStream(output, 10, 100)) {
-      for (int i = 0; i < flatList.size(); i++) {
-        ((Writeable)flatList.get(i)).write(os);
+      for (final StructEntry e : flatList) {
+        e.write(os);
       }
     }
   }
@@ -613,7 +613,7 @@ public final class MassExporter extends ChildFrame implements ActionListener, Li
   private void export(ResourceEntry entry)
   {
     try {
-      Path output = outputPath.resolve(entry.toString());
+      Path output = outputPath.resolve(entry.getResourceName());
       if (Files.exists(output) && !cbOverwrite.isSelected()) {
         return;
       }
@@ -659,7 +659,7 @@ public final class MassExporter extends ChildFrame implements ActionListener, Li
         decompressWav(entry, output);
       }
       else if (entry.getExtension().equalsIgnoreCase("MVE") && cbExportMVEasAVI.isSelected()) {
-        output = outputPath.resolve(StreamUtils.replaceFileExtension(entry.toString(), "avi"));
+        output = outputPath.resolve(StreamUtils.replaceFileExtension(entry.getResourceName(), "avi"));
         if (Files.exists(output) && !cbOverwrite.isSelected()) {
           return;
         }
@@ -742,4 +742,3 @@ public final class MassExporter extends ChildFrame implements ActionListener, Li
     }
   }
 }
-

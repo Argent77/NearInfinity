@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.util;
@@ -16,18 +16,19 @@ import org.infinity.resource.key.ResourceEntry;
 
 public class IdsMapCache
 {
-  private static final Map<String, IdsMap> common = new HashMap<>();
+  /** Maps upper-cased name of IDS resource to parsed resource. */
+  private static final Map<String, IdsMap> CACHE = new HashMap<>();
 
   public static void remove(ResourceEntry entry)
   {
     if (entry != null) {
-      common.remove(entry.toString().toUpperCase(Locale.ENGLISH));
+      CACHE.remove(entry.getResourceName().toUpperCase(Locale.ENGLISH));
     }
   }
 
   public static void clearCache()
   {
-    common.clear();
+    CACHE.clear();
   }
 
   public static synchronized IdsMap get(String name)
@@ -35,7 +36,7 @@ public class IdsMapCache
     IdsMap retVal = null;
     if (name != null) {
       name = name.trim().toUpperCase(Locale.ENGLISH);
-      retVal = common.get(name);
+      retVal = CACHE.get(name);
       if (retVal == null) {
         ResourceEntry entry = ResourceFactory.getResourceEntry(name);
         if (entry == null ) {
@@ -47,7 +48,7 @@ public class IdsMapCache
         }
         if (entry != null) {
           retVal = new IdsMap(entry);
-          common.put(name, retVal);
+          CACHE.put(name, retVal);
         }
       }
     }

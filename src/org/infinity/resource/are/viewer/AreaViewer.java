@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.are.viewer;
@@ -2638,7 +2638,7 @@ public class AreaViewer extends ChildFrame
           Path output;
           if (wed[dayNight].getResourceEntry() instanceof BIFFResourceEntry) {
             output = FileManager.query(Profile.getRootFolders(), Profile.getOverrideFolderName(),
-                                       wed[dayNight].getResourceEntry().toString());
+                                       wed[dayNight].getResourceEntry().getResourceName());
           } else {
             output = wed[dayNight].getResourceEntry().getActualPath();
           }

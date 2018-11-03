@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.sav;
@@ -28,17 +28,17 @@ public final class IOHandler implements Writeable
   private final ResourceEntry entry;
   private final TextString header;
   private Path tempFolder;
-  private List<SavResourceEntry> fileEntries;
+  private final List<SavResourceEntry> fileEntries;
 
   public IOHandler(ResourceEntry entry) throws Exception
   {
     this.entry = entry;
     ByteBuffer buffer = entry.getResourceBuffer(true);  // ignoreOverride - no real effect
     header = new TextString(buffer, 0, 8, null);
-    if (!header.toString().equals("SAV V1.0")) {
-      throw new Exception("Unsupported version: " + header);
+    if (!header.getText().equals("SAV V1.0")) {
+      throw new UnsupportedOperationException("Unsupported version: " + header);
     }
-    fileEntries = new ArrayList<SavResourceEntry>();
+    fileEntries = new ArrayList<>();
     int offset = 8;
     while (offset < buffer.limit()) {
       SavResourceEntry fileEntry = new SavResourceEntry(buffer, offset);
@@ -88,22 +88,23 @@ public final class IOHandler implements Writeable
   public void compress(List<? extends ResourceEntry> entries) throws Exception
   {
     fileEntries.clear();
-    for (int i = 0; i < entries.size(); i++) {
-      fileEntries.add(new SavResourceEntry(entries.get(i)));
+    for (final ResourceEntry entry : entries) {
+      fileEntries.add(new SavResourceEntry(entry));
     }
     close();
   }
 
   public List<ResourceEntry> decompress() throws Exception
   {
-    List<ResourceEntry> entries = new ArrayList<ResourceEntry>(fileEntries.size());
     tempFolder = createTempFolder();
     if (tempFolder == null) {
       throw new Exception("Unable to create temp folder");
     }
     Files.createDirectory(tempFolder);
+
+    final List<ResourceEntry> entries = new ArrayList<>(fileEntries.size());
     for (final SavResourceEntry entry: fileEntries) {
-      Path file = tempFolder.resolve(entry.toString());
+      Path file = tempFolder.resolve(entry.getResourceName());
       try (OutputStream os = StreamUtils.getOutputStream(file, true)) {
         StreamUtils.writeBytes(os, entry.decompress());
       }
@@ -122,7 +123,7 @@ public final class IOHandler implements Writeable
     return tempFolder;
   }
 
-  // Create a unique temp folder for current baldur.sav
+  /** Create a unique temp folder for current baldur.sav. */
   private Path createTempFolder()
   {
     for (int idx = 0; idx < Integer.MAX_VALUE; idx++) {
@@ -134,4 +135,3 @@ public final class IOHandler implements Writeable
     return null;
   }
 }
-

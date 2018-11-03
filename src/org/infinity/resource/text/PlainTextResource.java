@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.text;
@@ -16,6 +16,7 @@ import java.io.OutputStreamWriter;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.StringTokenizer;
@@ -154,13 +155,10 @@ public final class PlainTextResource implements TextResource, Writeable, ActionL
     ButtonPopupMenu bpmFind = (ButtonPopupMenu)buttonPanel.getControlByType(ButtonPanel.Control.FIND_MENU);
     if (event.getSource() == bpmFind) {
       if (bpmFind.getSelectedItem() == ifindall) {
-        String type = entry.toString().substring(entry.toString().indexOf(".") + 1);
-        List<ResourceEntry> files = ResourceFactory.getResources(type);
+        final List<ResourceEntry> files = ResourceFactory.getResources(entry.getExtension());
         new TextResourceSearcher(files, panel.getTopLevelAncestor());
       } else if (bpmFind.getSelectedItem() == ifindthis) {
-        List<ResourceEntry> files = new ArrayList<ResourceEntry>();
-        files.add(entry);
-        new TextResourceSearcher(files, panel.getTopLevelAncestor());
+        new TextResourceSearcher(Arrays.asList(entry), panel.getTopLevelAncestor());
       }
     }
   }
@@ -235,20 +233,20 @@ public final class PlainTextResource implements TextResource, Writeable, ActionL
     editor.setCaretPosition(0);
     editor.setLineWrap(false);
     editor.getDocument().addDocumentListener(this);
-    if (entry.toString().toUpperCase(Locale.ENGLISH).endsWith(".BIO") ||
-        entry.toString().toUpperCase(Locale.ENGLISH).endsWith(".RES")) {
+
+    final String ext = entry.getExtension();
+    if ("BIO".equals(ext) || "RES".equals(ext)) {
       editor.setLineWrap(true);
       editor.setWrapStyleWord(true);
     }
 
-    ifindall =
-        new JMenuItem("in all " + entry.toString().substring(entry.toString().indexOf(".") + 1) + " files");
+    ifindall  = new JMenuItem("in all " + ext + " files");
     ifindthis = new JMenuItem("in this file only");
     ButtonPopupMenu bpmFind = (ButtonPopupMenu)buttonPanel.addControl(ButtonPanel.Control.FIND_MENU);
     bpmFind.setMenuItems(new JMenuItem[]{ifindall, ifindthis});
     bpmFind.addItemListener(this);
     ((JButton)buttonPanel.addControl(ButtonPanel.Control.TRIM_SPACES)).addActionListener(this);
-    if (entry.toString().toUpperCase(Locale.ENGLISH).endsWith(".2DA")) {
+    if ("2DA".equals(ext)) {
       ((JButton)buttonPanel.addControl(ButtonPanel.Control.FIND_REFERENCES)).addActionListener(this);
     }
     ((JButton)buttonPanel.addControl(ButtonPanel.Control.EXPORT_BUTTON)).addActionListener(this);
@@ -259,13 +257,9 @@ public final class PlainTextResource implements TextResource, Writeable, ActionL
     panel.add(pane, BorderLayout.CENTER);
     panel.add(buttonPanel, BorderLayout.SOUTH);
 
-    SwingUtilities.invokeLater(new Runnable() {
-      @Override
-      public void run()
-      {
-        if (highlightedLine >= 0) {
-          highlightText(highlightedLine, null);
-        }
+    SwingUtilities.invokeLater(() -> {
+      if (highlightedLine >= 0) {
+        highlightText(highlightedLine, null);
       }
     });
 
@@ -309,7 +303,7 @@ public final class PlainTextResource implements TextResource, Writeable, ActionL
     st.nextToken();
     String header = st.nextToken();
     st = new StringTokenizer(header);
-    List<String> strings = new ArrayList<String>();
+    final List<String> strings = new ArrayList<>();
     while (st.hasMoreTokens())
       strings.add(st.nextToken().toUpperCase(Locale.ENGLISH));
     return strings;
@@ -362,4 +356,3 @@ public final class PlainTextResource implements TextResource, Writeable, ActionL
     }
   }
 }
-

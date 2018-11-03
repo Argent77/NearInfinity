@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.graphics;
@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Random;
 
 import javax.imageio.ImageIO;
@@ -46,6 +48,7 @@ import javax.swing.ListCellRenderer;
 import javax.swing.SwingConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import org.infinity.NearInfinity;
 
 import org.infinity.gui.ButtonPanel;
 import org.infinity.gui.ButtonPopupMenu;
@@ -267,8 +270,8 @@ public class PltResource implements Resource, Closeable, Writeable, ItemListener
     } else if (e.getSource() == miExport) {
       ResourceFactory.exportResource(entry, panelMain.getTopLevelAncestor());
     } else if (e.getSource() == miExportPNG) {
-      try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
-        String fileName = entry.toString().replace(".PLT", ".PNG");
+      try (final ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+        final String fileName = StreamUtils.replaceFileExtension(entry.getResourceName(), "PNG");
         boolean bRet = false;
         WindowBlocker.blockWindow(true);
         try {
@@ -280,7 +283,7 @@ public class PltResource implements Resource, Closeable, Writeable, ItemListener
           ResourceFactory.exportResource(entry, StreamUtils.getByteBuffer(os.toByteArray()),
                                          fileName, panelMain.getTopLevelAncestor());
         } else {
-          throw new Exception("PNG write error");
+          throw new UnsupportedOperationException("PNG writing is not supported");
         }
       } catch (Exception ioe) {
         ioe.printStackTrace();
@@ -837,5 +840,4 @@ public class PltResource implements Resource, Closeable, Writeable, ItemListener
       return image;
     }
   }
-
 }

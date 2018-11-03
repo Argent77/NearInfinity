@@ -28,7 +28,7 @@ public final class AreResourceRef extends ResourceRef
         .getAttribute(AreResource.ARE_WED_RESOURCE)).getResourceName());
     String wedBIFF = "_dummy";
     if (res instanceof BIFFResourceEntry) {
-      wedBIFF = ((BIFFResourceEntry)res).getBIFFEntry().toString();
+      wedBIFF = ((BIFFResourceEntry)res).getBIFFEntry().getFileName();
     }
     if (Profile.getEngine() == Profile.Engine.BG1) {
       legalBIFs = new String[]{wedBIFF, "data/sfxsound.bif", "data/cresound.bif"};

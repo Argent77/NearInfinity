@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.gui;
@@ -146,7 +146,7 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
     List<ResourceEntry> overrideBif = overridetable.getValueList(BIFFEditorTable.TYPE_BIF);
     for (int i = 0; i < overrideBif.size(); i++) {
       ResourceEntry entry = overrideBif.get(i);
-      Path file = FileManager.query(Profile.getRootFolders(), Profile.getOverrideFolderName(), entry.toString());
+      Path file = FileManager.query(Profile.getRootFolders(), Profile.getOverrideFolderName(), entry.getResourceName());
       try (OutputStream os = StreamUtils.getOutputStream(file, true)) {
         StreamUtils.writeBytes(os, entry.getResourceBuffer(true));
       } catch (Exception e) {
@@ -186,9 +186,9 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
     }
 
     // 4: Delete old files from override
-    for (int i = 0; i < tobif.size(); i++) {
+    for (final ResourceEntry entry : tobif) {
       Path file = FileManager.query(Profile.getRootFolders(), Profile.getOverrideFolderName(),
-                                    tobif.get(i).toString());
+                                    entry.getResourceName());
       if (file != null && Files.isRegularFile(file)) {
         try {
           Files.delete(file);
@@ -202,9 +202,9 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
     // 5: Add new OverrideResourceEntries (ResourceEntries deleted from BIF)
     origbiflist.removeAll(biftable.getValueList(BIFFEditorTable.TYPE_BIF));
     origbiflist.removeAll(overridetable.getValueList(BIFFEditorTable.TYPE_BIF));
-    for (int i = 0; i < origbiflist.size(); i++) {
+    for (final ResourceEntry entry : origbiflist) {
       Path file = FileManager.query(Profile.getRootFolders(), Profile.getOverrideFolderName(),
-                                    origbiflist.get(i).toString());
+                                    entry.getResourceName());
       FileResourceEntry fileEntry = new FileResourceEntry(file, true);
       ResourceFactory.getResourceTreeModel().addResourceEntry(fileEntry, fileEntry.getTreeFolderName(), true);
     }
@@ -239,7 +239,7 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
 
     for (final ResourceEntry entry : ResourceFactory.getResourceTreeModel().getResourceEntries()) {
       if ((entry instanceof FileResourceEntry || entry.hasOverride()) &&
-          StreamUtils.splitFileName(entry.toString())[1].length() <= 8 &&
+          StreamUtils.splitFileName(entry.getResourceName())[1].length() <= 8 &&
           ResourceFactory.getKeyfile().getExtensionType(entry.getExtension()) != -1) {
         overridetable.addEntry(entry, BIFFEditorTable.TYPE_NEW);
       }
@@ -407,4 +407,3 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
     }
   }
 }
-

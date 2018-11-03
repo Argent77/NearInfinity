@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.util;
@@ -30,7 +30,7 @@ public class IdsMap
   public IdsMap(ResourceEntry entry)
   {
     this.entry = entry;
-    this.caseSensitive = IdsMapCache.isCaseSensitiveMatch(entry.toString());
+    this.caseSensitive = IdsMapCache.isCaseSensitiveMatch(entry.getResourceName());
     try {
       if (entry.getExtension().equalsIgnoreCase("IDS")) {
         parseIDS();
@@ -149,9 +149,9 @@ public class IdsMap
 
     // parsing hardcoded entries
     List<String> list = null;
-    if (entry.toString().equalsIgnoreCase("TRIGGER.IDS")) {
+    if (entry.getResourceName().equalsIgnoreCase("TRIGGER.IDS")) {
       list = ScriptInfo.getInfo().getFunctionDefinitions(Signatures.Function.FunctionType.TRIGGER);
-    } else if (entry.toString().equalsIgnoreCase("ACTION.IDS")) {
+    } else if (entry.getResourceName().equalsIgnoreCase("ACTION.IDS")) {
       list = ScriptInfo.getInfo().getFunctionDefinitions(Signatures.Function.FunctionType.ACTION);
     }
     if (list != null) {

@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.sound;
@@ -87,10 +87,7 @@ public class SoundResource implements Resource, ActionListener, ItemListener, Cl
       if (bpmExport.getSelectedItem() == miExport) {
         ResourceFactory.exportResource(entry, panel.getTopLevelAncestor());
       } else if (bpmExport.getSelectedItem() == miConvert) {
-        String fileName = entry.toString();
-        if (fileName.lastIndexOf('.') > 0) {
-          fileName = fileName.substring(0, fileName.lastIndexOf('.')) + ".WAV";
-        }
+        final String fileName = StreamUtils.replaceFileExtension(entry.getResourceName(), "WAV");
         ByteBuffer buffer = StreamUtils.getByteBuffer(audioBuffer.getAudioData());
         ResourceFactory.exportResource(entry, buffer, fileName, panel.getTopLevelAncestor());
       }

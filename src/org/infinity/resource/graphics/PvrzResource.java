@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.graphics;
@@ -90,7 +90,7 @@ public class PvrzResource implements Resource, ActionListener, Closeable
         e.printStackTrace();
       }
       if (decompressed != null) {
-        String fileName = entry.toString().replace(".PVRZ", ".PVR");
+        final String fileName = StreamUtils.replaceFileExtension(entry.getResourceName(), "PVR");
         ResourceFactory.exportResource(entry, decompressed, fileName, panel.getTopLevelAncestor());
       } else {
         JOptionPane.showMessageDialog(panel.getTopLevelAncestor(),
@@ -100,7 +100,7 @@ public class PvrzResource implements Resource, ActionListener, Closeable
     } else if (event.getSource() == miPNG) {
       try {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
-        String fileName = entry.toString().replace(".PVRZ", ".PNG");
+        final String fileName = StreamUtils.replaceFileExtension(entry.getResourceName(), "PNG");
         BufferedImage image = getImage();
         if (ImageIO.write(image, "png", os)) {
           ResourceFactory.exportResource(entry, StreamUtils.getByteBuffer(os.toByteArray()),
@@ -248,5 +248,4 @@ public class PvrzResource implements Resource, ActionListener, Closeable
     }
     return image;
   }
-
 }

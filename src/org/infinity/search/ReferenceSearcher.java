@@ -129,7 +129,7 @@ public final class ReferenceSearcher extends AbstractReferenceSearcher
     for (int i = 0; i < struct.getFieldCount(); i++) {
       StructEntry o = struct.getField(i);
       if (o instanceof ResourceRef &&
-          ((ResourceRef)o).getResourceName().equalsIgnoreCase(targetEntry.toString()))
+          ((ResourceRef)o).getResourceName().equalsIgnoreCase(targetEntry.getResourceName()))
         addHit(entry, saventry.toString(), o);
       else if (o instanceof AbstractStruct)
         searchSavStruct(entry, saventry, (AbstractStruct)o);
@@ -173,10 +173,11 @@ public final class ReferenceSearcher extends AbstractReferenceSearcher
 
   private void searchStruct(ResourceEntry entry, AbstractStruct struct)
   {
+    final String name = targetEntry.getResourceName();
     for (int i = 0; i < struct.getFieldCount(); i++) {
       StructEntry o = struct.getField(i);
       if (o instanceof ResourceRef &&
-          ((ResourceRef)o).getResourceName().equalsIgnoreCase(targetEntry.toString())) {
+          ((ResourceRef)o).getResourceName().equalsIgnoreCase(name)) {
         addHit(entry, entry.getSearchString(), o);
       } else if (o instanceof ProRef && ((ProRef)o).getSelectedEntry() == targetEntry) {
         addHit(entry, entry.getSearchString(), o);
@@ -186,16 +187,15 @@ public final class ReferenceSearcher extends AbstractReferenceSearcher
     }
 
     // special cases
-    final String keyword = (targetEntry.toString().lastIndexOf('.') >= 0) ?
-        targetEntry.toString().substring(0, targetEntry.toString().lastIndexOf('.')) :
-          targetEntry.toString();
     if (struct instanceof EffResource) {
+      final int p = name.lastIndexOf('.');
+      final String keyword = p >= 0 ? name.substring(0, p) : name;
       // checking resource2/3 fields
       final String[] fieldName = {"Resource 2", "Resource 3"};
-      for (int i = 0; i < fieldName.length; i++) {
-        StructEntry o = struct.getAttribute(fieldName[i]);
+      for (final String field : fieldName) {
+        final StructEntry o = struct.getAttribute(field);
         if (o instanceof TextString) {
-          if (o.toString().equalsIgnoreCase(keyword)) {
+          if (((TextString)o).getText().equalsIgnoreCase(keyword)) {
             addHit(entry, entry.getSearchString(), o);
           }
         }
@@ -241,11 +241,12 @@ public final class ReferenceSearcher extends AbstractReferenceSearcher
 
   private void searchTis(ResourceEntry entry, TisResource tis)
   {
+    final String name = getTargetEntry().getResourceName();
     Pattern pGeneric = Pattern.compile("MOS[0-9]{4,5}\\.PVRZ$", Pattern.CASE_INSENSITIVE);
     Pattern pArea = Pattern.compile("(.)(.{4})(N?)([0-9]{2})\\.PVRZ$", Pattern.CASE_INSENSITIVE);
-    Matcher mGeneric = pGeneric.matcher(getTargetEntry().getResourceName());
+    final Matcher mGeneric = pGeneric.matcher(name);
     if (!mGeneric.find()) {
-      Matcher mArea = pArea.matcher(getTargetEntry().getResourceName());
+      final Matcher mArea = pArea.matcher(name);
       if (mArea.find()) {
         String prefix = mArea.group(1);
         String code = mArea.group(2);

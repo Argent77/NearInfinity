@@ -645,9 +645,9 @@ public class ViewerMap extends JPanel
           WindowBlocker.blockWindow(wnd, false);
         }
         if (bRet) {
-          ResourceEntry re = ((AbstractStruct)getEntry().getParent()).getResourceEntry();
-          String fileName = re.getResourceName().toUpperCase(Locale.US).replace(".WMP", ".PNG");
-          ResourceFactory.exportResource(re, StreamUtils.getByteBuffer(os.toByteArray()), fileName, wnd);
+          final ResourceEntry entry = ((AbstractStruct)getEntry().getParent()).getResourceEntry();
+          final String fileName = StreamUtils.replaceFileExtension(entry.getResourceName(), "PNG");
+          ResourceFactory.exportResource(entry, StreamUtils.getByteBuffer(os.toByteArray()), fileName, wnd);
         } else {
           JOptionPane.showMessageDialog(wnd, "Error while exporting map as graphics.", "Error",
                                         JOptionPane.ERROR_MESSAGE);

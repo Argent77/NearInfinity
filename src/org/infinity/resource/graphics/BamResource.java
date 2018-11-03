@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.graphics;
@@ -258,7 +258,7 @@ public class BamResource implements Resource, Closeable, Writeable, ActionListen
           // decompress existing BAMC V1 and save as BAM V1
           try {
             ByteBuffer buffer = Compressor.decompress(entry.getResourceBuffer());
-            ResourceFactory.exportResource(entry, buffer, entry.toString(),
+            ResourceFactory.exportResource(entry, buffer, entry.getResourceName(),
                                            panelMain.getTopLevelAncestor());
           } catch (Exception e) {
             e.printStackTrace();
@@ -278,7 +278,7 @@ public class BamResource implements Resource, Closeable, Writeable, ActionListen
           // compress existing BAM V1 and save as BAMC V1
           try {
             ByteBuffer buffer = Compressor.compress(entry.getResourceBuffer(), "BAMC", "V1  ");
-            ResourceFactory.exportResource(entry, buffer, entry.toString(), panelMain.getTopLevelAncestor());
+            ResourceFactory.exportResource(entry, buffer, entry.getResourceName(), panelMain.getTopLevelAncestor());
           } catch (Exception e) {
             e.printStackTrace();
           }
@@ -288,7 +288,7 @@ public class BamResource implements Resource, Closeable, Writeable, ActionListen
       JFileChooser fc = new JFileChooser(ResourceFactory.getExportFilePath().toFile());
       fc.setDialogTitle("Export BAM frames");
       fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
-      fc.setSelectedFile(new File(fc.getCurrentDirectory(), entry.toString().replace(".BAM", "")));
+      fc.setSelectedFile(new File(fc.getCurrentDirectory(), entry.getResourceName().replace(".BAM", "")));
 
       // Output graphics format depends on BAM type
       while (fc.getChoosableFileFilters().length > 0) {
@@ -351,7 +351,7 @@ public class BamResource implements Resource, Closeable, Writeable, ActionListen
         if (bamData != null) {
           if (bamData.length > 0) {
             ResourceFactory.exportResource(entry, StreamUtils.getByteBuffer(bamData),
-                                           entry.toString(), panelMain.getTopLevelAncestor());
+                                           entry.getResourceName(), panelMain.getTopLevelAncestor());
           } else {
             JOptionPane.showMessageDialog(panelMain.getTopLevelAncestor(),
                                           "Export has been cancelled." + entry, "Information",

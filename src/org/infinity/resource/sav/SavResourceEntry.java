@@ -48,7 +48,7 @@ public class SavResourceEntry extends ResourceEntry implements Writeable
   {
     comprLength = 0;
     uncomprLength = 0;
-    fileName = entry.toString();
+    fileName = entry.getResourceName();
     byte[] udata = StreamUtils.toArray(entry.getResourceBuffer(true));
     cdata = StreamUtils.getByteBuffer(udata.length * 2 + 8);
     try (DeflaterOutputStream dos = new DeflaterOutputStream(new ByteBufferOutputStream(cdata),

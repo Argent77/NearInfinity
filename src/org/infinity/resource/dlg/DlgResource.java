@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.dlg;
@@ -47,6 +47,7 @@ import org.infinity.resource.StructEntry;
 import org.infinity.resource.key.ResourceEntry;
 import org.infinity.updater.Utils;
 import org.infinity.util.StringTable;
+import org.infinity.util.io.StreamUtils;
 
 /**
  * DLG resource contains the structure of conversation, in what is effectievly
@@ -230,9 +231,8 @@ public final class DlgResource extends AbstractStruct
     if (e.getSource() == miExport) {
       ResourceFactory.exportResource(getResourceEntry(), getViewer().getTopLevelAncestor());
     } else if (e.getSource() == miExportWeiDUDialog) {
-      Path path = ResourceFactory.getExportFileDialog(getViewer().getTopLevelAncestor(),
-                                                      getResourceEntry().toString().replace(".DLG", ".D"),
-                                                      false);
+      final String fileName = StreamUtils.replaceFileExtension(getResourceEntry().getResourceName(), "D");
+      final Path path = ResourceFactory.getExportFileDialog(getViewer().getTopLevelAncestor(), fileName, false);
       if (path != null) {
         File file = path.toFile();
         try (PrintWriter writer = new PrintWriter(file, BrowserMenuBar.getInstance().getSelectedCharset())) {

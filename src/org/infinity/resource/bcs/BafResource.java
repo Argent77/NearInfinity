@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.bcs;
@@ -406,7 +406,7 @@ public class BafResource implements TextResource, Writeable, Closeable, ItemList
       bpmErrors.setMenuItems(errorItems, false);
       bpmErrors.setEnabled(true);
     }
-    if (warningMap.size() == 0) {
+    if (warningMap.isEmpty()) {
       bpmWarnings.setEnabled(false);
     } else {
       JMenuItem warningItems[] = new JMenuItem[warningMap.size()];
@@ -428,7 +428,7 @@ public class BafResource implements TextResource, Writeable, Closeable, ItemList
       for (final ResourceEntry usesEntry : uses) {
         if (usesEntry.getSearchString() != null) {
           usesItems[usesIndex++] =
-          new JMenuItem(usesEntry.toString() + " (" + usesEntry.getSearchString() + ')');
+          new JMenuItem(usesEntry.getResourceName() + " (" + usesEntry.getSearchString() + ')');
         } else {
           usesItems[usesIndex++] = new JMenuItem(usesEntry.toString());
         }
@@ -459,7 +459,7 @@ public class BafResource implements TextResource, Writeable, Closeable, ItemList
     for (final ResourceEntry usesEntry : uses) {
       if (usesEntry.getSearchString() != null)
         usesItems[usesIndex++] =
-        new JMenuItem(usesEntry.toString() + " (" + usesEntry.getSearchString() + ')');
+        new JMenuItem(usesEntry.getResourceName() + " (" + usesEntry.getSearchString() + ')');
       else
         usesItems[usesIndex++] = new JMenuItem(usesEntry.toString());
     }
@@ -508,7 +508,7 @@ public class BafResource implements TextResource, Writeable, Closeable, ItemList
         }
       });
     }
-    chooser.setSelectedFile(new File(StreamUtils.replaceFileExtension(entry.toString(), "BCS")));
+    chooser.setSelectedFile(new File(StreamUtils.replaceFileExtension(entry.getResourceName(), "BCS")));
     int returnval = chooser.showSaveDialog(panel.getTopLevelAncestor());
     if (returnval == JFileChooser.APPROVE_OPTION) {
       try (BufferedWriter bw =
@@ -525,4 +525,3 @@ public class BafResource implements TextResource, Writeable, Closeable, ItemList
     }
   }
 }
-

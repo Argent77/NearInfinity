@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.mus;
@@ -14,7 +14,7 @@ import java.awt.event.ItemListener;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -240,13 +240,10 @@ public final class MusResource implements Closeable, TextResource, ActionListene
     if (buttonPanel.getControlByType(ButtonPanel.Control.FIND_MENU) == event.getSource()) {
       ButtonPopupMenu bpmFind = (ButtonPopupMenu)event.getSource();
       if (bpmFind.getSelectedItem() == ifindall) {
-        String type = entry.toString().substring(entry.toString().indexOf(".") + 1);
-        List<ResourceEntry> files = ResourceFactory.getResources(type);
+        final List<ResourceEntry> files = ResourceFactory.getResources(entry.getExtension());
         new TextResourceSearcher(files, panel.getTopLevelAncestor());
       } else if (bpmFind.getSelectedItem() == ifindthis) {
-        List<ResourceEntry> files = new ArrayList<ResourceEntry>();
-        files.add(entry);
-        new TextResourceSearcher(files, panel.getTopLevelAncestor());
+        new TextResourceSearcher(Arrays.asList(entry), panel.getTopLevelAncestor());
       } else if (bpmFind.getSelectedItem() == ifindreference) {
         new SongReferenceSearcher(entry, panel.getTopLevelAncestor());
       }
@@ -348,8 +345,7 @@ public final class MusResource implements Closeable, TextResource, ActionListene
 
   private JComponent getEditor(CaretListener caretListener)
   {
-    ifindall =
-        new JMenuItem("in all " + entry.toString().substring(entry.toString().indexOf(".") + 1) + " files");
+    ifindall  = new JMenuItem("in all " + entry.getExtension() + " files");
     ifindthis = new JMenuItem("in this file only");
     ifindreference = new JMenuItem("references to this file");
     ButtonPopupMenu bpmFind = (ButtonPopupMenu)buttonPanel.addControl(ButtonPanel.Control.FIND_MENU);

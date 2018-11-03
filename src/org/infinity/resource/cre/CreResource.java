@@ -589,9 +589,8 @@ public final class CreResource extends AbstractStruct
     if (!resourceEntry.getExtension().equalsIgnoreCase("CHR")) {
       return;
     }
-    Path path = ResourceFactory.getExportFileDialog(NearInfinity.getInstance(),
-                                                    resourceEntry.toString().replace(".CHR", ".CRE"),
-                                                    false);
+    final String fileName = StreamUtils.replaceFileExtension(resourceEntry.getResourceName(), "CRE");
+    final Path path = ResourceFactory.getExportFileDialog(NearInfinity.getInstance(), fileName, false);
     if (path != null) {
       try {
         CreResource crefile = (CreResource)ResourceFactory.getResource(resourceEntry);

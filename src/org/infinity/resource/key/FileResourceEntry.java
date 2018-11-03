@@ -41,7 +41,7 @@ public final class FileResourceEntry extends ResourceEntry
   @Override
   public String toString()
   {
-    return file.getFileName().toString().toUpperCase(Locale.ENGLISH);
+    return getResourceName().toUpperCase(Locale.ENGLISH);
   }
 
   public void deleteFile() throws IOException

@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.gui;
@@ -143,9 +143,7 @@ public class ResourceChooser extends JComponent implements ActionListener
     if (lpResources != null) {
       final ResourceEntry entry = lpResources.getSelectedValue();
       if (entry != null) {
-        //TODO: toString not designed for such purpoces,
-        // but in all implementations it is equals to getResourceName
-        return entry.toString();
+        return entry.getResourceName();
       }
     }
     return null;

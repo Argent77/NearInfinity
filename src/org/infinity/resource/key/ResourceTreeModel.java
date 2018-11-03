@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.key;
@@ -313,7 +313,7 @@ public final class ResourceTreeModel implements TreeModel
     TreeModelEvent event = new TreeModelEvent(this, path, new int[]{getIndexOfChild(parent, entry)},
                                               new Object[]{entry});
     parent.removeResourceEntry(entry);
-    entries.remove(entry.toString().toUpperCase(Locale.ENGLISH));
+    entries.remove(entry.getResourceName().toUpperCase(Locale.ENGLISH));
     if (parent.getChildCount() == 0) {
       root.removeFolder(parent);
       folders.remove(parent.folderName());

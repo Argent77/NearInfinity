@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.bcs;
@@ -506,7 +506,7 @@ public final class BcsResource implements TextResource, Writeable, Closeable, Ac
             }
           });
         }
-        chooser.setSelectedFile(new File(StreamUtils.replaceFileExtension(entry.toString(), "BAF")));
+        chooser.setSelectedFile(new File(StreamUtils.replaceFileExtension(entry.getResourceName(), "BAF")));
         int returnval = chooser.showSaveDialog(panel.getTopLevelAncestor());
         if (returnval == JFileChooser.APPROVE_OPTION) {
           try (BufferedWriter bw =
@@ -795,7 +795,7 @@ public final class BcsResource implements TextResource, Writeable, Closeable, Ac
     for (final ResourceEntry usesEntry : uses) {
       if (usesEntry.getSearchString() != null) {
         usesItems[usesIndex++] =
-        new JMenuItem(usesEntry.toString() + " (" + usesEntry.getSearchString() + ')');
+        new JMenuItem(usesEntry.getResourceName() + " (" + usesEntry.getSearchString() + ')');
       } else {
         usesItems[usesIndex++] = new JMenuItem(usesEntry.toString());
       }
@@ -828,4 +828,3 @@ public final class BcsResource implements TextResource, Writeable, Closeable, Ac
     }
   }
 }
-

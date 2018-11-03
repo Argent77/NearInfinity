@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.util;
@@ -34,7 +34,7 @@ public final class CreMapCache
   public static void creInvalid(ResourceEntry entry)
   {
     if (entry != null) {
-      scriptNamesCre.remove(normalized(entry.toString()));
+      scriptNamesCre.remove(normalized(entry.getResourceName()));
     }
   }
 
@@ -109,11 +109,11 @@ public final class CreMapCache
     if (isInitialized()) {
       return scriptNamesCre.keySet();
     } else {
-      return new HashSet<String>();
+      return new HashSet<>();
     }
   }
 
-  // Waits until indexing process has finished or time out occurred
+  /** Waits until indexing process has finished or time out occurred. */
   private static boolean ensureInitialized(int timeOutMS)
   {
     long timeOut = (timeOutMS >= 0) ? System.nanoTime() + (timeOutMS * 1000000L) : -1L;

@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.key;
@@ -408,7 +408,7 @@ public class Keyfile
   {
     BIFFResourceEntry retVal = null;
     if (resourceName != null) {
-      retVal = resourceEntries.get(resourceName);
+      retVal = resourceEntries.get(resourceName.toUpperCase(Locale.ENGLISH));
     }
     return retVal;
   }
@@ -590,7 +590,7 @@ public class Keyfile
   {
     BIFFResourceEntry retVal = null;
     if (entry != null) {
-      String key = entry.toString();
+      final String key = entry.getResourceName().toUpperCase(Locale.ENGLISH);
       retVal = resourceEntries.put(key, entry);
     }
     return retVal;

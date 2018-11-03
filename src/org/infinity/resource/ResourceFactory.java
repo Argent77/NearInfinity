@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource;
@@ -636,7 +636,7 @@ public final class ResourceFactory implements FileWatchListener
   public static void closeResource(Resource resource, ResourceEntry entry, JComponent parent) throws Exception {
     final Path output;
     if (entry instanceof BIFFResourceEntry) {
-      output = FileManager.query(Profile.getRootFolders(), Profile.getOverrideFolderName(), entry.toString());
+      output = FileManager.query(Profile.getRootFolders(), Profile.getOverrideFolderName(), entry.getResourceName());
     } else {
       output = entry.getActualPath();
     }
@@ -954,13 +954,13 @@ public final class ResourceFactory implements FileWatchListener
                                            ext.equalsIgnoreCase("SQL") ||
                                            ext.equalsIgnoreCase("GLSL")))) {
         if (buffer.getShort(0) == -1) {
-          exportResourceInternal(entry, StaticSimpleXorDecryptor.decrypt(buffer, 2), entry.toString(), parent, output);
+          exportResourceInternal(entry, StaticSimpleXorDecryptor.decrypt(buffer, 2), entry.getResourceName(), parent, output);
         } else {
           buffer.position(0);
-          exportResourceInternal(entry, buffer, entry.toString(), parent, output);
+          exportResourceInternal(entry, buffer, entry.getResourceName(), parent, output);
         }
       } else {
-        exportResourceInternal(entry, buffer, entry.toString(), parent, output);
+        exportResourceInternal(entry, buffer, entry.getResourceName(), parent, output);
       }
     } catch (Exception e) {
       throw new Exception("Can't read " + entry);
@@ -1514,7 +1514,7 @@ public final class ResourceFactory implements FileWatchListener
         WritableByteChannel wbc = Channels.newChannel(os);
         wbc.write(bb);
       }
-      JOptionPane.showMessageDialog(NearInfinity.getInstance(), entry.toString() + " copied to " + outFile,
+      JOptionPane.showMessageDialog(NearInfinity.getInstance(), entry + " copied to " + outFile,
                                     "Copy complete", JOptionPane.INFORMATION_MESSAGE);
       ResourceEntry newEntry = new FileResourceEntry(outFile, !entry.getExtension().equalsIgnoreCase("bs"));
       treeModel.addResourceEntry(newEntry, newEntry.getTreeFolderName(), true);
@@ -1537,7 +1537,7 @@ public final class ResourceFactory implements FileWatchListener
       JOptionPane.showMessageDialog(parent, "Resource not savable", "Error", JOptionPane.ERROR_MESSAGE);
       return false;
     }
-    ResourceEntry entry = resource.getResourceEntry();
+    final ResourceEntry entry = resource.getResourceEntry();
     if (entry == null) {
       return false;
     }
@@ -1554,7 +1554,7 @@ public final class ResourceFactory implements FileWatchListener
           return false;
         }
       }
-      outPath = FileManager.query(overridePath, entry.toString());
+      outPath = FileManager.query(overridePath, entry.getResourceName());
       ((BIFFResourceEntry)entry).setOverride(true);
     } else {
       outPath = entry.getActualPath();
@@ -1599,27 +1599,27 @@ public final class ResourceFactory implements FileWatchListener
     try (OutputStream os = StreamUtils.getOutputStream(outPath, true)) {
       ((Writeable)resource).write(os);
     } catch (IOException e) {
-      JOptionPane.showMessageDialog(parent, "Error while saving " + resource.getResourceEntry().toString(),
+      JOptionPane.showMessageDialog(parent, "Error while saving " + entry,
                                     "Error", JOptionPane.ERROR_MESSAGE);
       e.printStackTrace();
       return false;
     }
     JOptionPane.showMessageDialog(parent, "File saved to \"" + outPath.toAbsolutePath() + '\"',
                                   "Save complete", JOptionPane.INFORMATION_MESSAGE);
-    if (resource.getResourceEntry().getExtension().equals("IDS")) {
-      IdsMapCache.remove(resource.getResourceEntry());
+    if ("IDS".equals(entry.getExtension())) {
+      IdsMapCache.remove(entry);
       final IdsBrowser idsbrowser = ChildFrame.getFirstFrame(IdsBrowser.class);
       if (idsbrowser != null) {
         idsbrowser.refreshList();
       }
       CreMapCache.reset();
-    } else if (resource.getResourceEntry().toString().equalsIgnoreCase(Song2daBitmap.getTableName())) {
+    } else if (entry.getResourceName().equalsIgnoreCase(Song2daBitmap.getTableName())) {
       Song2daBitmap.resetSonglist();
-    } else if (resource.getResourceEntry().toString().equalsIgnoreCase(Summon2daBitmap.getTableName())) {
+    } else if (entry.getResourceName().equalsIgnoreCase(Summon2daBitmap.getTableName())) {
       Summon2daBitmap.resetSummonTable();
-    } else if (resource.getResourceEntry().toString().equalsIgnoreCase(PriTypeBitmap.getTableName())) {
+    } else if (entry.getResourceName().equalsIgnoreCase(PriTypeBitmap.getTableName())) {
       PriTypeBitmap.resetTypeTable();
-    } else if (resource.getResourceEntry().toString().equalsIgnoreCase(SecTypeBitmap.getTableName())) {
+    } else if (entry.getResourceName().equalsIgnoreCase(SecTypeBitmap.getTableName())) {
       SecTypeBitmap.resetTypeTable();
     }
     return true;

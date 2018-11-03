@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.gui;
@@ -156,7 +156,7 @@ final public class LinkButton extends JLabel implements MouseListener, ActionLis
   public String getUrl()
   {
     if (isResource) {
-      return entry.toString();
+      return entry.getResourceName();
     } else {
       return url;
     }
@@ -238,4 +238,3 @@ final public class LinkButton extends JLabel implements MouseListener, ActionLis
     listeners.add(listener);
   }
 }
-

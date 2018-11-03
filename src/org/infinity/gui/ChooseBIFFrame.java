@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.gui;
@@ -185,7 +185,7 @@ final class ChooseBIFFrame extends ChildFrame implements ActionListener
       if (rbcreate.isSelected()) {
         // Check if name exists
         String name = tfbifname.getText().toLowerCase(Locale.ENGLISH);
-        if (name.equals("") || name.indexOf("\\") != -1 || name.indexOf("/") != -1) {
+        if (name.isEmpty() || name.contains("\\") || name.contains("/")) {
           JOptionPane.showMessageDialog(this, "Illegal BIFF name", "Error", JOptionPane.ERROR_MESSAGE);
           return;
         }
@@ -200,7 +200,7 @@ final class ChooseBIFFrame extends ChildFrame implements ActionListener
           name += ".bif";
         }
         for (int i = 0; i < cbbifname.getItemCount(); i++) {
-          if (name.equalsIgnoreCase(cbbifname.getItemAt(i).toString())) {
+          if (name.equalsIgnoreCase(cbbifname.getItemAt(i).getFileName())) {
             JOptionPane.showMessageDialog(this, "This BIFF already exists!", "Error",
                                           JOptionPane.ERROR_MESSAGE);
             return;
@@ -233,4 +233,3 @@ final class ChooseBIFFrame extends ChildFrame implements ActionListener
 
 // --------------------- End Interface ActionListener ---------------------
 }
-

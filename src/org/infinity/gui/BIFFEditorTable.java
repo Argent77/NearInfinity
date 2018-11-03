@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.gui;
@@ -240,7 +240,7 @@ final class BIFFEditorTable extends JPanel implements ActionListener
       }
       for (Iterator<BifEditorTableLine> i = entries.iterator(); i.hasNext();) {
         BifEditorTableLine oldline = i.next();
-        if (oldline.entry.toString().equalsIgnoreCase(line.entry.toString())) {
+        if (oldline.entry.getResourceName().equalsIgnoreCase(line.entry.getResourceName())) {
           if (line.type == TYPE_UPD) {
             i.remove();
             hiddenentries.add(oldline);
@@ -274,7 +274,7 @@ final class BIFFEditorTable extends JPanel implements ActionListener
       if (line.type == TYPE_UPD) {
         for (Iterator<BifEditorTableLine> i = hiddenentries.iterator(); i.hasNext();) {
           BifEditorTableLine hidden = i.next();
-          if (line.entry.toString().equalsIgnoreCase(hidden.entry.toString())) {
+          if (line.entry.getResourceName().equalsIgnoreCase(hidden.entry.getResourceName())) {
             entries.remove(line);
             entries.add(hidden);
             i.remove();
@@ -366,11 +366,10 @@ final class BIFFEditorTable extends JPanel implements ActionListener
       else if (sortbycolumn == 1)
         result = line1.entry.getExtension().compareTo(line2.entry.getExtension());
       else if (sortbycolumn == 2)
-        result = line1.entry.toString().compareTo(line2.entry.toString());
+        result = line1.entry.getResourceName().compareTo(line2.entry.getResourceName());
       if (sortreverse)
         result = -result;
       return result;
     }
   }
 }
-
