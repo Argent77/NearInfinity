@@ -61,26 +61,6 @@ public class Compiler
   private int lastCode;     // stores the code of the most recently processed trigger or action
   private Token lastToken;  // token associated with lastCode
 
-  public Compiler()
-  {
-    this("", ScriptType.BAF);
-  }
-
-  public Compiler(ResourceEntry bafEntry) throws Exception
-  {
-    this(bafEntry, ScriptType.BAF);
-  }
-
-  public Compiler(ResourceEntry bafEntry, ScriptType type) throws Exception
-  {
-    if (bafEntry == null) {
-      throw new NullPointerException();
-    }
-    this.scriptType = type;
-    setVerbose(BrowserMenuBar.getInstance().showMoreCompileWarnings());
-    setSource(bafEntry);
-  }
-
   public Compiler(String source)
   {
     this(source, ScriptType.BAF);

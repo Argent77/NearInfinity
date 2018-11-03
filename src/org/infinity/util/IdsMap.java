@@ -64,21 +64,6 @@ public class IdsMap
     return new ArrayList<IdsMapEntry>(idsMap.values());
   }
 
-  /** Returns a formatted string list of all available symbols and their associated key values. */
-  public List<String> getAllStringValues()
-  {
-    ArrayList<String> retVal = new ArrayList<>(idsMap.size() * 3 / 2);
-
-    for (final IdsMapEntry e: idsMap.values()) {
-      long id = e.getID();
-      for (String symbol : e) {
-        retVal.add(IdsMapEntry.toString(id, symbol));
-      }
-    }
-
-    return retVal;
-  }
-
   /** Returns a copy of the keys contained in the IDS map as a sorted set. */
   public SortedSet<Long> getKeys()
   {
@@ -128,12 +113,6 @@ public class IdsMap
       return null;
     }
     return e;
-  }
-
-  /** Returns whether symbols from this IDS resource are matched case-sensitive. */
-  public boolean isCaseSensitiveMatch()
-  {
-    return caseSensitive;
   }
 
   private void parse2DA() throws Exception
