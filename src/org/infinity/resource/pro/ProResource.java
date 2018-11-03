@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.pro;
@@ -108,8 +108,7 @@ public final class ProResource extends AbstractStruct implements Resource, HasAd
     super(entry);
   }
 
-//--------------------- Begin Interface HasAddRemovable ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="HasAddRemovable">
   @Override
   public AddRemovable[] getAddRemovables() throws Exception
   {
@@ -127,11 +126,9 @@ public final class ProResource extends AbstractStruct implements Resource, HasAd
   {
     return true;
   }
+  //</editor-fold>
 
-//--------------------- End Interface HasAddRemovable ---------------------
-
-//--------------------- Begin Interface UpdateListener ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="UpdateListener">
   @Override
   public boolean valueUpdated(UpdateEvent event)
   {
@@ -197,11 +194,9 @@ public final class ProResource extends AbstractStruct implements Resource, HasAd
     }
     return false;
   }
+  //</editor-fold>
 
-//--------------------- End Interface UpdateListener ---------------------
-
-//--------------------- Begin Interface HasViewerTabs ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="HasViewerTabs">
   @Override
   public int getViewerTabCount()
   {
@@ -231,9 +226,9 @@ public final class ProResource extends AbstractStruct implements Resource, HasAd
   {
     return false;
   }
+  //</editor-fold>
 
-//--------------------- End Interface HasViewerTabs ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="Readable">
   @Override
   public int read(ByteBuffer buffer, int offset) throws Exception
   {
@@ -307,7 +302,9 @@ public final class ProResource extends AbstractStruct implements Resource, HasAd
 
     return offset;
   }
+  //</editor-fold>
 
+  //<editor-fold defaultstate="collapsed" desc="AbstractStruct">
   @Override
   protected void viewerInitialized(StructViewer viewer)
   {
@@ -347,19 +344,20 @@ public final class ProResource extends AbstractStruct implements Resource, HasAd
       hexViewer.dataModified();
     }
   }
+  //</editor-fold>
 
-  // Updates current IDS targeting to IWD style and returns true if changes have been made
+  /** Updates current IDS targeting to IWD style and returns true if changes have been made. */
   private boolean setIwdStyleIdsType(AbstractStruct struct, int offset, int nr)
   {
     if (struct != null && offset >= 0) {
       StructEntry e1 = struct.getAttribute(offset, false);
       StructEntry e2 = struct.getAttribute(offset + 2, false);
       if (!(e2 instanceof SpellProtType)) {
-        ByteBuffer typeBuffer = ((Datatype)e2).getDataBuffer();
-        SpellProtType newType = new SpellProtType(typeBuffer, 0, 2, null, nr);
+        final ByteBuffer typeBuffer = e2.getDataBuffer();
+        final SpellProtType newType = new SpellProtType(typeBuffer, 0, 2, null, nr);
         newType.setOffset(offset + 2);
-        ByteBuffer valueBuffer = ((Datatype)e1).getDataBuffer();
-        StructEntry newValue = newType.createCreatureValueFromType(valueBuffer, 0);
+        final ByteBuffer valueBuffer = e1.getDataBuffer();
+        final StructEntry newValue = newType.createCreatureValueFromType(valueBuffer, 0);
         newValue.setOffset(offset);
 
         replaceEntry(newValue);
@@ -377,11 +375,11 @@ public final class ProResource extends AbstractStruct implements Resource, HasAd
       StructEntry e1 = struct.getAttribute(offset, false);
       StructEntry e2 = struct.getAttribute(offset + 2, false);
       if (!(e2 instanceof IdsTargetType)) {
-        ByteBuffer typeBuffer = ((Datatype)e2).getDataBuffer();
-        IdsTargetType newType = new IdsTargetType(typeBuffer, 0, 2, null, nr, null, false);
+        final ByteBuffer typeBuffer = e2.getDataBuffer();
+        final IdsTargetType newType = new IdsTargetType(typeBuffer, 0, 2, null, nr, null, false);
         newType.setOffset(offset + 2);
-        ByteBuffer valueBuffer = ((Datatype)e1).getDataBuffer();
-        StructEntry newValue = newType.createIdsValueFromType(valueBuffer, 0);
+        final ByteBuffer valueBuffer = e1.getDataBuffer();
+        final StructEntry newValue = newType.createIdsValueFromType(valueBuffer, 0);
         newValue.setOffset(offset);
 
         replaceEntry(newValue);

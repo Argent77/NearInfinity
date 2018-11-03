@@ -211,15 +211,21 @@ public abstract class AbstractBIFFReader //implements AutoCloseable
 
 //-------------------------- INNER CLASSES --------------------------
 
-  // File or tileset entry definition
+  /** File or tileset entry definition. */
   protected static class Entry
   {
-    public int locator;     // resource locator
-    public int offset;      // offset to resource data
-    public int size;        // file size or size of each tile
-    public int count;       // number of tiles in the resource (if isTile == true)
-    public short type;      // resource type
-    public boolean isTile;  // indicates whether this is a file or tileset
+    /** Resource locator. */
+    public final int locator;
+    /** Offset to resource data. */
+    public final int offset;
+    /** File size or size of each tile. */
+    public final int size;
+    /** Number of tiles in the resource (if {@code isTile == true}). */
+    public final int count;
+    /** Resource type. */
+    public final short type;
+    /** Indicates whether this is a file or tileset. */
+    public final boolean isTile;
 
     public Entry(int locator, int offset, int size, short type)
     {

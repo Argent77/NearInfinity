@@ -117,7 +117,7 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
   private boolean tabSelected;
   private int cachedSize;
 
-  // Returns a short description of the specified structure type
+  /** Returns a short description of the specified structure type. */
   public static String getTypeDesc(StructEntry type)
   {
     if (type instanceof AbstractStruct) {
@@ -191,8 +191,7 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
     initGui();
   }
 
-//--------------------- Begin Interface IHexViewListener ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="IHexViewListener">
   @Override
   public void stateChanged(HexViewEvent event)
   {
@@ -209,21 +208,17 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
       updateStatusBar(offset);
     }
   }
+  //</editor-fold>
 
-//--------------------- End Interface IHexViewListener ---------------------
-
-//--------------------- Begin Interface IDataChangedListener ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="IDataChangedListener">
   @Override
   public void dataChanged(DataChangedEvent event)
   {
     getStruct().setStructChanged(true);
   }
+  //</editor-fold>
 
-//--------------------- End Interface IDataChangedListener ---------------------
-
-//--------------------- Begin Interface ActionListener ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="ActionListener">
   @Override
   public void actionPerformed(ActionEvent event)
   {
@@ -333,11 +328,9 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
       getHexView().requestFocusInWindow();
     }
   }
+  //</editor-fold>
 
-//--------------------- End Interface ActionListener ---------------------
-
-//--------------------- Begin Interface ChangeListener ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="ChangeListener">
   @Override
   public void stateChanged(ChangeEvent e)
   {
@@ -356,11 +349,9 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
       }
     }
   }
+  //</editor-fold>
 
-//--------------------- End Interface ChangeListener ---------------------
-
-//--------------------- Begin Interface Closeable ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="Closeable">
   @Override
   public void close() throws Exception
   {
@@ -382,8 +373,7 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
       findData = null;
     }
   }
-
-//--------------------- End Interface Closeable ---------------------
+  //</editor-fold>
 
   /** Returns the associated resource structure. */
   public AbstractStruct getStruct()
@@ -427,7 +417,7 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
     }
   }
 
-  // initialize controls
+  /** Initialize controls. */
   private void initGui()
   {
     setLayout(new BorderLayout());
@@ -492,7 +482,7 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
     return findData;
   }
 
-  // Attempts to find the next match of the search string as defined in the FindData instance, starting at offset.
+  /** Attempts to find the next match of the search string as defined in the FindData instance, starting at offset. */
   private void findPattern(int offset)
   {
     if (getFindData().getDataType() == FindDataDialog.Type.TEXT) {
@@ -566,7 +556,7 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
 
 //-------------------------- INNER CLASSES --------------------------
 
-  // Panel component showing information about the currently selected data.
+  /** Panel component showing information about the currently selected data. */
   private final class InfoPanel extends JPanel
   {
     private final List<StructEntryTableModel> listModels = new ArrayList<StructEntryTableModel>();
@@ -601,7 +591,7 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
       }
     }
 
-    // Initialize controls
+    /** Initialize controls. */
     private void init()
     {
       setLayout(new GridBagLayout());
@@ -619,7 +609,7 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
       add(new JPanel(), gbc);
     }
 
-    // Updates tables and table models based on the data at the specified offset
+    /** Updates tables and table models based on the data at the specified offset. */
     private void updatePanel(int offset)
     {
       StructuredDataProvider data = (getDataProvider() instanceof StructuredDataProvider) ?
@@ -672,7 +662,7 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
       repaint();
     }
 
-    // Constructs and initializes a new table panel based on the specified model and level information
+    /** Constructs and initializes a new table panel based on the specified model and level information. */
     private Component createInfoTable(TableModel model, int level)
     {
       final String[] suffix = {"th", "st", "nd", "rd", "th"};
@@ -715,7 +705,7 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
       return retVal;
     }
 
-    // Removes the specified component from the info panel
+    /** Removes the specified component from the info panel. */
     private void removeComponentFromPanel(Component c)
     {
       if (c != null) {
@@ -723,7 +713,7 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
       }
     }
 
-    // Adds the specified component to the info panel
+    /** Adds the specified component to the info panel. */
     private void addComponentToPanel(Component c)
     {
       if (c != null) {
@@ -735,7 +725,7 @@ public class StructHexViewer extends JPanel implements IHexViewListener, IDataCh
   }
 
 
-  // Manages the representation of a single StructEntry instance
+  /** Manages the representation of a single {@link StructEntry} instance. */
   private class StructEntryTableModel extends AbstractTableModel
   {
     private final String[] names = {"Name", "Start offset", "Length", "Structure type", "Value"};

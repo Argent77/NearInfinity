@@ -307,14 +307,20 @@ public class ResourceBitmap extends Datatype
 
 //-------------------------- INNER CLASSES --------------------------
 
-  public static class RefEntry implements Comparable<RefEntry>
+  public static final class RefEntry implements Comparable<RefEntry>
   {
-    private final long value;           // associated ID
-    private final String name;          // alternate label if ResourceEntry is empty
-    private final ResourceEntry entry;  // contains resource if available
-    private final String searchString;  // resource-dependent search string
-    private String fmt;                 // format string for textual representation
-    private String desc;                // cached textual output for toString() method
+    /** Associated ID. */
+    private final long value;
+    /** Alternate label if ResourceEntry is empty. */
+    private final String name;
+    /** Contains resource if available. */
+    private final ResourceEntry entry;
+    /** Resource-dependent search string. */
+    private final String searchString;
+    /** Format string for textual representation. */
+    private String fmt;
+    /** Cached textual output for {@link #toString()} method. */
+    private String desc;
 
     public RefEntry(long value, String ref)
     {
@@ -350,13 +356,13 @@ public class ResourceBitmap extends Datatype
     @Override
     public boolean equals(Object o)
     {
-      return toString().equalsIgnoreCase(o.toString());
+      return desc.equalsIgnoreCase(o.toString());
     }
 
     @Override
     public int compareTo(RefEntry o)
     {
-      return toString().compareToIgnoreCase(o.toString());
+      return desc.compareToIgnoreCase(o.toString());
     }
 
     public boolean isResource() { return (entry != null); }
