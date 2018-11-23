@@ -5,6 +5,9 @@
 package org.infinity.resource;
 
 import java.awt.Component;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -36,7 +39,8 @@ import org.infinity.resource.key.ResourceEntry;
 import org.infinity.util.io.ByteBufferOutputStream;
 import org.infinity.util.io.StreamUtils;
 
-public abstract class AbstractStruct extends AbstractTableModel implements StructEntry, Viewable, Closeable
+public abstract class AbstractStruct extends AbstractTableModel implements StructEntry, Viewable, Closeable,
+        PropertyChangeListener
 {
   // Commonly used field labels
   public static final String COMMON_SIGNATURE     = "Signature";
@@ -58,6 +62,14 @@ public abstract class AbstractStruct extends AbstractTableModel implements Struc
   private boolean structChanged;
   private int startoffset, endoffset, extraoffset;
   private Collection<Component> viewerComponents = null;
+  /**
+   * If any {@link PropertyChangeListener}s have been registered,
+   * the {@code changeSupport} field describes them.
+   *
+   * @see #addPropertyChangeListener
+   * @see #removePropertyChangeListener
+   */
+  private final PropertyChangeSupport changeSupport = new PropertyChangeSupport(this);
 
   private static void adjustEntryOffsets(AbstractStruct superStruct, AbstractStruct modifiedStruct,
                                          AddRemovable datatype, int amount)
@@ -1165,7 +1177,13 @@ public abstract class AbstractStruct extends AbstractTableModel implements Struc
 
   protected void setSuperStruct(AbstractStruct struct)
   {
+    if (superStruct != null) {
+      removePropertyChangeListener(struct);
+    }
     this.superStruct = struct;
+    if (struct != null) {
+      addPropertyChangeListener(struct);
+    }
   }
 
   /**
@@ -1182,5 +1200,42 @@ public abstract class AbstractStruct extends AbstractTableModel implements Struc
   public void fireTableRowsWillBeDeleted(int firstRow, int lastRow) {
     fireTableChanged(new TableModelEvent(this, firstRow, lastRow,
                          TableModelEvent.ALL_COLUMNS, WILL_BE_DELETE));
+  }
+
+  /**
+   * Add a PropertyChangeListener to the listener list. The listener is registered
+   * for all properties. The same listener object may be added more than once, and
+   * will be called as many times as it is added.
+   * <p>
+   * If {@code listener} is null, no exception is thrown and no action
+   * is taken.
+   *
+   * @param listener  The PropertyChangeListener to be added
+   */
+  public void addPropertyChangeListener(PropertyChangeListener listener)
+  {
+    changeSupport.addPropertyChangeListener(listener);
+  }
+
+  /**
+   * Remove a PropertyChangeListener from the listener list. This removes a
+   * PropertyChangeListener that was registered for all properties.
+   * If {@code listener} was added more than once to the same event source, it
+   * will be notified one less time after being removed.
+   * <p>
+   * If {@code listener} is null, or was never added, no exception is thrown and
+   * no action is taken.
+   *
+   * @param listener  The PropertyChangeListener to be removed
+   */
+  public void removePropertyChangeListener(PropertyChangeListener listener)
+  {
+    changeSupport.removePropertyChangeListener(listener);
+  }
+
+  @Override
+  public void propertyChange(PropertyChangeEvent evt)
+  {
+    changeSupport.firePropertyChange(evt);
   }
 }

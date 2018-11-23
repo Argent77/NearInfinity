@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.Objects;
 
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -27,6 +28,19 @@ import org.infinity.resource.StructEntry;
 import org.infinity.util.Misc;
 import org.infinity.util.io.StreamUtils;
 
+/**
+ * Field that represents a string enumeration of some values.
+ *
+ * <h2>Bean property</h2>
+ * When this field is child of {@link AbstractStruct}, then changes of its internal
+ * value reported as {@link PropertyChangeEvent}s of the {@link #getParent() parent}
+ * struct.
+ * <ul>
+ * <li>Property name: {@link #getName() name} of this field</li>
+ * <li>Property type: {@link String}</li>
+ * <li>Value meaning: value from list of enumarated values</li>
+ * </ul>
+ */
 public final class TextBitmap extends Datatype implements Editable, IsTextual
 {
   private final String[] ids;
@@ -122,7 +136,7 @@ public final class TextBitmap extends Datatype implements Editable, IsTextual
     if (index == -1) {
       return false;
     }
-    text = ids[index];
+    setValue(ids[index]);
 
     // notifying listeners
     fireValueUpdated(new UpdateEvent(this, struct));
@@ -200,6 +214,15 @@ public final class TextBitmap extends Datatype implements Editable, IsTextual
     return "";
   }
 
+  private void setValue(String newValue)
+  {
+    final String oldValue = text;
+    text = newValue;
+    if (!Objects.equals(oldValue, newValue)) {
+      firePropertyChange(oldValue, newValue);
+    }
+  }
+
 // -------------------------- INNER CLASSES --------------------------
 
   private final class BitmapTableModel extends AbstractTableModel
@@ -229,4 +252,3 @@ public final class TextBitmap extends Datatype implements Editable, IsTextual
     }
   }
 }
-

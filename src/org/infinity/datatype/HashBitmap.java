@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -32,7 +32,20 @@ import org.infinity.util.LongIntegerHashMap;
 import org.infinity.util.Misc;
 import org.infinity.util.ObjectString;
 
-public class HashBitmap extends Datatype implements Editable, IsNumeric
+/**
+ * Field that represents an integer enumeration of some values.
+ *
+ * <h2>Bean property</h2>
+ * When this field is child of {@link AbstractStruct}, then changes of its internal
+ * value reported as {@link PropertyChangeEvent}s of the {@link #getParent() parent}
+ * struct.
+ * <ul>
+ * <li>Property name: {@link #getName() name} of this field</li>
+ * <li>Property type: {@code long}</li>
+ * <li>Value meaning: numerical value of this field</li>
+ * </ul>
+ */
+public class HashBitmap extends Datatype implements Editable, IsNumeric//TODO: try to unify with Bitmap
 {
   private final LongIntegerHashMap<? extends Object> idsmap;
   private final List<JButton> buttonList;
@@ -163,7 +176,7 @@ public class HashBitmap extends Datatype implements Editable, IsNumeric
     // updating value
     Long number = getValueOfItem(list.getSelectedValue());
     if (number != null) {
-      value = number.longValue();
+      setValue(number.longValue());
     } else {
       return false;
     }
@@ -240,7 +253,11 @@ public class HashBitmap extends Datatype implements Editable, IsNumeric
 
   protected void setValue(long newValue)
   {
+    final long oldValue = value;
     this.value = newValue;
+    if (oldValue != newValue) {
+      firePropertyChange(oldValue, newValue);
+    }
   }
 
   /** Called whenever the user selects a new list item. */
@@ -354,4 +371,3 @@ public class HashBitmap extends Datatype implements Editable, IsNumeric
     }
   }
 }
-

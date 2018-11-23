@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -9,6 +9,19 @@ import java.nio.ByteBuffer;
 import org.infinity.resource.AbstractStruct;
 import org.infinity.resource.StructEntry;
 
+/**
+ * Field that represents binary data in decimal format in their editor.
+ *
+ * <h2>Bean property</h2>
+ * When this field is child of {@link AbstractStruct}, then changes of its internal
+ * value reported as {@link PropertyChangeEvent}s of the {@link #getParent() parent}
+ * struct.
+ * <ul>
+ * <li>Property name: {@link #getName() name} of this field</li>
+ * <li>Property type: {@code byte[]}</li>
+ * <li>Value meaning: raw bytes of this field</li>
+ * </ul>
+ */
 public final class UnknownDecimal extends Unknown
 {
   public UnknownDecimal(ByteBuffer buffer, int offset, int length, String name)
@@ -43,8 +56,7 @@ public final class UnknownDecimal extends Unknown
         index = value.indexOf((int)' ');
       }
       if (counter == newdata.length) {
-        buffer.position(0);
-        buffer.put(newdata);
+        setValue(newdata);
         return true;
       }
     } catch (NumberFormatException e) {
@@ -75,4 +87,3 @@ public final class UnknownDecimal extends Unknown
       return "";
   }
 }
-

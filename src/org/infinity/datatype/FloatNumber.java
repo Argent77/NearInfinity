@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -11,7 +11,20 @@ import java.nio.ByteBuffer;
 import org.infinity.resource.StructEntry;
 import org.infinity.util.io.StreamUtils;
 
-
+/**
+ * Field that represents numerical value which is usually edited in a floating
+ * point mode.
+ *
+ * <h2>Bean property</h2>
+ * When this field is child of {@link AbstractStruct}, then changes of its internal
+ * value reported as {@link PropertyChangeEvent}s of the {@link #getParent() parent}
+ * struct.
+ * <ul>
+ * <li>Property name: {@link #getName() name} of this field</li>
+ * <li>Property type: {@code double}</li>
+ * <li>Value meaning: numerical value of this field</li>
+ * </ul>
+ */
 public class FloatNumber extends Datatype implements InlineEditable
 {
   private double value;
@@ -24,27 +37,26 @@ public class FloatNumber extends Datatype implements InlineEditable
   public FloatNumber(StructEntry parent, ByteBuffer buffer, int offset, int length, String name)
   {
     super(parent, offset, length, name);
-    value = 0.0;
     read(buffer, offset);
   }
 
 //--------------------- Begin Interface InlineEditable ---------------------
 
- @Override
- public boolean update(Object value)
- {
-   try {
-     double newValue = Double.parseDouble(value.toString());
-     if (getSize() == 4) {
-       newValue = Double.valueOf(newValue).floatValue();
-     }
-     this.value = newValue;
-     return true;
-   } catch (NumberFormatException e) {
-     e.printStackTrace();
-   }
-   return false;
- }
+  @Override
+  public boolean update(Object value)
+  {
+    try {
+      double newValue = Double.parseDouble(value.toString());
+      if (getSize() == 4) {
+        newValue = Double.valueOf(newValue).floatValue();
+      }
+      setValue(newValue);
+      return true;
+    } catch (NumberFormatException e) {
+      e.printStackTrace();
+    }
+    return false;
+  }
 
 //--------------------- End Interface InlineEditable ---------------------
 
@@ -88,8 +100,16 @@ public class FloatNumber extends Datatype implements InlineEditable
     return value;
   }
 
+  private void setValue(double newValue)
+  {
+    final double oldValue = value;
+    value = newValue;
+    if (Double.compare(oldValue, newValue) != 0) {
+      firePropertyChange(oldValue, newValue);
+    }
+  }
 
-  // Converts byte array of specified length into a double value
+  /** Converts byte array of specified length into a double value. */
   private static double toFloatNumber(ByteBuffer buffer, int offset, int length)
   {
     if (length == 4 || length == 8) {
@@ -104,7 +124,7 @@ public class FloatNumber extends Datatype implements InlineEditable
     return 0.0;
   }
 
-  // Converts double value into byte array of specified length
+  /** Converts double value into byte array of specified length. */
   private static ByteBuffer toByteBuffer(double value, int length)
   {
     if (length == 4 || length == 8) {

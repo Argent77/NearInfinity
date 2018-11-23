@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -27,6 +27,19 @@ import org.infinity.resource.AbstractStruct;
 import org.infinity.resource.StructEntry;
 import org.infinity.util.Misc;
 
+/**
+ * Field that represents an integer enumeration of some values.
+ *
+ * <h2>Bean property</h2>
+ * When this field is child of {@link AbstractStruct}, then changes of its internal
+ * value reported as {@link PropertyChangeEvent}s of the {@link #getParent() parent}
+ * struct.
+ * <ul>
+ * <li>Property name: {@link #getName() name} of this field</li>
+ * <li>Property type: {@code int}</li>
+ * <li>Value meaning: value of the enumeration</li>
+ * </ul>
+ */
 public class Bitmap extends Datatype implements Editable, IsNumeric
 {
   private final String[] table;
@@ -108,12 +121,7 @@ public class Bitmap extends Datatype implements Editable, IsNumeric
   public boolean updateValue(AbstractStruct struct)
   {
     // updating value
-    final String svalue = list.getSelectedValue();
-    value = 0;
-    //FIXME: Ineffective code
-    while (!svalue.equals(toString(value))) {
-      value++;
-    }
+    setValue(calcValue());
 
     // notifying listeners
     fireValueUpdated(new UpdateEvent(this, struct));
@@ -190,18 +198,37 @@ public class Bitmap extends Datatype implements Editable, IsNumeric
     return null;
   }
 
-  // Returns a formatted description of the specified value.
+  /** Returns a formatted description of the specified value. */
   private String toString(int nr)
   {
     if (nr >= table.length) {
       return "Unknown (" + nr + ')';
     } else if (nr < 0) {
       return "Error (" + nr + ')';
-    } else if (table[nr] == null || table[nr].equals("")) {
+    } else if (table[nr] == null || table[nr].isEmpty()) {
       return "Unknown (" + nr + ')';
     } else {
       return table[nr] + " (" + nr + ')';
     }
   }
-}
 
+  private void setValue(int newValue)
+  {
+    final int oldValue = value;
+    value = newValue;
+    if (oldValue != newValue) {
+      firePropertyChange(oldValue, newValue);
+    }
+  }
+
+  private int calcValue()
+  {
+    final String svalue = list.getSelectedValue();
+    int val = 0;
+    //FIXME: Ineffective code
+    while (!svalue.equals(toString(val))) {
+      val++;
+    }
+    return val;
+  }
+}

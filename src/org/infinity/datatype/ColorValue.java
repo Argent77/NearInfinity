@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -61,6 +61,19 @@ import org.infinity.util.Misc;
 import org.infinity.util.Table2da;
 import org.infinity.util.Table2daCache;
 
+/**
+ * Field that represents indexed color or color range.
+ *
+ * <h2>Bean property</h2>
+ * When this field is child of {@link AbstractStruct}, then changes of its internal
+ * value reported as {@link PropertyChangeEvent}s of the {@link #getParent() parent}
+ * struct.
+ * <ul>
+ * <li>Property name: {@link #getName() name} of this field</li>
+ * <li>Property type: {@code int}</li>
+ * <li>Value meaning: index of the color in the color table</li>
+ * </ul>
+ */
 public class ColorValue extends Datatype implements Editable, IsNumeric
 {
   private static final int DEFAULT_COLOR_WIDTH  = 16;
@@ -100,82 +113,82 @@ public class ColorValue extends Datatype implements Editable, IsNumeric
 
 //--------------------- Begin Interface Editable ---------------------
 
- @Override
- public JComponent edit(ActionListener container)
- {
-   int defaultColorWidth = (colorEntry == null) ? DEFAULT_COLOR_WIDTH : 0;
-   colorList = new JList<Image>(new ColorListModel(defaultColorWidth, DEFAULT_COLOR_HEIGHT, colorEntry));
-   colorList.setCellRenderer(new ColorCellRenderer(colorMap));
-   colorList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-   colorList.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-   colorList.addMouseListener(new MouseAdapter() {
-     @Override
-     public void mouseClicked(MouseEvent event)
-     {
-       if (event.getClickCount() == 2) {
-         container.actionPerformed(new ActionEvent(this, 0, StructViewer.UPDATE_VALUE));
-       }
-     }
-   });
-   colorList.addKeyListener(new KeyAdapter() {
-     @Override
-     public void keyPressed(KeyEvent event)
-     {
-       if (event.getKeyCode() == KeyEvent.VK_ENTER) {
-         container.actionPerformed(new ActionEvent(this, 0, StructViewer.UPDATE_VALUE));
-       }
-     }
-   });
-   JScrollPane scroll = new JScrollPane(colorList);
-   scroll.setBorder(BorderFactory.createEmptyBorder());
+  @Override
+  public JComponent edit(ActionListener container)
+  {
+    int defaultColorWidth = (colorEntry == null) ? DEFAULT_COLOR_WIDTH : 0;
+    colorList = new JList<>(new ColorListModel(defaultColorWidth, DEFAULT_COLOR_HEIGHT, colorEntry));
+    colorList.setCellRenderer(new ColorCellRenderer(colorMap));
+    colorList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+    colorList.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+    colorList.addMouseListener(new MouseAdapter() {
+      @Override
+      public void mouseClicked(MouseEvent event)
+      {
+        if (event.getClickCount() == 2) {
+          container.actionPerformed(new ActionEvent(this, 0, StructViewer.UPDATE_VALUE));
+        }
+      }
+    });
+    colorList.addKeyListener(new KeyAdapter() {
+      @Override
+      public void keyPressed(KeyEvent event)
+      {
+        if (event.getKeyCode() == KeyEvent.VK_ENTER) {
+          container.actionPerformed(new ActionEvent(this, 0, StructViewer.UPDATE_VALUE));
+        }
+      }
+    });
+    JScrollPane scroll = new JScrollPane(colorList);
+    scroll.setBorder(BorderFactory.createEmptyBorder());
 
-   int selection = Math.min(colorList.getModel().getSize(), Math.max(0, getValue()));
-   colorList.setSelectedIndex(selection);
+    int selection = Math.min(colorList.getModel().getSize(), Math.max(0, getValue()));
+    colorList.setSelectedIndex(selection);
 
-   JButton bUpdate = new JButton("Update value", Icons.getIcon(Icons.ICON_REFRESH_16));
-   bUpdate.addActionListener(container);
-   bUpdate.setActionCommand(StructViewer.UPDATE_VALUE);
+    JButton bUpdate = new JButton("Update value", Icons.getIcon(Icons.ICON_REFRESH_16));
+    bUpdate.addActionListener(container);
+    bUpdate.setActionCommand(StructViewer.UPDATE_VALUE);
 
-   JPanel panel = new JPanel(new GridBagLayout());
+    JPanel panel = new JPanel(new GridBagLayout());
 
-   GridBagConstraints gbc = new GridBagConstraints();
-   gbc = ViewerUtil.setGBC(gbc, 0, 0, 1, 1, 1.0, 1.0, GridBagConstraints.CENTER,
-                           GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0);
-   panel.add(scroll, gbc);
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc = ViewerUtil.setGBC(gbc, 0, 0, 1, 1, 1.0, 1.0, GridBagConstraints.CENTER,
+                            GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0);
+    panel.add(scroll, gbc);
 
-   gbc = ViewerUtil.setGBC(gbc, 1, 0, 1, 1, 0.0, 0.0, GridBagConstraints.CENTER,
-                           GridBagConstraints.NONE, new Insets(0, 8, 0, 0), 0, 0);
-   panel.add(bUpdate, gbc);
+    gbc = ViewerUtil.setGBC(gbc, 1, 0, 1, 1, 0.0, 0.0, GridBagConstraints.CENTER,
+                            GridBagConstraints.NONE, new Insets(0, 8, 0, 0), 0, 0);
+    panel.add(bUpdate, gbc);
 
-   Dimension dim = (colorMap != null) ? new Dimension(DIM_MEDIUM.width + 100, DIM_MEDIUM.height) : DIM_MEDIUM;
-   panel.setMinimumSize(Misc.getScaledDimension(dim));
-   panel.setPreferredSize(Misc.getScaledDimension(dim));
+    Dimension dim = (colorMap != null) ? new Dimension(DIM_MEDIUM.width + 100, DIM_MEDIUM.height) : DIM_MEDIUM;
+    panel.setMinimumSize(Misc.getScaledDimension(dim));
+    panel.setPreferredSize(Misc.getScaledDimension(dim));
 
-   return panel;
- }
+    return panel;
+  }
 
- @Override
- public void select()
- {
-   colorList.ensureIndexIsVisible(colorList.getSelectedIndex());
- }
+  @Override
+  public void select()
+  {
+    colorList.ensureIndexIsVisible(colorList.getSelectedIndex());
+  }
 
- @Override
- public boolean updateValue(AbstractStruct struct)
- {
-   if (colorList.getSelectedIndex() >= 0) {
-     if (number != colorList.getSelectedIndex()) {
-       number = colorList.getSelectedIndex();
+  @Override
+  public boolean updateValue(AbstractStruct struct)
+  {
+    if (colorList.getSelectedIndex() >= 0) {
+      if (number != colorList.getSelectedIndex()) {
+        setValue(colorList.getSelectedIndex());
 
-       // notifying listeners
-       fireValueUpdated(new UpdateEvent(this, struct));
-     }
+        // notifying listeners
+        fireValueUpdated(new UpdateEvent(this, struct));
+      }
 
-     return true;
-   }
+      return true;
+    }
 
-   return false;
- }
+    return false;
+  }
 
 //--------------------- Begin Interface Writeable ---------------------
 
@@ -255,6 +268,15 @@ public class ColorValue extends Datatype implements Editable, IsNumeric
       }
     }
     return retVal;
+  }
+
+  private void setValue(int newValue)
+  {
+    final int oldValue = number;
+    number = newValue;
+    if (oldValue != newValue) {
+      firePropertyChange(oldValue, newValue);
+    }
   }
 
 //-------------------------- INNER CLASSES --------------------------

@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -8,9 +8,15 @@ import java.awt.event.ActionListener;
 
 import javax.swing.JComponent;
 
+import org.infinity.gui.StructViewer;
 import org.infinity.resource.AbstractStruct;
 import org.infinity.resource.StructEntry;
 
+/**
+ * Interface for fields that editable via external dialog, and not via inline editor
+ * in the {@link StructViewer}. For inline editing {@link Datatype datatype} must
+ * implement the {@link InlineEditable} interface.
+ */
 public interface Editable extends StructEntry
 {
   /**
@@ -33,4 +39,3 @@ public interface Editable extends StructEntry
    */
   boolean updateValue(AbstractStruct struct);
 }
-

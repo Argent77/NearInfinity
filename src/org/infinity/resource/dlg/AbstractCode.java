@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.dlg;
@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Objects;
 import java.util.SortedSet;
 
 import javax.swing.JButton;
@@ -235,11 +236,11 @@ public abstract class AbstractCode extends Datatype
     JButton bUpdate = (JButton)buttonPanel.getControlByType(CtrlUpdate);
     if (bCheck.isEnabled())
       bCheck.doClick();
-    if (errors.size() > 0) {
+    if (!errors.isEmpty()) {
       String options[] = {"Update", "Cancel"};
       if (JOptionPane.showOptionDialog(textArea.getTopLevelAncestor(), "Errors exist. Update anyway?", "Update value",
                                        JOptionPane.YES_NO_OPTION,
-                                       JOptionPane.WARNING_MESSAGE, null, options, options[0]) != 0) {
+                                       JOptionPane.WARNING_MESSAGE, null, options, options[0]) != JOptionPane.YES_OPTION) {
 
         // notifying listeners
         fireValueUpdated(new UpdateEvent(this, struct));
@@ -247,14 +248,15 @@ public abstract class AbstractCode extends Datatype
         return true;
       }
     }
-    text = textArea.getText();
-    int index = text.indexOf((int)'\n');
+    String text = textArea.getText();
+    int index = text.indexOf('\n');
     while (index != -1) {
       text = text.substring(0, index) + '\r' + text.substring(index);
-      index = text.indexOf((int)'\n', index + 2);
+      index = text.indexOf('\n', index + 2);
     }
     bUpdate.setEnabled(false);
 
+    setValue(text);
     // notifying listeners
     fireValueUpdated(new UpdateEvent(this, struct));
 
@@ -380,5 +382,13 @@ public abstract class AbstractCode extends Datatype
     textArea.select(startpos, endpos);
     textArea.getCaret().setSelectionVisible(true);
   }
-}
 
+  private void setValue(String newValue)
+  {
+    final String oldValue = getText();
+    text = newValue;
+    if (!Objects.equals(oldValue, newValue)) {
+      firePropertyChange(oldValue, newValue);
+    }
+  }
+}

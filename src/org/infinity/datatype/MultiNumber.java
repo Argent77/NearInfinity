@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -33,6 +33,16 @@ import org.infinity.util.Misc;
 
 /**
  * A Number object consisting of multiple values of a given number of bits.
+ *
+ * <h2>Bean property</h2>
+ * When this field is child of {@link AbstractStruct}, then changes of its internal
+ * value reported as {@link PropertyChangeEvent}s of the {@link #getParent() parent}
+ * struct.
+ * <ul>
+ * <li>Property name: {@link #getName() name} of this field</li>
+ * <li>Property type: {@code int}</li>
+ * <li>Value meaning: OR'ed values of each individual subfield of this field</li>
+ * </ul>
  */
 public class MultiNumber extends Datatype implements Editable, IsNumeric
 {
@@ -172,7 +182,7 @@ public class MultiNumber extends Datatype implements Editable, IsNumeric
   @Override
   public boolean updateValue(AbstractStruct struct)
   {
-    value = mValues.getValue();
+    setValueImpl(mValues.getValue());
 
     // notifying listeners
     fireValueUpdated(new UpdateEvent(this, struct));
@@ -290,14 +300,14 @@ public class MultiNumber extends Datatype implements Editable, IsNumeric
   public void setValue(int value)
   {
     mValues.setValue(value);
-    this.value = mValues.getValue();
+    setValueImpl(mValues.getValue());
   }
 
   /** Sets the specified value. */
   public void setValue(int idx, int value)
   {
     mValues.setValue(idx, value);
-    this.value = mValues.getValue();
+    setValueImpl(mValues.getValue());
   }
 
   /**
@@ -315,6 +325,15 @@ public class MultiNumber extends Datatype implements Editable, IsNumeric
       retVal |= -1 & ~((1 << bits) - 1);
     }
     return retVal;
+  }
+
+  private void setValueImpl(int newValue)
+  {
+    final int oldValue = value;
+    value = newValue;
+    if (oldValue != newValue) {
+      firePropertyChange(oldValue, newValue);
+    }
   }
 
 //-------------------------- INNER CLASSES --------------------------

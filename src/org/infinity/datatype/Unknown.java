@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -11,6 +11,7 @@ import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -25,6 +26,19 @@ import org.infinity.resource.StructEntry;
 import org.infinity.util.Misc;
 import org.infinity.util.io.StreamUtils;
 
+/**
+ * Field that represents binary data in hexademical format in their editor.
+ *
+ * <h2>Bean property</h2>
+ * When this field is child of {@link AbstractStruct}, then changes of its internal
+ * value reported as {@link PropertyChangeEvent}s of the {@link #getParent() parent}
+ * struct.
+ * <ul>
+ * <li>Property name: {@link #getName() name} of this field</li>
+ * <li>Property type: {@code byte[]}</li>
+ * <li>Value meaning: raw bytes of this field</li>
+ * </ul>
+ */
 public class Unknown extends Datatype implements Editable, IsBinary
 {
   protected InfinityTextArea textArea;
@@ -111,26 +125,11 @@ public class Unknown extends Datatype implements Editable, IsBinary
   @Override
   public boolean updateValue(AbstractStruct struct)
   {
-    String value = textArea.getText().trim();
-    value = value.replaceAll("\r?\n", " ");
-    int index = value.indexOf((int)' ');
-    while (index != -1) {
-      value = value.substring(0, index) + value.substring(index + 1);
-      index = value.indexOf((int)' ');
-    }
-    if (value.length() != 2 * buffer.limit())
+    final byte[] newData = calcValue(2, 16);
+    if (newData == null) {
       return false;
-    byte[] newdata = new byte[buffer.limit()];
-    for (int i = 0; i < newdata.length; i++) {
-      String bytechars = value.substring(2 * i, 2 * i + 2);
-      try {
-        newdata[i] = (byte)Integer.parseInt(bytechars, 16);
-      } catch (NumberFormatException e) {
-        return false;
-      }
     }
-    buffer.position(0);
-    buffer.put(newdata);
+    setValue(newData);
 
     // notifying listeners
     fireValueUpdated(new UpdateEvent(this, struct));
@@ -196,5 +195,48 @@ public class Unknown extends Datatype implements Editable, IsBinary
     } else
       return "";
   }
-}
 
+  protected void setValue(byte[] newValue)
+  {
+    buffer.position(0);
+    final byte[] oldValue = new byte[buffer.remaining()];
+    buffer.get(oldValue);
+
+    buffer.position(0);
+    buffer.put(newValue);
+
+    if (!Arrays.equals(oldValue, newValue)) {
+      firePropertyChange(oldValue, newValue);
+    }
+  }
+
+  /**
+   * Parses string from {@link #textArea editor} and returns it as byte array.
+   * All spaces and newline characters stripped from string before conversion.
+   *
+   * @param unit Length of each byte in characters in the input string
+   * @param radix The radix to be used while parsing input string
+   *
+   * @return {@code null}, if length of the input string not equals field size
+   *         or text has unconvertible symbols
+   */
+  protected byte[] calcValue(int unit, int radix)
+  {
+    final String value = textArea.getText().trim().replaceAll("\r?\n| ", "");
+    final int length = buffer.limit();
+    if (value.length() != unit * length) {
+      return null;
+    }
+    try {
+      final byte[] data = new byte[length];
+      for (int i = 0; i < length; ++i) {
+        final int from = i * unit;
+        final String chars = value.substring(from, from + unit);
+        data[i] = (byte)Integer.parseInt(chars, radix);
+      }
+      return data;
+    } catch (NumberFormatException ex) {
+      return null;
+    }
+  }
+}

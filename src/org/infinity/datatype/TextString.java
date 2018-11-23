@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -8,12 +8,26 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.Objects;
 
 import org.infinity.gui.BrowserMenuBar;
 import org.infinity.resource.StructEntry;
 import org.infinity.util.Misc;
 import org.infinity.util.io.StreamUtils;
 
+/**
+ * Field that represents string value in global editor encoding.
+ *
+ * <h2>Bean property</h2>
+ * When this field is child of {@link AbstractStruct}, then changes of its internal
+ * value reported as {@link PropertyChangeEvent}s of the {@link #getParent() parent}
+ * struct.
+ * <ul>
+ * <li>Property name: {@link #getName() name} of this field</li>
+ * <li>Property type: {@link String}</li>
+ * <li>Value meaning: text value of the field</li>
+ * </ul>
+ */
 public final class TextString extends Datatype implements InlineEditable, IsTextual
 {
   private final Charset charset;
@@ -39,9 +53,10 @@ public final class TextString extends Datatype implements InlineEditable, IsText
   public boolean update(Object value)
   {
     String newstring = (String)value;
-    if (newstring.length() > getSize())
+    if (newstring.length() > getSize()) {
       return false;
-    text = newstring;
+    }
+    setValue(newstring);
     return true;
   }
 
@@ -99,5 +114,13 @@ public final class TextString extends Datatype implements InlineEditable, IsText
   {
     return getText();
   }
-}
 
+  private void setValue(String newValue)
+  {
+    final String oldValue = getText();
+    text = newValue;
+    if (!Objects.equals(oldValue, newValue)) {
+      firePropertyChange(oldValue, newValue);
+    }
+  }
+}

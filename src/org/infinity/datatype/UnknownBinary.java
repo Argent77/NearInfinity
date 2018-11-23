@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -9,6 +9,19 @@ import java.nio.ByteBuffer;
 import org.infinity.resource.AbstractStruct;
 import org.infinity.resource.StructEntry;
 
+/**
+ * Field that represents binary data in binary format in their editor.
+ *
+ * <h2>Bean property</h2>
+ * When this field is child of {@link AbstractStruct}, then changes of its internal
+ * value reported as {@link PropertyChangeEvent}s of the {@link #getParent() parent}
+ * struct.
+ * <ul>
+ * <li>Property name: {@link #getName() name} of this field</li>
+ * <li>Property type: {@code byte[]}</li>
+ * <li>Value meaning: raw bytes of this field</li>
+ * </ul>
+ */
 public final class UnknownBinary extends Unknown
 {
   public UnknownBinary(ByteBuffer buffer, int offset, int length, String name)
@@ -26,27 +39,11 @@ public final class UnknownBinary extends Unknown
   @Override
   public boolean updateValue(AbstractStruct struct)
   {
-    String value = textArea.getText().trim();
-    value = value.replaceAll("\r?\n", " ");
-    int index = value.indexOf((int)' ');
-    while (index != -1) {
-      value = value.substring(0, index) + value.substring(index + 1);
-      index = value.indexOf((int)' ');
-    }
-    if (value.length() != 8 * buffer.limit()) {
+    final byte[] newData = calcValue(8, 2);
+    if (newData == null) {
       return false;
     }
-    byte newdata[] = new byte[buffer.limit()];
-    for (int i = 0; i < newdata.length; i++) {
-      String bytechars = value.substring(8 * i, 8 * i + 8);
-      try {
-        newdata[i] = (byte)Integer.parseInt(bytechars, 2);
-      } catch (NumberFormatException e) {
-        return false;
-      }
-    }
-    buffer.position(0);
-    buffer.put(newdata);
+    setValue(newData);
     return true;
   }
 
@@ -72,4 +69,3 @@ public final class UnknownBinary extends Unknown
       return "";
   }
 }
-

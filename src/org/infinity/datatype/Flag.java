@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -26,6 +26,19 @@ import org.infinity.resource.AbstractStruct;
 import org.infinity.resource.StructEntry;
 import org.infinity.util.Misc;
 
+/**
+ * Field that represents several numerical values as flags.
+ *
+ * <h2>Bean property</h2>
+ * When this field is child of {@link AbstractStruct}, then changes of its internal
+ * value reported as {@link PropertyChangeEvent}s of the {@link #getParent() parent}
+ * struct.
+ * <ul>
+ * <li>Property name: {@link #getName() name} of this field</li>
+ * <li>Property type: {@code long}</li>
+ * <li>Value meaning: the set flags of this field</li>
+ * </ul>
+ */
 public class Flag extends Datatype implements Editable, IsNumeric, ActionListener
 {
   public static final String DESC_NONE = "No flags set";
@@ -178,12 +191,7 @@ public class Flag extends Datatype implements Editable, IsNumeric, ActionListene
   public boolean updateValue(AbstractStruct struct)
   {
     // updating value
-    value = 0L;
-    for (int i = 0; i < checkBoxes.length; i++)
-      if (checkBoxes[i].isSelected()) {
-        setFlag(i);
-      }
-
+    setValue(calcValue());
     // notifying listeners
     fireValueUpdated(new UpdateEvent(this, struct));
 
@@ -276,22 +284,31 @@ public class Flag extends Datatype implements Editable, IsNumeric, ActionListene
 
   public void setValue(long newValue)
   {
+    final long oldValue = value;
     value = newValue;
+    if (oldValue != newValue) {
+      firePropertyChange(oldValue, newValue);
+    }
   }
 
-  private void setFlag(int i)
+  private long calcValue()
   {
-    long mask = 1L << i;
-    value |= mask;
+    long val = 0L;
+    for (int i = 0; i < checkBoxes.length; ++i) {
+      if (checkBoxes[i].isSelected()) {
+        val |= (1L << i);
+      }
+    }
+    return val;
   }
 
-  // Sets description for empty flags
+  /** Sets description for empty flags. */
   protected void setEmptyDesc(String desc)
   {
     nodesc = (desc != null) ? desc : DESC_NONE;
   }
 
-  // Sets labels and optional tooltips for each flag
+  /** Sets labels and optional tooltips for each flag. */
   protected void setFlagDescriptions(int size, String[] stable, int startOfs, char separator)
   {
     table = new String[8*size];
@@ -318,4 +335,3 @@ public class Flag extends Datatype implements Editable, IsNumeric, ActionListene
     }
   }
 }
-

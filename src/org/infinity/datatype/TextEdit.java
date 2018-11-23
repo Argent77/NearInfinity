@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -13,6 +13,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.EnumMap;
+import java.util.Objects;
 
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -32,6 +33,16 @@ import org.infinity.resource.StructEntry;
 import org.infinity.util.Misc;
 import org.infinity.util.io.StreamUtils;
 
+/**
+ * <h2>Bean property</h2>
+ * When this field is child of {@link AbstractStruct}, then changes of its internal
+ * value reported as {@link PropertyChangeEvent}s of the {@link #getParent() parent}
+ * struct.
+ * <ul>
+ * <li>Property name: {@link #getName() name} of this field</li>
+ * <li>Property type: {@link String}</li>
+ * </ul>
+ */
 public final class TextEdit extends Datatype implements Editable, IsTextual
 {
   public static enum EOLType {
@@ -157,7 +168,7 @@ public final class TextEdit extends Datatype implements Editable, IsTextual
   @Override
   public boolean updateValue(AbstractStruct struct)
   {
-    text = textArea.getText();
+    setValue(textArea.getText());
 
     // notifying listeners
     fireValueUpdated(new UpdateEvent(this, struct));
@@ -292,6 +303,14 @@ public final class TextEdit extends Datatype implements Editable, IsTextual
       return s;
   }
 
+  private void setValue(String newValue)
+  {
+    final String oldValue = getText();
+    text = newValue;
+    if (!Objects.equals(oldValue, newValue)) {
+      firePropertyChange(oldValue, newValue);
+    }
+  }
 
 //-------------------------- INNER CLASSES --------------------------
 

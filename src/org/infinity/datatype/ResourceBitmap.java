@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -37,6 +37,16 @@ import org.infinity.util.Misc;
 
 /**
  * Datatype for selecting resource entries, constructed from a predefined list of key/value pairs.
+ *
+ * <h2>Bean property</h2>
+ * When this field is child of {@link AbstractStruct}, then changes of its internal
+ * value reported as {@link PropertyChangeEvent}s of the {@link #getParent() parent}
+ * struct.
+ * <ul>
+ * <li>Property name: {@link #getName() name} of this field</li>
+ * <li>Property type: {@code long}</li>
+ * <li>Value meaning: index of the resource in the predefined list</li>
+ * </ul>
  */
 public class ResourceBitmap extends Datatype
     implements Editable, IsNumeric, IsReference, ActionListener, ListSelectionListener
@@ -207,7 +217,7 @@ public class ResourceBitmap extends Datatype
       return false;
     }
 
-    value = selected.getValue();
+    setValue(selected.getValue());
     // notifying listeners
     fireValueUpdated(new UpdateEvent(this, struct));
 
@@ -317,6 +327,15 @@ public class ResourceBitmap extends Datatype
       }
     }
     return null;
+  }
+
+  private void setValue(long newValue)
+  {
+    final long oldValue = value;
+    value = newValue;
+    if (oldValue != newValue) {
+      firePropertyChange(oldValue, newValue);
+    }
   }
 
 //-------------------------- INNER CLASSES --------------------------

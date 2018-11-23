@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -39,7 +39,19 @@ import org.infinity.resource.graphics.ColorConvert;
 import org.infinity.util.Misc;
 
 
-/** Implements a RGB color picker control. */
+/**
+ * Implements a RGB color picker control.
+ *
+ * <h2>Bean property</h2>
+ * When this field is child of {@link AbstractStruct}, then changes of its internal
+ * value reported as {@link PropertyChangeEvent}s of the {@link #getParent() parent}
+ * struct.
+ * <ul>
+ * <li>Property name: {@link #getName() name} of this field</li>
+ * <li>Property type: {@code int}</li>
+ * <li>Value meaning: components of the color in format determined by field</li>
+ * </ul>
+ */
 public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseListener, FocusListener
 {
   /** Supported color formats. */
@@ -276,7 +288,7 @@ public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseL
   @Override
   public boolean updateValue(AbstractStruct struct)
   {
-    value = getInputRgbValue();
+    setValue(getInputRgbValue());
 
     // notifying listeners
     fireValueUpdated(new UpdateEvent(this, struct));
@@ -444,6 +456,15 @@ public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseL
 
 //--------------------- End Interface IsNumeric ---------------------
 
+  private void setValue(int newValue)
+  {
+    final int oldValue = value;
+    value = newValue;
+    if (oldValue != newValue) {
+      firePropertyChange(oldValue, newValue);
+    }
+  }
+
   // r, g, b in range [0..255]
   private int getRgbValue(int r, int g, int b)
   {
@@ -475,7 +496,7 @@ public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseL
     return (color >>> shiftBlue) & 0xff;
   }
 
-  // Returns a color value based on the RGB input fields
+  /** Returns a color value based on the RGB input fields. */
   private int getInputRgbValue() throws NumberFormatException
   {
     return getRgbValue(getInputRed(), getInputGreen(), getInputBlue());
@@ -502,7 +523,7 @@ public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseL
     return v;
   }
 
-  // Checks and returns either the number fetched from the input field or oldVal on error
+  /** Checks and returns either the number fetched from the input field or oldVal on error. */
   private int validateNumberInput(JTextField tf, int oldVal, int min, int max)
   {
     if (tf != null) {
@@ -516,7 +537,10 @@ public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseL
     return oldVal;
   }
 
-  // Returns color value based on the main preview coordinates and the saturation value from the input field
+  /**
+   * Returns color value based on the main preview coordinates and the saturation
+   * value from the input field.
+   */
   private void updateMainPreviewValue(int x, int y)
   {
     if (x < 0) x = 0; else if (x >= rcMainPreview.getWidth()) x = rcMainPreview.getWidth() - 1;
@@ -525,7 +549,10 @@ public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseL
     tmpBri = 100 - (y * 100 / rcMainPreview.getHeight());
   }
 
-  // Returns color value based on the secondary preview coordinate and the hue/brightness values from the input fields
+  /**
+   * Returns color value based on the secondary preview coordinate and the
+   * hue/brightness values from the input fields.
+   */
   private void updateSecondPreviewValue(int y)
   {
     if (y < 0) y = 0; else if (y >= rcSecondPreview.getHeight()) y = rcSecondPreview.getHeight() - 1;
@@ -534,7 +561,7 @@ public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseL
 
   private void updateRgbFromHsb()
   {
-    Color c = new Color(Color.HSBtoRGB((float)tmpHue / 360.0f, (float)tmpSat / 100.0f, (float)tmpBri / 100.0f));
+    Color c = new Color(Color.HSBtoRGB(tmpHue / 360.0f, tmpSat / 100.0f, tmpBri / 100.0f));
     tmpRed = c.getRed();
     tmpGreen = c.getGreen();
     tmpBlue = c.getBlue();
@@ -544,12 +571,12 @@ public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseL
   {
     float[] hsb = {0.0f, 0.0f, 0.0f};
     Color.RGBtoHSB(tmpRed, tmpGreen, tmpBlue, hsb);
-    tmpHue = (int)Math.round(hsb[0]*360.0f);
-    tmpSat = (int)Math.round(hsb[1]*100.0f);
-    tmpBri = (int)Math.round(hsb[2]*100.0f);
+    tmpHue = Math.round(hsb[0]*360.0f);
+    tmpSat = Math.round(hsb[1]*100.0f);
+    tmpBri = Math.round(hsb[2]*100.0f);
   }
 
-  // Updates all temporary values for each color component
+  /** Updates all temporary values for each color component. */
   private void updateColorValues(int value)
   {
     tmpRed = getRed(value);
@@ -558,7 +585,7 @@ public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseL
     updateHsbFromRgb();
   }
 
-  // Update RGB input controls only
+  /** Update RGB input controls only. */
   private void updateInputRgb()
   {
     tfRed.setText(Integer.toString(tmpRed));
@@ -569,7 +596,7 @@ public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseL
     if (tfBlue.hasFocus()) tfBlue.selectAll();
   }
 
-  // Update HSB input controls only
+  /** Update HSB input controls only. */
   private void updateInputHsb()
   {
     tfHue.setText(Integer.toString(tmpHue));
@@ -580,7 +607,7 @@ public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseL
     if (tfBri.hasFocus()) tfBri.selectAll();
   }
 
-  // Update preview controls only
+  /** Update preview controls only. */
   private void updatePreview()
   {
     // update main preview
@@ -593,7 +620,7 @@ public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseL
     updateColorPreview();
   }
 
-  // Update controls with given color value
+  /** Update controls with given color value. */
   private void updateColor()
   {
     updateInputRgb();
@@ -601,7 +628,7 @@ public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseL
     updatePreview();
   }
 
-  // Update main (hue/brightness) preview
+  /** Update main (hue/brightness) preview. */
   private void updateMainPreview()
   {
     // drawing background
@@ -629,7 +656,7 @@ public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseL
     rcMainPreview.repaint();
   }
 
-  // Update secondary (saturation) preview
+  /** Update secondary (saturation) preview. */
   private void updateSecondPreview()
   {
     BufferedImage image = (BufferedImage)rcSecondPreview.getImage();
@@ -657,7 +684,7 @@ public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseL
     rcSecondPreview.repaint();
   }
 
-  // Update color preview box
+  /** Update color preview box. */
   private void updateColorPreview()
   {
     BufferedImage image = (BufferedImage)rcColorPreview.getImage();
@@ -672,7 +699,7 @@ public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseL
     rcColorPreview.repaint();
   }
 
-  // Update main preview background map
+  /** Update main preview background map. */
   private void initMainPreviewMap()
   {
     BufferedImage image = (BufferedImage)rcMainPreview.getImage();

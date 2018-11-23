@@ -11,6 +11,7 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.beans.PropertyChangeEvent;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -42,6 +43,16 @@ import org.infinity.util.StringTable;
 /**
  * A struct field that represents reference to string in a talk table file (dialog.tlk
  * or dialogF.tlk).
+ *
+ * <h2>Bean property</h2>
+ * When this field is child of {@link AbstractStruct}, then changes of its internal
+ * value reported as {@link PropertyChangeEvent}s of the {@link #getParent() parent}
+ * struct.
+ * <ul>
+ * <li>Property name: {@link #getName() name} of this field</li>
+ * <li>Property type: {@code int}</li>
+ * <li>Value meaning: number of the string in the TLK</li>
+ * </ul>
  */
 public final class StringRef extends Datatype implements Editable, IsNumeric, IsTextual, ActionListener, ChangeListener
 {
@@ -248,7 +259,7 @@ public final class StringRef extends Datatype implements Editable, IsNumeric, Is
   @Override
   public boolean updateValue(AbstractStruct struct)
   {
-    value = getValueFromEditor();
+    setValue(getValueFromEditor());
 
     // notifying listeners
     fireValueUpdated(new UpdateEvent(this, struct));
@@ -322,12 +333,17 @@ public final class StringRef extends Datatype implements Editable, IsNumeric, Is
 
 //--------------------- End Interface IsTextual ---------------------
 
-  public void setValue(int newvalue)
+  public void setValue(int newValue)
   {
-    value = newvalue;
-    taRefText.setText(StringTable.getStringRef(value));
-    sRefNr.setValue(value);
-    enablePlay(value);
+    final int oldValue = value;
+    value = newValue;
+    taRefText.setText(StringTable.getStringRef(newValue));
+    sRefNr.setValue(newValue);
+    enablePlay(newValue);
+
+    if (oldValue != newValue) {
+      firePropertyChange(oldValue, newValue);
+    }
   }
 
   /**

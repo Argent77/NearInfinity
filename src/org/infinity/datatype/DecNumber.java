@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -11,6 +11,19 @@ import java.util.Locale;
 
 import org.infinity.resource.StructEntry;
 
+/**
+ * Field that represents numerical value which is usually edited in a decimal mode.
+ *
+ * <h2>Bean property</h2>
+ * When this field is child of {@link AbstractStruct}, then changes of its internal
+ * value reported as {@link PropertyChangeEvent}s of the {@link #getParent() parent}
+ * struct.
+ * <ul>
+ * <li>Property name: {@link #getName() name} of this field</li>
+ * <li>Property type: {@code long}</li>
+ * <li>Value meaning: numerical value of this field</li>
+ * </ul>
+ */
 public class DecNumber extends Datatype implements InlineEditable, IsNumeric
 {
   private long number;
@@ -34,7 +47,6 @@ public class DecNumber extends Datatype implements InlineEditable, IsNumeric
   public DecNumber(StructEntry parent, ByteBuffer buffer, int offset, int length, String name, boolean signed)
   {
     super(parent, offset, length, name);
-    this.number = 0L;
     this.signed = signed;
     read(buffer, offset);
   }
@@ -45,7 +57,7 @@ public class DecNumber extends Datatype implements InlineEditable, IsNumeric
   public boolean update(Object value)
   {
     try {
-      number = parseNumber(value, getSize(), signed, true);
+      setValue(parseNumber(value, getSize(), signed, true));
       return true;
     } catch (Exception e) {
       e.printStackTrace();
@@ -121,12 +133,16 @@ public class DecNumber extends Datatype implements InlineEditable, IsNumeric
 
   public void incValue(long value)
   {
-    number += value;
+    setValue(number + value);
   }
 
-  public void setValue(long value)
+  public void setValue(long newValue)
   {
-    number = value;
+    final long oldValue = number;
+    number = newValue;
+    if (oldValue != newValue) {
+      firePropertyChange(oldValue, newValue);
+    }
   }
 
   @Override
@@ -160,4 +176,3 @@ public class DecNumber extends Datatype implements InlineEditable, IsNumeric
     return newNumber;
   }
 }
-

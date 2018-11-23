@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -40,7 +41,18 @@ import org.infinity.util.io.StreamUtils;
 
 /**
  * Represents reference to another resource in game. This resource can be
- * sound, item, dialog, creature, image
+ * sound, item, dialog, creature, image.
+ *
+ * <h2>Bean property</h2>
+ * When this field is child of {@link AbstractStruct}, then changes of its internal
+ * value reported as {@link PropertyChangeEvent}s of the {@link #getParent() parent}
+ * struct.
+ * <ul>
+ * <li>Property name: {@link #getName() name} of this field</li>
+ * <li>Property type: {@link String}</li>
+ * <li>Value meaning: name of the resource (without extension, 8 chars max).
+ *     {code null} means that field not contains any reference</li>
+ * </ul>
  */
 public class ResourceRef extends Datatype
     implements Editable, IsTextual, IsReference, ActionListener, ListSelectionListener
@@ -238,7 +250,7 @@ public class ResourceRef extends Datatype
   {
     final ResourceRefEntry selected = list.getSelectedValue();
     if (selected == NONE) {
-      resname = NONE.name;//FIXME: use null instead of this
+      setValue(NONE.name);//FIXME: use null instead of this
 
       // notifying listeners
       fireValueUpdated(new UpdateEvent(this, struct));
@@ -248,15 +260,15 @@ public class ResourceRef extends Datatype
 
     final ResourceEntry entry = selected.entry;
     if (entry == null) {
-      resname = selected.name;
+      setValue(selected.name);
     } else {
       int i = -1;
       for (String ext : type) {
         //TODO: It seems that instead of toString getExtension must be used
         i = entry.toString().indexOf('.' + ext.toUpperCase(Locale.ENGLISH));
         if (i != -1) {
-          resname = entry.toString().substring(0, i);
           curtype = ext;
+          setValue(entry.toString().substring(0, i));
           break;
         }
       }
@@ -407,9 +419,24 @@ public class ResourceRef extends Datatype
   {
   }
 
-  private boolean isEditable(ResourceRefEntry ref) {
+  private boolean isEditable(ResourceRefEntry ref)
+  {
     return ref != null && ref != NONE && ref.entry != null;
   }
+
+  private void setValue(String newValue)
+  {
+    final String oldValue = NONE.name.equals(resname) ? null : resname;
+    resname = newValue;
+
+    if (NONE.name.equals(newValue)) {
+      newValue = null;
+    }
+    if (!Objects.equals(oldValue, newValue)) {
+      firePropertyChange(oldValue, newValue);
+    }
+  }
+
 // -------------------------- INNER CLASSES --------------------------
   /** Class that represents resource reference in the list of choice. */
   static final class ResourceRefEntry
@@ -465,4 +492,3 @@ public class ResourceRef extends Datatype
     }
   }
 }
-
