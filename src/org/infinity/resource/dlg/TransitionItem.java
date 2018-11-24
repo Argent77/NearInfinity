@@ -28,13 +28,13 @@ final class TransitionItem extends StateOwnerItem
   private final StateItem parent;
   /**
    * Item to which need go to in break cycles tree view mode. This item contains
-   * referense to the same transition as this one (i.e. {@code this.trans == main.trans})
+   * referense to the same transition as this one (i.e. {@code this.trans == main.ref.trans})
    */
-  private final TransitionItem main;
+  private final MainRef<TransitionItem> main;
   /** Tree item to which go this transition or {@code null}, if this transition terminates dialog. */
   StateItem nextState;
 
-  public TransitionItem(Transition trans, StateItem parent, TransitionItem main)
+  public TransitionItem(Transition trans, StateItem parent, MainRef<TransitionItem> main)
   {
     this.trans  = Objects.requireNonNull(trans,  "Transition dialog entry must be not null");
     this.parent = Objects.requireNonNull(parent, "Parent tree of transition item must be not null");
@@ -45,7 +45,7 @@ final class TransitionItem extends StateOwnerItem
   public Transition getEntry() { return trans; }
 
   @Override
-  public TransitionItem getMain() { return main; }
+  public TransitionItem getMain() { return main == null || main.ref == this ? null : main.ref; }
 
   @Override
   public DlgResource getDialog() { return (DlgResource)trans.getParent(); }

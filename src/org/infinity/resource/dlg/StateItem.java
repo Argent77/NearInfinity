@@ -29,13 +29,13 @@ final class StateItem extends ItemBase implements Iterable<TransitionItem>
   private final StateOwnerItem parent;
   /**
    * Item to which need go to in break cycles tree view mode. This item contains
-   * referense to the same state as this one (i.e. {@code this.state == main.state})
+   * referense to the same state as this one (i.e. {@code this.state == main.ref.state})
    */
-  private final StateItem main;
+  private final MainRef<StateItem> main;
   /** Items that represents transition tree nodes from this state. */
   ArrayList<TransitionItem> trans;
 
-  public StateItem(State state, StateOwnerItem parent, StateItem main)
+  public StateItem(State state, StateOwnerItem parent, MainRef<StateItem> main)
   {
     this.state  = Objects.requireNonNull(state,  "State dialog entry must be not null");
     this.parent = Objects.requireNonNull(parent, "Parent tree of state item must be not null");
@@ -46,7 +46,7 @@ final class StateItem extends ItemBase implements Iterable<TransitionItem>
   public State getEntry() { return state; }
 
   @Override
-  public StateItem getMain() { return main; }
+  public StateItem getMain() { return main == null || main.ref == this ? null : main.ref; }
 
   @Override
   public DlgResource getDialog() { return (DlgResource)state.getParent(); }
