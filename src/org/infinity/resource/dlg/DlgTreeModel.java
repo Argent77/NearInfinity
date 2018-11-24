@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.IntStream;
 
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
@@ -19,6 +20,7 @@ import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
 import org.infinity.datatype.ResourceRef;
+import org.infinity.gui.BrowserMenuBar;
 import org.infinity.resource.ResourceFactory;
 import org.infinity.resource.StructEntry;
 
@@ -190,6 +192,85 @@ final class DlgTreeModel implements TreeModel, TableModelListener
     }
   }
 
+  /**
+   * Removes visual sub-tree (including {@code item} itself) from tree model,
+   * notifies listeners about changes. Changes includes removal of nodes and
+   * changes in some non-main nodes (which a not a part of the deleted sub-tree),
+   * if among the deleted nodes there are main nodes. Does not change dialog tree
+   * entries - affects only GUI nodes.
+   *
+   * @param item Root of deleted sub-tree
+   */
+  private void removeItem(ItemBase item)
+  {
+    final TreeItemEntry entry = item.getEntry();
+    final List<ItemBase> items = allItems.get(entry);
+    if (items.remove(item)) {
+      // If element not exists in all items list it already deleted, so skip.
+      // This occurs when dialog has cycle and `item` is some item inside it
+      @SuppressWarnings("unchecked")
+      final MainRef<ItemBase> main = (MainRef<ItemBase>)mainItems.get(entry);
+      if (main != null && main.ref == item) {
+        if (items.isEmpty()) {
+          mainItems.remove(entry);
+        } else {
+          main.ref = items.get(0);
+          nodeChanged(main.ref);
+        }
+      }
+      item.traverseChildren(this::removeItem);
+    }
+  }
+
+  //<editor-fold defaultstate="collapsed" desc="State changed">
+  /**
+   * Adds continuous range of tree items that represent transitions from specified
+   * state and notifies listeners. If state is not main state and option
+   * {@link BrowserMenuBar#breakCyclesInDialogs()} is enabled, do nothing.
+   *
+   * @param parent Parent state under which tree items must be added
+   * @param startTransition First transition index that state has
+   * @param fromIndex Index of the first child tree item under {@code parent}
+   *        state to add, inclusive
+   * @param toIndex Index of the last child tree item under {@code parent}
+   *        state to add, exclusive
+   */
+  private void insertChildTransitions(StateItem parent, int startTransition, int fromIndex, int toIndex)
+  {
+    parent.trans.ensureCapacity(toIndex);
+    addTransitions(parent, startTransition + fromIndex, startTransition + toIndex);
+
+    final int[] childIndices = IntStream.range(fromIndex, toIndex).toArray();
+    final Object[] children  = parent.trans.subList(fromIndex, toIndex).toArray();
+
+    fireTreeNodesInserted(parent.getPath(), childIndices, children);
+  }
+
+  /**
+   * Removes all visual tree items under {@code parent} state and notifies listeners.
+   *
+   * @param parent Parent state at which tree items must be removed
+   * @param fromIndex Index of the first child tree item of the {@code state}
+   *        to remove, inclusive
+   * @param toIndex Index of the last child tree item of the {@code state}
+   *        to remove, exclusive
+   */
+  private void removeChildTransitions(StateItem parent, int fromIndex, int toIndex)
+  {
+    final List<TransitionItem> items = parent.trans.subList(fromIndex, toIndex);
+    final int[] childIndices = IntStream.range(fromIndex, toIndex).toArray();
+    final Object[] children  = items.toArray();
+
+    // Clear global registers and redirect main references
+    for (TransitionItem item : items) {
+      removeItem(item);
+    }
+
+    items.clear();
+    fireTreeNodesRemoved(parent.getPath(), childIndices, children);
+  }
+  //</editor-fold>
+
   //<editor-fold defaultstate="collapsed" desc="Event emitting">
   private void nodeChanged(ItemBase node)
   {
@@ -206,9 +287,18 @@ final class DlgTreeModel implements TreeModel, TableModelListener
   {
     if (!listeners.isEmpty()) {
       final TreeModelEvent event = new TreeModelEvent(this, path, childIndices, children);
-      for (int i = listeners.size()-1; i >= 0; i--) {
-        final TreeModelListener tml = listeners.get(i);
+      for (final TreeModelListener tml : listeners) {
         tml.treeNodesChanged(event);
+      }
+    }
+  }
+
+  private void fireTreeNodesInserted(TreePath path, int[] childIndices, Object[] children)
+  {
+    if (!listeners.isEmpty()) {
+      final TreeModelEvent event = new TreeModelEvent(this, path, childIndices, children);
+      for (final TreeModelListener tml : listeners) {
+        tml.treeNodesInserted(event);
       }
     }
   }
@@ -367,21 +457,35 @@ final class DlgTreeModel implements TreeModel, TableModelListener
   private void initState(StateItem state)
   {
     if (state.trans == null) {
-      final DlgResource dlg = state.getDialog();
       final int start = state.getEntry().getFirstTrans();
       final int count = state.getEntry().getTransCount();
 
       state.trans = new ArrayList<>(count);
-      for (int i = start; i < start + count; ++i) {
-        final Transition trans = dlg.getTransition(i);
-        if (trans != null) {
-          @SuppressWarnings("unchecked")
-          final MainRef<TransitionItem> main = (MainRef<TransitionItem>)mainItems.get(trans);
-          final TransitionItem item = new TransitionItem(trans, state, main);
+      addTransitions(state, start, start + count);
+    }
+  }
 
-          state.trans.add(item);
-          putItem(item, main);
-        }
+  /**
+   * Creates {@link TransitionItem}s for transitions at specified indexes.
+   *
+   * @param state State item for which need create additional transition tree items
+   * @param firstTransition Index of the first transition in the {@code state}
+   *        {@link StateItem#getDialog() dialog} that need to add, inclusive
+   * @param lastTransition Index of the last transition in the state dialog that
+   *        need to add, exclusive
+   */
+  private void addTransitions(StateItem state, int firstTransition, int lastTransition)
+  {
+    final DlgResource dlg = state.getDialog();
+    for (int i = firstTransition; i < lastTransition; ++i) {
+      final Transition trans = dlg.getTransition(i);
+      if (trans != null) {
+        @SuppressWarnings("unchecked")
+        final MainRef<TransitionItem> main = (MainRef<TransitionItem>)mainItems.get(trans);
+        final TransitionItem item = new TransitionItem(trans, state, main);
+
+        state.trans.add(item);
+        putItem(item, main);
       }
     }
   }
