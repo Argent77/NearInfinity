@@ -28,4 +28,7 @@ public interface TreeItemEntry extends StructEntry
    * @return Text for show or {@code null} if case of broken structure
    */
   StringRef getAssociatedText();
+
+  @Override
+  DlgResource getParent();
 }

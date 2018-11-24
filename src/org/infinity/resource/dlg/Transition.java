@@ -40,9 +40,9 @@ public final class Transition extends AbstractStruct implements AddRemovable, Tr
     super(null, DLG_TRANS, StreamUtils.getByteBuffer(32), 0);
   }
 
-  Transition(AbstractStruct superStruct, ByteBuffer buffer, int offset, int nr) throws Exception
+  Transition(DlgResource dlg, ByteBuffer buffer, int offset, int nr) throws Exception
   {
-    super(superStruct, DLG_TRANS + " " + nr, buffer, offset);
+    super(dlg, DLG_TRANS + " " + nr, buffer, offset);
     this.nr = nr;
   }
 
@@ -56,7 +56,10 @@ public final class Transition extends AbstractStruct implements AddRemovable, Tr
   {
     return (StringRef)getAttribute(DLG_TRANS_TEXT, false);
   }
-//</editor-fold>
+
+  @Override
+  public DlgResource getParent() { return (DlgResource)super.getParent(); }
+  //</editor-fold>
 
   public int getActionIndex()
   {

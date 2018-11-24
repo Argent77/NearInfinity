@@ -49,7 +49,7 @@ final class TransitionItem extends StateOwnerItem
   public TransitionItem getMain() { return main == null || main.ref == this ? null : main.ref; }
 
   @Override
-  public DlgResource getDialog() { return (DlgResource)trans.getParent(); }
+  public DlgResource getDialog() { return trans.getParent(); }
 
   @Override
   public Icon getIcon() { return ICON; }

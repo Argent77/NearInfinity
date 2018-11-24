@@ -34,9 +34,9 @@ public final class State extends AbstractStruct implements AddRemovable, TreeIte
     super(null, DLG_STATE, StreamUtils.getByteBuffer(16), 0);
   }
 
-  State(AbstractStruct superStruct, ByteBuffer buffer, int offset, int count) throws Exception
+  State(DlgResource dlg, ByteBuffer buffer, int offset, int count) throws Exception
   {
-    super(superStruct, DLG_STATE + " " + count, buffer, offset);
+    super(dlg, DLG_STATE + " " + count, buffer, offset);
     nr = count;
   }
 
@@ -49,6 +49,9 @@ public final class State extends AbstractStruct implements AddRemovable, TreeIte
   {
     return (StringRef)getAttribute(DLG_STATE_RESPONSE, false);
   }
+
+  @Override
+  public DlgResource getParent() { return (DlgResource)super.getParent(); }
   //</editor-fold>
 
   public int getFirstTrans()
