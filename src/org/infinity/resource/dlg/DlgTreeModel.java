@@ -4,6 +4,8 @@
 
 package org.infinity.resource.dlg;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,7 +27,7 @@ import org.infinity.resource.ResourceFactory;
 import org.infinity.resource.StructEntry;
 
 /** Creates and manages the dialog tree structure. */
-final class DlgTreeModel implements TreeModel, TableModelListener
+final class DlgTreeModel implements TreeModel, TableModelListener, PropertyChangeListener
 {
   private final ArrayList<TreeModelListener> listeners = new ArrayList<>();
   /** Maps used dialog names to dialog resources. */
@@ -47,6 +49,7 @@ final class DlgTreeModel implements TreeModel, TableModelListener
       putItem(state, null);
     }
     dlg.addTableModelListener(this);
+    dlg.addPropertyChangeListener(this);
   }
 
   //<editor-fold defaultstate="collapsed" desc="TreeModel">
@@ -152,6 +155,58 @@ final class DlgTreeModel implements TreeModel, TableModelListener
   }
   //</editor-fold>
 
+  //<editor-fold defaultstate="collapsed" desc="PropertyChangeListener">
+  @Override
+  public void propertyChange(PropertyChangeEvent e)
+  {
+    final Object src  = e.getSource();
+    final String prop = e.getPropertyName();
+    if (src instanceof TreeItemEntry) {
+      final List<ItemBase> items = allItems.get(src);
+      if (items == null) { return; }
+
+      // Count of responses changed
+      if (State.DLG_STATE_NUM_RESPONSES.equals(prop)) {
+        // Copy list since it can change during iteration
+        changeStateTransCount((State)src, new ArrayList<>(items), e.getOldValue(), e.getNewValue());
+      } else
+      // First response transition changed
+      if (State.DLG_STATE_FIRST_RESPONSE_INDEX.equals(prop)) {
+        // Copy list since it can change during iteration
+        changeStateFirstTrans((State)src, new ArrayList<>(items), e.getOldValue(), e.getNewValue());
+      } else
+      // Next dialog or next dialog state changed
+      if (Transition.DLG_TRANS_NEXT_DIALOG.equals(prop)
+       || Transition.DLG_TRANS_NEXT_DIALOG_STATE.equals(prop)
+      ) {
+        // Copy list since it can change during iteration
+        changeTransition(new ArrayList<>(items));
+      } else
+      // Transition flags changed
+      if (Transition.DLG_TRANS_FLAGS.equals(prop)) {
+        final int oldFlags = ((Number)e.getOldValue()).intValue();
+        final int newFlags = ((Number)e.getNewValue()).intValue();
+        final int diff = oldFlags ^ newFlags;
+
+        // Flag 3: Terminates dialogue - if changed, rebuild tree
+        if ((diff & (1 << 3)) != 0) {
+          // Copy list since it can change during iteration
+          changeTransition(new ArrayList<>(items));
+        } else
+        // Flag 0: Text associated - if changed, repaint nodes
+        // No need to repaint if flag 3 changed - it already repainted
+        if ((diff & (1 << 0)) != 0) {
+          items.forEach(this::nodeChanged);
+        }
+      } else
+      // Response text or Associated text changed
+      if (State.DLG_STATE_RESPONSE.equals(prop) || Transition.DLG_TRANS_TEXT.equals(prop)) {
+        items.forEach(this::nodeChanged);
+      }
+    }
+  }
+  //</editor-fold>
+
   //<editor-fold defaultstate="collapsed" desc="Events">
   /**
    * Updates tree when specified state or transition entry changed.
@@ -224,6 +279,93 @@ final class DlgTreeModel implements TreeModel, TableModelListener
 
   //<editor-fold defaultstate="collapsed" desc="State changed">
   /**
+   * Changes tree structure accourding to the changes in the
+   * {@link State#DLG_STATE_FIRST_RESPONSE_INDEX} property of the state.
+   * <p>
+   * Example:
+   * <code><pre>
+   * Transition indexes (start increased by 2):
+   *    oldValue: 3, cnt: 4 -> [3, 4, 5, 6]
+   *    newValue: 5, cnt: 4 -> [5, 6, 7, 8] -> remove [3, 4], insert [7, 8]
+   * Tree item child index:     0  1  2  3             0  1           2  3
+   *
+   * Transition indexes (start decreased by 2):
+   *    oldValue: 3, cnt: 4 -> [3, 4, 5, 6]
+   *    newValue: 1, cnt: 4 -> [1, 2, 3, 4] -> remove [5, 6], insert [1, 2]
+   * Tree item child index:     0  1  2  3             2  3           0  1
+   * </pre></code>
+   *
+   * @param state Changed state entry
+   * @param items List of visual items that represents state in the tree
+   * @param oldValue Old value of bound bean property
+   * @param newValue New value of bound bean property
+   */
+  private void changeStateFirstTrans(State state, List<ItemBase> items, Object oldValue, Object newValue)
+  {
+    final int cnt = state.getTransCount();
+    final int oldStart = ((Number)oldValue).intValue();
+    final int newStart = ((Number)newValue).intValue();
+    final int diff = newStart - oldStart;
+
+    if (diff > 0) {
+      for (ItemBase item : items) {
+        final StateItem s = (StateItem)item;
+        // If this not main state item and non-main items do not contains childs, skip
+        if (s.trans == null) continue;
+
+        removeChildTransitions(s, 0, diff);
+        insertChildTransitions(s, newStart, cnt - diff, cnt);
+      }
+    } else
+    if (diff < 0) {
+      for (ItemBase item : items) {
+        final StateItem s = (StateItem)item;
+        // If this not main state item and non-main items do not contains childs, skip
+        if (s.trans == null) continue;
+
+        removeChildTransitions(s, cnt + diff, cnt);
+        insertChildTransitions(s, newStart, 0, -diff);
+      }
+    }
+  }
+
+  /**
+   * Changes tree structure accourding to the changes in the
+   * {@link State#DLG_STATE_NUM_RESPONSES} property of the state. Appends
+   * or removes {@link TransitionItem}s based on the value of the bean property.
+   *
+   * @param state Changed state entry
+   * @param items List of visual items that represents state in the tree
+   * @param oldValue Old value of bound bean property
+   * @param newValue New value of bound bean property
+   */
+  private void changeStateTransCount(State state, List<ItemBase> items, Object oldValue, Object newValue)
+  {
+    final int start  = state.getFirstTrans();
+    final int oldCnt = ((Number)oldValue).intValue();
+    final int newCnt = ((Number)newValue).intValue();
+
+    if (newCnt > oldCnt) {
+      for (ItemBase item : items) {
+        final StateItem s = (StateItem)item;
+        // If this not main state item and non-main items do not contains childs, skip
+        if (s.trans == null) continue;
+
+        insertChildTransitions(s, start, oldCnt, newCnt);
+      }
+    } else
+    if (newCnt < oldCnt) {
+      for (ItemBase item : items) {
+        final StateItem s = (StateItem)item;
+        // If this not main state item and non-main items do not contains childs, skip
+        if (s.trans == null) continue;
+
+        removeChildTransitions(s, newCnt, oldCnt);
+      }
+    }
+  }
+
+  /**
    * Adds continuous range of tree items that represent transitions from specified
    * state and notifies listeners. If state is not main state and option
    * {@link BrowserMenuBar#breakCyclesInDialogs()} is enabled, do nothing.
@@ -271,6 +413,32 @@ final class DlgTreeModel implements TreeModel, TableModelListener
   }
   //</editor-fold>
 
+  //<editor-fold defaultstate="collapsed" desc="Transition changed">
+  /**
+   * Changes tree structure accourding to the changes in the
+   * {@link Transition#DLG_TRANS_NEXT_DIALOG},
+   * {@link Transition#DLG_TRANS_NEXT_DIALOG_STATE} or
+   * {@link Transition#DLG_TRANS_FLAGS} properties of the transition entry.
+   *
+   * Emits {@link TreeModelListener#treeStructureChanged} event for each element
+   * in {@code items}.
+   *
+   * @param items List of visual items that represents transition in the tree
+   */
+  private void changeTransition(List<ItemBase> items)
+  {
+    for (ItemBase item : items) {
+      final TransitionItem t = (TransitionItem)item;
+      if (t.nextState != null) {
+        removeItem(t.nextState);
+        t.nextState = null;
+      }
+      // New node, if required, will be created on demand
+      fireTreeStructureChanged(item.getPath());
+    }
+  }
+  //</editor-fold>
+
   //<editor-fold defaultstate="collapsed" desc="Event emitting">
   private void nodeChanged(ItemBase node)
   {
@@ -307,9 +475,18 @@ final class DlgTreeModel implements TreeModel, TableModelListener
   {
     if (!listeners.isEmpty()) {
       final TreeModelEvent event = new TreeModelEvent(this, path, childIndices, children);
-      for (int i = listeners.size()-1; i >= 0; i--) {
-        final TreeModelListener tml = listeners.get(i);
+      for (final TreeModelListener tml : listeners) {
         tml.treeNodesRemoved(event);
+      }
+    }
+  }
+
+  private void fireTreeStructureChanged(TreePath path)
+  {
+    if (!listeners.isEmpty()) {
+      final TreeModelEvent event = new TreeModelEvent(this, path);
+      for (final TreeModelListener tml : listeners) {
+        tml.treeStructureChanged(event);
       }
     }
   }
