@@ -9,6 +9,7 @@ import static java.util.Collections.enumeration;
 import static java.util.Collections.singletonList;
 import java.util.Enumeration;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -61,6 +62,14 @@ final class TransitionItem extends StateOwnerItem
       return true;
     }
     return false;
+  }
+
+  @Override
+  public void traverseChildren(Consumer<ItemBase> action)
+  {
+    if (nextState != null) {
+      action.accept(nextState);
+    }
   }
 
   //<editor-fold defaultstate="collapsed" desc="TreeNode">

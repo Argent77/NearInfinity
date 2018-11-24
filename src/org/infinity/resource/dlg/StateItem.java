@@ -10,6 +10,7 @@ import static java.util.Collections.enumeration;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -56,6 +57,14 @@ final class StateItem extends ItemBase implements Iterable<TransitionItem>
 
   @Override
   public boolean removeChild(ItemBase child) { return trans.remove(child); }
+
+  @Override
+  public void traverseChildren(Consumer<ItemBase> action)
+  {
+    if (trans != null) {
+      trans.forEach(action);
+    }
+  }
 
   //<editor-fold defaultstate="collapsed" desc="TreeNode">
   @Override

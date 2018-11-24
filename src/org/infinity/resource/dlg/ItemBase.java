@@ -5,6 +5,7 @@
 package org.infinity.resource.dlg;
 
 import java.util.Enumeration;
+import java.util.function.Consumer;
 
 import javax.swing.Icon;
 import javax.swing.tree.TreeNode;
@@ -72,6 +73,17 @@ abstract class ItemBase implements TreeNode
    * @return {@code true} if item is child of this node and was removed, {@code false} otherwize.
    */
   public abstract boolean removeChild(ItemBase child);
+
+  /**
+   * Performs the given action for each child of the node until all childrens have
+   * been processed or the action throws an exception. Exceptions thrown by the
+   * action are relayed to the caller.
+   *
+   * @param action The action to be performed for each children
+   *
+   * @throws NullPointerException If the specified action is {@code null}
+   */
+  public abstract void traverseChildren(Consumer<ItemBase> action);
 
   //<editor-fold defaultstate="collapsed" desc="TreeNode">
   @Override
