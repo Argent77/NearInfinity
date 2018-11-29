@@ -19,7 +19,7 @@ public class DecNumber extends Datatype implements InlineEditable, IsNumeric
     this(buffer, offset, length, name, true);
   }
 
-  public DecNumber(ByteBuffer buffer, int offset, int length, String name, boolean signed)
+  protected DecNumber(ByteBuffer buffer, int offset, int length, String name, boolean signed)
   {
     super(offset, length, name);
     this.number = 0L;

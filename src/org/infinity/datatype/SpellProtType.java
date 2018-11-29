@@ -64,7 +64,7 @@ public class SpellProtType extends Bitmap
       "ALIGN.IDS", "KIT.IDS" };
 
   private static final String tableName = "SPLPROT.2DA";
-  private static final LongIntegerHashMap<String> statIds = new LongIntegerHashMap<String>();
+  private static final LongIntegerHashMap<String> statIds = new LongIntegerHashMap<>();
   private static String[] creType;
 
   static {
@@ -91,11 +91,6 @@ public class SpellProtType extends Bitmap
     this(buffer, offset, length, null, -1);
   }
 
-  public SpellProtType(ByteBuffer buffer, int offset, int length, String name)
-  {
-    this(buffer, offset, length, name, -1);
-  }
-
   public SpellProtType(ByteBuffer buffer, int offset, int length, String name, int idx)
   {
     super(buffer, offset, length, createFieldName(name, idx, DEFAULT_NAME_TYPE), getTypeTable());
@@ -116,8 +111,8 @@ public class SpellProtType extends Bitmap
       for (int i = 0, size = list.size(); i < size; i++) {
         StructEntry entry = list.get(i);
         if (entry.getOffset() == valueOffset && entry instanceof Datatype) {
-          ByteBuffer buffer = ((Datatype)entry).getDataBuffer();
-          StructEntry newEntry = createCreatureValueFromType(buffer, 0);
+          final ByteBuffer buffer = entry.getDataBuffer();
+          final StructEntry newEntry = createCreatureValueFromType(buffer, 0);
           newEntry.setOffset(valueOffset);
           list.set(i, newEntry);
 

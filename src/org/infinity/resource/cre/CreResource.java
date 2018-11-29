@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.cre;
@@ -1441,7 +1441,7 @@ public final class CreResource extends AbstractStruct
     addField(new IdsFlag(buffer, offset + 24, 4, CRE_STATUS, "STATE.IDS"));
     addField(new DecNumber(buffer, offset + 28, 2, CRE_HP_CURRENT));
     addField(new DecNumber(buffer, offset + 30, 2, CRE_HP_MAX));
-    AnimateBitmap animate = new AnimateBitmap(buffer, offset + 32, 4, CRE_ANIMATION, "ANIMATE.IDS");
+    final AnimateBitmap animate = new AnimateBitmap(buffer, offset + 32, 4, CRE_ANIMATION);
     if (Profile.getGame() == Profile.Game.PSTEE && version.equals("V1.0")) {
       // TODO: resolve issues with Listener queue filled with duplicate entries on each "Update" button click
 //      animate.addUpdateListener(this);
@@ -2300,4 +2300,3 @@ public final class CreResource extends AbstractStruct
     return false;
   }
 }
-

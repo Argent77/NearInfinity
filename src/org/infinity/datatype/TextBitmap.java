@@ -52,15 +52,6 @@ public final class TextBitmap extends Datatype implements Editable, IsTextual
     }
   }
 
-  public TextBitmap(ByteBuffer buffer, int offset, int length, String name,
-                    String[] ids, String[] names)
-  {
-    super(offset, length, name);
-    read(buffer, offset);
-    this.ids = ids;
-    this.names = names;
-  }
-
 // --------------------- Begin Interface Editable ---------------------
 
   @Override

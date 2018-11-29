@@ -18,13 +18,11 @@ public class KitIdsBitmap extends IdsBitmap
   public KitIdsBitmap(ByteBuffer buffer, int offset, String name)
   {
     super(buffer, offset, 4, name, "KIT.IDS");
-    init();
-  }
+    // adding "No Kit" value if needed
+    addIdsMapEntry(new IdsMapEntry(0L, "NO_KIT"));
 
-  public KitIdsBitmap(ByteBuffer buffer, int offset, String name, int idsStart)
-  {
-    super(buffer, offset, 4, name, "KIT.IDS", idsStart);
-    init();
+    // fixing word order of kit id value
+    setValue(swapWords(getValue()));
   }
 
 //--------------------- Begin Interface Writeable ---------------------
@@ -37,16 +35,7 @@ public class KitIdsBitmap extends IdsBitmap
 
 //--------------------- End Interface Writeable ---------------------
 
-  private void init()
-  {
-    // adding "No Kit" value if needed
-    addIdsMapEntry(new IdsMapEntry(0L, "NO_KIT"));
-
-    // fixing word order of kit id value
-    setValue(swapWords(getValue()));
-  }
-
-  // Swaps position of the two lower words
+  /** Swaps position of the two lower words. */
   private static long swapWords(long value)
   {
     return ((value >>> 16) & 0xffffL) | ((value & 0xffffL) << 16);

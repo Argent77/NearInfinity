@@ -2290,7 +2290,7 @@ public final class EffectFactory
       case 109: // Paralyze
       case 175: // Hold creature
       {
-        IdsTargetType param2 = new IdsTargetType(buffer, offset + 4, 4);
+        final IdsTargetType param2 = new IdsTargetType(buffer, offset + 4);
         s.add(param2.createIdsValueFromType(buffer));
         s.add(param2);
         break;
@@ -2399,7 +2399,7 @@ public final class EffectFactory
         final String[] ids = new String[]{"EA.IDS", "GENERAL.IDS", "RACE.IDS", "CLASS.IDS",
                                           "SPECIFIC.IDS", "GENDER.IDS",
                                           Profile.getProperty(Profile.Key.GET_IDS_ALIGNMENT)};
-        IdsTargetType param2 = new IdsTargetType(buffer, offset + 4, 4, IdsTargetType.DEFAULT_NAME_TYPE, ids);
+        final IdsTargetType param2 = new IdsTargetType(buffer, offset + 4, IdsTargetType.DEFAULT_NAME_TYPE, ids);
         s.add(param2.createIdsValueFromType(buffer));
         s.add(param2);
         break;
@@ -2957,7 +2957,7 @@ public final class EffectFactory
         if (Profile.getEngine() == Profile.Engine.PST) {
           makeEffectParamsDefault(buffer, offset, s);
         } else {
-          IdsTargetType param2 = new IdsTargetType(buffer, offset + 4, 4);
+          final IdsTargetType param2 = new IdsTargetType(buffer, offset + 4);
           s.add(param2.createIdsValueFromType(buffer));
           s.add(param2);
           restype = "EFF";
@@ -2969,7 +2969,7 @@ public final class EffectFactory
         if (Profile.getEngine() == Profile.Engine.PST) {
           makeEffectParamsDefault(buffer, offset, s);
         } else {
-          IdsTargetType param2 = new IdsTargetType(buffer, offset + 4, 4);
+          final IdsTargetType param2 = new IdsTargetType(buffer, offset + 4);
           s.add(param2.createIdsValueFromType(buffer));
           s.add(param2);
         }
@@ -3033,7 +3033,7 @@ public final class EffectFactory
           s.add(new DecNumber(buffer, offset, 4, AbstractStruct.COMMON_UNUSED));
           s.add(new DecNumber(buffer, offset + 4, 4, AbstractStruct.COMMON_UNUSED));
         } else {
-          IdsTargetType param2 = new IdsTargetType(buffer, offset + 4, 4);
+          final IdsTargetType param2 = new IdsTargetType(buffer, offset + 4);
           s.add(param2.createIdsValueFromType(buffer));
           s.add(param2);
         }
@@ -3300,7 +3300,7 @@ public final class EffectFactory
           ids = new String[]{"", "", "EA.IDS", "GENERAL.IDS", "RACE.IDS", "CLASS.IDS", "", "GENDER.IDS",
                              Profile.getProperty(Profile.Key.GET_IDS_ALIGNMENT)};
         }
-        IdsTargetType param2 = new IdsTargetType(buffer, offset + 4, 4, IdsTargetType.DEFAULT_NAME_TYPE, ids);
+        final IdsTargetType param2 = new IdsTargetType(buffer, offset + 4, IdsTargetType.DEFAULT_NAME_TYPE, ids);
         s.add(param2.createIdsValueFromType(buffer));
         s.add(param2);
         break;
@@ -3434,7 +3434,7 @@ public final class EffectFactory
 
       case 238: // Disintegrate
       {
-        IdsTargetType param2 = new IdsTargetType(buffer, offset + 4, 4);
+        final IdsTargetType param2 = new IdsTargetType(buffer, offset + 4);
         s.add(param2.createIdsValueFromType(buffer));
         s.add(param2);
         break;
@@ -3646,7 +3646,7 @@ public final class EffectFactory
 
       case 283: // Use EFF file as curse
       {
-        IdsTargetType param2 = new IdsTargetType(buffer, offset + 4, 4);
+        final IdsTargetType param2 = new IdsTargetType(buffer, offset + 4);
         s.add(param2.createIdsValueFromType(buffer));
         s.add(param2);
         restype = "EFF";
@@ -3769,9 +3769,9 @@ public final class EffectFactory
       case 319: // Restrict item (BGEE)
       {
         if (Profile.isEnhancedEdition()) {
-          IdsTargetType param2 = new IdsTargetType(buffer, offset + 4, 4,
-                                                   IdsTargetType.DEFAULT_NAME_TYPE,
-                                                   IdsTargetType.DEFAULT_SECOND_IDS, true);
+          final IdsTargetType param2 = new IdsTargetType(buffer, offset + 4,
+                                                         IdsTargetType.DEFAULT_NAME_TYPE,
+                                                         IdsTargetType.DEFAULT_SECOND_IDS, true);
           param2.addUpdateListener((UpdateListener)parent);
           s.add(param2.createIdsValueFromType(buffer));
           s.add(param2);
@@ -4017,7 +4017,7 @@ public final class EffectFactory
 
       case 344: // Enchantment vs. creature type
         if (Profile.isEnhancedEdition()) {
-          IdsTargetType param2 = new IdsTargetType(buffer, offset + 4, 4);
+          final IdsTargetType param2 = new IdsTargetType(buffer, offset + 4);
           s.add(param2.createIdsValueFromType(buffer));
           s.add(param2);
         } else {

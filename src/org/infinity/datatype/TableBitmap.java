@@ -29,24 +29,6 @@ public class TableBitmap extends Bitmap
     super(buffer, offset, length, name, generateList(tableName, 0, true));
   }
 
-  /**
-   * Constructs a list control from the given column o fthe specified 2DA resource.
-   *
-   * @param buffer
-   * @param offset
-   * @param length
-   * @param name
-   * @param tableName 2DA resource name
-   * @param column Column to use strings from
-   * @param normalize Whether to normalize strings (underscores to spaces, each word starts with capital letter)
-   */
-  public TableBitmap(ByteBuffer buffer, int offset, int length, String name,
-                     String tableName, int column, boolean normalize)
-  {
-    super(buffer, offset, length, name, generateList(tableName, column, normalize));
-  }
-
-
   private static String[] generateList(String tableName, int column, boolean normalize)
   {
     String[] retVal = null;

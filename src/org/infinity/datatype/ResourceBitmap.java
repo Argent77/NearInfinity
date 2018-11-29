@@ -71,25 +71,13 @@ public class ResourceBitmap extends Datatype
   private long value;
 
   public ResourceBitmap(ByteBuffer buffer, int offset, int length, String name,
-      List<RefEntry> resources)
-  {
-    this(buffer, offset, length, name, resources, null, null);
-  }
-
-  public ResourceBitmap(ByteBuffer buffer, int offset, int length, String name,
-      List<RefEntry> resources, String defLabel)
-  {
-    this(buffer, offset, length, name, resources, defLabel, null);
-  }
-
-  public ResourceBitmap(ByteBuffer buffer, int offset, int length, String name,
                         List<RefEntry> resources, String defLabel, String fmt)
   {
     super(offset, length, name);
     this.formatString = (fmt != null) ? fmt : FMT_REF_VALUE;
     this.defaultLabel = (defLabel != null) ? defLabel : "Unknown";
 
-    this.resources = new ArrayList<RefEntry>((resources != null) ? resources.size() : 10);
+    this.resources = new ArrayList<>((resources != null) ? resources.size() : 10);
     if (resources != null) {
       for (final RefEntry entry: resources) {
         entry.setFormatString(this.formatString);
@@ -309,8 +297,7 @@ public class ResourceBitmap extends Datatype
 
   private RefEntry getRefEntry(long value)
   {
-    for (int i = 0, size = resources.size(); i < size; i++) {
-      RefEntry entry = resources.get(i);
+    for (final RefEntry entry : resources) {
       if (entry.getValue() == value) {
         return entry;
       }

@@ -64,7 +64,6 @@ import org.infinity.util.IniMapEntry;
 import org.infinity.util.IniMapSection;
 import org.infinity.util.StringTable;
 
-
 /**
  * Datatype for {@link GamResource#GAM_BESTIARY Bestiary} field of the
  * {@link GamResource GAM} resource.
@@ -528,7 +527,7 @@ public final class Bestiary extends Datatype implements Editable, TableModel
         final int row = table.rowAtPoint(e.getPoint());
         if (row >= 0) {
           table.getSelectionModel().setSelectionInterval(row, row);
-          setupPopup(contextMenu, row);
+          setupPopup(row);
           contextMenu.show(table, e.getX(), e.getY());
         }
       }
@@ -537,10 +536,9 @@ public final class Bestiary extends Datatype implements Editable, TableModel
     /**
      * Setup availability and names of the context menu items for specified creature.
      *
-     * @param menu Context menu under which place items
      * @param index Index of the creature for which menu is shown
      */
-    private void setupPopup(JPopupMenu menu, int index)
+    private void setupPopup(int index)
     {
       final Creature cre = index >= 0 && index < creatures.size() ? creatures.get(index) : null;
       final boolean hasVar = cre != null && cre.killVarName != null;

@@ -35,17 +35,9 @@ public class IdsTargetType extends Bitmap
   /**
    * Constructs an IDS type field with the default list of IDS entries.
    */
-  public IdsTargetType(ByteBuffer buffer, int offset, int size)
+  public IdsTargetType(ByteBuffer buffer, int offset)
   {
-    this(buffer, offset, size, null, -1, null, false);
-  }
-
-  /**
-   * Constructs an IDS type field with the default list of IDS entries.
-   */
-  public IdsTargetType(ByteBuffer buffer, int offset, int size, String name)
-  {
-    this(buffer, offset, size, name, -1, null, false);
+    this(buffer, offset, null, null, false);
   }
 
   /**
@@ -54,10 +46,10 @@ public class IdsTargetType extends Bitmap
    * @param targetActor If {@code true}, Enhanced Editions will use index 10 for
    *                    Actor's name strrefs and index 11 for Actor's script name.
    */
-  public IdsTargetType(ByteBuffer buffer, int offset, int size, String name,
+  public IdsTargetType(ByteBuffer buffer, int offset, String name,
                        String secondIds, boolean targetActor)
   {
-    this(buffer, offset, size, name, -1, secondIds, targetActor);
+    this(buffer, offset, 4, name, -1, secondIds, targetActor);
   }
 
   /**
@@ -77,9 +69,9 @@ public class IdsTargetType extends Bitmap
   }
 
   /** Constructs an IDS type field with the specified list of IDS resource names. */
-  public IdsTargetType(ByteBuffer buffer, int offset, int size, String name, String[] ids)
+  public IdsTargetType(ByteBuffer buffer, int offset, String name, String[] ids)
   {
-    super(buffer, offset, size, createFieldName(name, -1, DEFAULT_NAME_TYPE),
+    super(buffer, offset, 4, createFieldName(name, -1, DEFAULT_NAME_TYPE),
           (ids != null) ? ids : createIdsTypeTable(null, false));
     this.index = -1;
     this.updateIdsValues = true;

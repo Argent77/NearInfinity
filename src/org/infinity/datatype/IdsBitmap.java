@@ -15,19 +15,7 @@ public class IdsBitmap extends HashBitmap
 {
   public IdsBitmap(ByteBuffer buffer, int offset, int length, String name, String resource)
   {
-    this(buffer, offset, length, name, resource, 0, -1);
-  }
-
-  public IdsBitmap(ByteBuffer buffer, int offset, int length, String name, String resource,
-                   int idsStart)
-  {
-    this(buffer, offset, length, name, resource, idsStart, -1);
-  }
-
-  public IdsBitmap(ByteBuffer buffer, int offset, int length, String name, String resource,
-                   int idsStart, int idsSize)
-  {
-    super(buffer, offset, length, name, createResourceList(resource, idsStart, idsSize), true);
+    super(buffer, offset, length, name, createResourceList(resource), true);
   }
 
   public int getIdsMapEntryCount()
@@ -53,25 +41,22 @@ public class IdsBitmap extends HashBitmap
   {
     if (entry != null) {
       @SuppressWarnings("unchecked")
-      LongIntegerHashMap<IdsMapEntry>map = (LongIntegerHashMap<IdsMapEntry>)getHashBitmap();
+      final LongIntegerHashMap<IdsMapEntry> map = (LongIntegerHashMap<IdsMapEntry>)getHashBitmap();
       if (!map.containsKey(Long.valueOf(entry.getID()))) {
         map.put(Long.valueOf(entry.getID()), entry);
       }
     }
   }
 
-  private static LongIntegerHashMap<IdsMapEntry> createResourceList(String resource, int idsStart, int idsSize)
+  private static LongIntegerHashMap<IdsMapEntry> createResourceList(String resource)
   {
     LongIntegerHashMap<IdsMapEntry> retVal = null;
     IdsMap idsMap = IdsMapCache.get(resource);
     if (idsMap != null) {
-      retVal = new LongIntegerHashMap<IdsMapEntry>();
+      retVal = new LongIntegerHashMap<>();
       for (final IdsMapEntry e: idsMap.getAllValues()) {
-        long id = e.getID();
-        if (idsSize < 0 || (id >= idsStart && id < idsStart + idsSize)) {
-          id -= idsStart;
-          retVal.put(Long.valueOf(id), new IdsMapEntry(id, e.getSymbol()));
-        }
+        final long id = e.getID();
+        retVal.put(id, new IdsMapEntry(id, e.getSymbol()));
       }
 
       // Add a fitting symbol for "0" to IDS list if needed

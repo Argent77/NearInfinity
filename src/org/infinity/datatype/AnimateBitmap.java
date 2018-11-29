@@ -28,16 +28,9 @@ public class AnimateBitmap extends IdsBitmap implements ActionListener
   private IdsMap idsMap;
   private boolean useIni;
 
-  public AnimateBitmap(ByteBuffer buffer, int offset, int length, String name,
-                       String resource)
+  public AnimateBitmap(ByteBuffer buffer, int offset, int length, String name)
   {
-    this(buffer, offset, length, name, resource, 0);
-  }
-
-  public AnimateBitmap(ByteBuffer buffer, int offset, int length, String name,
-                       String resource, int idsStart)
-  {
-    super(buffer, offset, length, name, resource, idsStart);
+    super(buffer, offset, length, name, "ANIMATE.IDS");
 
     if (Profile.isEnhancedEdition() || ResourceFactory.resourceExists("ANISND.IDS")) {
       showIni = new JButton("View/Edit", Icons.getIcon(Icons.ICON_ZOOM_16));

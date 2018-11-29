@@ -47,26 +47,14 @@ public class Flag extends Datatype implements Editable, IsNumeric, ActionListene
 
   /**
    * @param stable Contains default value when no flag is selected and a list of flag descriptions.
-   *               Optionally you can combine flag descriptions with tool tips, using the default
+   *               Optionally you can combine flag descriptions with tool tips, using the
    *               separator char ';'.
    */
   public Flag(ByteBuffer buffer, int offset, int length, String name, String[] stable)
   {
-    this(buffer, offset, length, name, stable, ';');
-  }
-
-  /**
-   * @param stable Contains default value when no flag is selected and a list of flag descriptions.
-   *               Optionally you can combine flag descriptions with tool tips, using the specified
-   *               separator char.
-   * @param separator Character that can be used to split flag description and tool tip.
-   */
-  public Flag(ByteBuffer buffer, int offset, int length, String name, String[] stable,
-              char separator)
-  {
     this(buffer, offset, length, name);
     setEmptyDesc((stable == null || stable.length == 0) ? null : stable[0]);
-    setFlagDescriptions(length, stable, 1, separator);
+    setFlagDescriptions(length, stable, 1);
   }
 
   //<editor-fold defaultstate="collapsed" desc="ActionListener">
@@ -265,16 +253,16 @@ public class Flag extends Datatype implements Editable, IsNumeric, ActionListene
   }
 
   /**
-   * Sets labels and optional tooltips for each flag.
+   * Sets labels and optional tooltips for each flag. Label and tooltip separated
+   * by {@code ';'}
    *
    * @param size Size of flag field in bytes. Count of flags equals {@code size * 8}
    * @param stable Table with labels and optional tooltips of each flag. If table
    *        size if less then count of flags, then remaining flags will be without
    *        labels and tooltips
    * @param startOfs Offset to {@code stable} from which data begins
-   * @param separator Separator, used to separate flag label and tooltip
    */
-  protected final void setFlagDescriptions(int size, String[] stable, int startOfs, char separator)
+  protected final void setFlagDescriptions(int size, String[] stable, int startOfs)
   {
     table = new String[8*size];
     toolTable = new String[8*size];
@@ -283,7 +271,7 @@ public class Flag extends Datatype implements Editable, IsNumeric, ActionListene
         final String desc = stable[i];
         if (desc == null) continue;
 
-        final int sep = desc.indexOf(separator);
+        final int sep = desc.indexOf(';');
         if (sep < 0) {
           table[j] = desc;
           toolTable[j] = null;

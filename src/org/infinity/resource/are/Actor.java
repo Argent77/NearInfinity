@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.are;
@@ -206,7 +206,7 @@ public final class Actor extends AbstractStruct implements AddRemovable, HasView
     } else {
       addField(new Unknown(buffer, offset + 47, 1));
     }
-    addField(new AnimateBitmap(buffer, offset + 48, 4, ARE_ACTOR_ANIMATION, "ANIMATE.IDS"));
+    addField(new AnimateBitmap(buffer, offset + 48, 4, ARE_ACTOR_ANIMATION));
     addField(new Bitmap(buffer, offset + 52, 2, ARE_ACTOR_ORIENTATION, s_orientation));
     addField(new Unknown(buffer, offset + 54, 2));
     addField(new DecNumber(buffer, offset + 56, 4, ARE_ACTOR_EXPIRY_TIME));
@@ -260,4 +260,3 @@ public final class Actor extends AbstractStruct implements AddRemovable, HasView
     return offset + 272;
   }
 }
-

@@ -25,6 +25,6 @@ public final class IdsFlag extends Flag
       entry = idsMap.get(Long.valueOf(1L << i));
       stable[i] = (entry != null) ? entry.getSymbol() : null;
     }
-    setFlagDescriptions(length, stable, 0, ';');
+    setFlagDescriptions(length, stable, 0);
   }
 }
