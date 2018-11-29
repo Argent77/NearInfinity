@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -9,7 +9,6 @@ import java.util.Locale;
 
 import org.infinity.resource.Profile;
 import org.infinity.resource.ResourceFactory;
-import org.infinity.resource.StructEntry;
 import org.infinity.util.IdsMap;
 import org.infinity.util.IdsMapCache;
 import org.infinity.util.IdsMapEntry;
@@ -38,12 +37,7 @@ public class PriTypeBitmap extends HashBitmap
 
   public PriTypeBitmap(ByteBuffer buffer, int offset, int length, String name)
   {
-    this(null, buffer, offset, length, name);
-  }
-
-  public PriTypeBitmap(StructEntry parent, ByteBuffer buffer, int offset, int length, String name)
-  {
-    super(parent, buffer, offset, length, name, getTypeTable());
+    super(buffer, offset, length, name, getTypeTable());
   }
 
   public static String getTableName()

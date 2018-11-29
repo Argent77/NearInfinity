@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -32,12 +32,6 @@ public abstract class Datatype implements StructEntry
 
   protected Datatype(int offset, int length, String name)
   {
-    this(null, offset, length, name);
-  }
-
-  protected Datatype(StructEntry parent, int offset, int length, String name)
-  {
-    this.parent = parent;
     this.offset = offset;
     this.length = length;
     this.name = name;
@@ -222,4 +216,3 @@ public abstract class Datatype implements StructEntry
     writeInt(os, (int)value);
   }
 }
-

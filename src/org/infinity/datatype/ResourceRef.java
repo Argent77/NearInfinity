@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -33,7 +33,6 @@ import org.infinity.gui.ViewFrame;
 import org.infinity.icon.Icons;
 import org.infinity.resource.AbstractStruct;
 import org.infinity.resource.ResourceFactory;
-import org.infinity.resource.StructEntry;
 import org.infinity.resource.key.ResourceEntry;
 import org.infinity.util.Misc;
 import org.infinity.util.io.StreamUtils;
@@ -67,44 +66,24 @@ public class ResourceRef extends Datatype
 
   public ResourceRef(ByteBuffer h_buffer, int offset, String name, String type)
   {
-    this(null, h_buffer, offset, 8, name, type);
+    this(h_buffer, offset, 8, name, type);
   }
 
-  public ResourceRef(StructEntry parent, ByteBuffer h_buffer, int offset, String name, String type)
-  {
-    this(parent, h_buffer, offset, 8, name, type);
-  }
-
-  public ResourceRef(ByteBuffer h_buffer, int offset, int length, String name, String type)
-  {
-    this(null, h_buffer, offset, length, name, new String[]{type});
-  }
-
-  public ResourceRef(StructEntry parent, ByteBuffer h_buffer, int offset, int length, String name,
+  public ResourceRef(ByteBuffer h_buffer, int offset, int length, String name,
                      String type)
   {
-    this(parent, h_buffer, offset, length, name, new String[]{type});
+    this(h_buffer, offset, length, name, new String[]{type});
   }
 
   public ResourceRef(ByteBuffer h_buffer, int offset, String name, String[] type)
   {
-    this(null, h_buffer, offset, 8, name, type);
+    this(h_buffer, offset, 8, name, type);
   }
 
-  public ResourceRef(StructEntry parent, ByteBuffer h_buffer, int offset, String name, String[] type)
-  {
-    this(parent, h_buffer, offset, 8, name, type);
-  }
-
-  public ResourceRef(ByteBuffer h_buffer, int offset, int length, String name, String[] type)
-  {
-    this(null, h_buffer, offset, length, name, type);
-  }
-
-  public ResourceRef(StructEntry parent, ByteBuffer h_buffer, int offset, int length, String name,
+  public ResourceRef(ByteBuffer h_buffer, int offset, int length, String name,
                      String[] type)
   {
-    super(parent, offset, length, name);
+    super(offset, length, name);
     this.buffer = StreamUtils.getByteBuffer(length);
     if (type == null || type.length == 0) {
       this.type = new String[]{""};
@@ -465,4 +444,3 @@ public class ResourceRef extends Datatype
     }
   }
 }
-

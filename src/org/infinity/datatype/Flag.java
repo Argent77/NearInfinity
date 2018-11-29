@@ -22,7 +22,6 @@ import javax.swing.JPanel;
 
 import org.infinity.gui.StructViewer;
 import org.infinity.resource.AbstractStruct;
-import org.infinity.resource.StructEntry;
 import org.infinity.util.Misc;
 
 public class Flag extends Datatype implements Editable, IsNumeric, ActionListener
@@ -40,9 +39,9 @@ public class Flag extends Datatype implements Editable, IsNumeric, ActionListene
   private JCheckBox[] checkBoxes;
   private long value;
 
-  Flag(StructEntry parent, ByteBuffer buffer, int offset, int length, String name)
+  Flag(ByteBuffer buffer, int offset, int length, String name)
   {
-    super(parent, offset, length, name);
+    super(offset, length, name);
     read(buffer, offset);
   }
 
@@ -53,17 +52,7 @@ public class Flag extends Datatype implements Editable, IsNumeric, ActionListene
    */
   public Flag(ByteBuffer buffer, int offset, int length, String name, String[] stable)
   {
-    this(null, buffer, offset, length, name, stable);
-  }
-
-  /**
-   * @param stable Contains default value when no flag is selected and a list of flag descriptions.
-   *               Optionally you can combine flag descriptions with tool tips, using the default
-   *               separator char ';'.
-   */
-  public Flag(StructEntry parent, ByteBuffer buffer, int offset, int length, String name, String[] stable)
-  {
-    this(parent, buffer, offset, length, name, stable, ';');
+    this(buffer, offset, length, name, stable, ';');
   }
 
   /**
@@ -72,10 +61,10 @@ public class Flag extends Datatype implements Editable, IsNumeric, ActionListene
    *               separator char.
    * @param separator Character that can be used to split flag description and tool tip.
    */
-  public Flag(StructEntry parent, ByteBuffer buffer, int offset, int length, String name, String[] stable,
+  public Flag(ByteBuffer buffer, int offset, int length, String name, String[] stable,
               char separator)
   {
-    this(parent, buffer, offset, length, name);
+    this(buffer, offset, length, name);
     setEmptyDesc((stable == null || stable.length == 0) ? null : stable[0]);
     setFlagDescriptions(length, stable, 1, separator);
   }

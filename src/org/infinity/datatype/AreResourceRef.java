@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -8,7 +8,6 @@ import java.nio.ByteBuffer;
 
 import org.infinity.resource.Profile;
 import org.infinity.resource.ResourceFactory;
-import org.infinity.resource.StructEntry;
 import org.infinity.resource.are.AreResource;
 import org.infinity.resource.key.BIFFResourceEntry;
 import org.infinity.resource.key.ResourceEntry;
@@ -24,12 +23,7 @@ public final class AreResourceRef extends ResourceRef
 
   public AreResourceRef(ByteBuffer h_buffer, int offset, String name, AreResource are)
   {
-    this(null, h_buffer, offset, name, are);
-  }
-
-  public AreResourceRef(StructEntry parent, ByteBuffer h_buffer, int offset, String name, AreResource are)
-  {
-    super(parent, h_buffer, offset, name, "WAV");
+    super(h_buffer, offset, name, "WAV");
     ResourceEntry res = ResourceFactory.getResourceEntry(((ResourceRef)are
         .getAttribute(AreResource.ARE_WED_RESOURCE)).getResourceName());
     String wedBIFF = "_dummy";
@@ -75,4 +69,3 @@ public final class AreResourceRef extends ResourceRef
     return false;
   }
 }
-

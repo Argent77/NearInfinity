@@ -27,7 +27,6 @@ import org.infinity.gui.StructViewer;
 import org.infinity.gui.TextListPanel;
 import org.infinity.icon.Icons;
 import org.infinity.resource.AbstractStruct;
-import org.infinity.resource.StructEntry;
 import org.infinity.util.LongIntegerHashMap;
 import org.infinity.util.Misc;
 import org.infinity.util.ObjectString;
@@ -44,25 +43,13 @@ public class HashBitmap extends Datatype implements Editable, IsNumeric
   public HashBitmap(ByteBuffer buffer, int offset, int length, String name,
                     LongIntegerHashMap<? extends Object> idsmap)
   {
-    this(null, buffer, offset, length, name, idsmap, true);
+    this(buffer, offset, length, name, idsmap, true);
   }
 
   public HashBitmap(ByteBuffer buffer, int offset, int length, String name,
                     LongIntegerHashMap<? extends Object> idsmap, boolean sortByName)
   {
-    this(null, buffer, offset, length, name, idsmap, sortByName);
-  }
-
-  public HashBitmap(StructEntry parent, ByteBuffer buffer, int offset, int length, String name,
-                    LongIntegerHashMap<? extends Object> idsmap)
-  {
-    this(parent, buffer, offset, length, name, idsmap, true);
-  }
-
-  public HashBitmap(StructEntry parent, ByteBuffer buffer, int offset, int length, String name,
-                    LongIntegerHashMap<? extends Object> idsmap, boolean sortByName)
-  {
-    super(parent, offset, length, name);
+    super(offset, length, name);
     this.idsmap = normalizeHashMap(idsmap);
     this.sortByName = sortByName;
     this.bUpdate = new JButton("Update value", Icons.getIcon(Icons.ICON_REFRESH_16));

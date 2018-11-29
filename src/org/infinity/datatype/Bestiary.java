@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -571,7 +571,7 @@ public final class Bestiary extends Datatype implements Editable, TableModel
 
   public Bestiary(ByteBuffer buffer, int offset, String name)
   {
-    super(null, offset, 260, name);
+    super(offset, 260, name);
     known = new byte[getSize()];
     read(buffer, offset);
     creatures = readCreatures();

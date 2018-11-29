@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-import org.infinity.resource.StructEntry;
 import org.infinity.util.IdsMapEntry;
 
 /**
@@ -16,26 +15,15 @@ import org.infinity.util.IdsMapEntry;
  */
 public class KitIdsBitmap extends IdsBitmap
 {
-
   public KitIdsBitmap(ByteBuffer buffer, int offset, String name)
   {
-    this(null, buffer, offset, name);
-  }
-
-  public KitIdsBitmap(StructEntry parent, ByteBuffer buffer, int offset, String name)
-  {
-    super(parent, buffer, offset, 4, name, "KIT.IDS");
+    super(buffer, offset, 4, name, "KIT.IDS");
     init();
   }
 
   public KitIdsBitmap(ByteBuffer buffer, int offset, String name, int idsStart)
   {
-    this(null, buffer, offset, name, idsStart);
-  }
-
-  public KitIdsBitmap(StructEntry parent, ByteBuffer buffer, int offset, String name, int idsStart)
-  {
-    super(parent, buffer, offset, 4, name, "KIT.IDS", idsStart);
+    super(buffer, offset, 4, name, "KIT.IDS", idsStart);
     init();
   }
 

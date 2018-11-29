@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -10,7 +10,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
 import org.infinity.gui.BrowserMenuBar;
-import org.infinity.resource.StructEntry;
 import org.infinity.util.Misc;
 import org.infinity.util.io.StreamUtils;
 
@@ -22,12 +21,7 @@ public final class TextString extends Datatype implements InlineEditable, IsText
 
   public TextString(ByteBuffer buffer, int offset, int length, String name)
   {
-    this(null, buffer, offset, length, name);
-  }
-
-  public TextString(StructEntry parent, ByteBuffer buffer, int offset, int length, String name)
-  {
-    super(parent, offset, length, name);
+    super(offset, length, name);
     this.buffer = StreamUtils.getByteBuffer(length);
     this.charset = Charset.forName(BrowserMenuBar.getInstance().getSelectedCharset());
     read(buffer, offset);
@@ -100,4 +94,3 @@ public final class TextString extends Datatype implements InlineEditable, IsText
     return getText();
   }
 }
-

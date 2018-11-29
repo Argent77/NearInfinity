@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -7,63 +7,31 @@ package org.infinity.datatype;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 
-import org.infinity.resource.StructEntry;
 import org.infinity.util.Table2da;
 import org.infinity.util.Table2daCache;
 
 /** A general-purpose Bitmap type for creating lists of 2DA table entries. */
 public class TableBitmap extends Bitmap
 {
-
   /**
    * Constructs a list control from the first column of the specified 2DA resource. List entries
    * will be normalized (i.e. underscores to spaces, each word starts with capital letter).
+   *
    * @param buffer
    * @param offset
    * @param length
    * @param name
    * @param tableName 2DA resource name
    */
-  public TableBitmap(ByteBuffer buffer, int offset, int length, String name, String tableName)
-  {
-    super(null, buffer, offset, length, name, generateList(tableName, 0, true));
-  }
-
-  /**
-   * Constructs a list control from the given column o fthe specified 2DA resource.
-   * @param buffer
-   * @param offset
-   * @param length
-   * @param name
-   * @param tableName 2DA resource name
-   * @param column Column to use strings from
-   * @param normalize Whether to normalize strings (underscores to spaces, each word starts with capital letter)
-   */
-  public TableBitmap(ByteBuffer buffer, int offset, int length, String name, String tableName,
-                     int column, boolean normalize)
-  {
-    super(null, buffer, offset, length, name, generateList(tableName, column, normalize));
-  }
-
-  /**
-   * Constructs a list control from the first column of the specified 2DA resource. List entries
-   * will be normalized (i.e. underscores to spaces, each word starts with capital letter).
-   * @param parent
-   * @param buffer
-   * @param offset
-   * @param length
-   * @param name
-   * @param tableName 2DA resource name
-   */
-  public TableBitmap(StructEntry parent, ByteBuffer buffer, int offset, int length, String name,
+  public TableBitmap(ByteBuffer buffer, int offset, int length, String name,
                      String tableName)
   {
-    super(parent, buffer, offset, length, name, generateList(tableName, 0, true));
+    super(buffer, offset, length, name, generateList(tableName, 0, true));
   }
 
   /**
    * Constructs a list control from the given column o fthe specified 2DA resource.
-   * @param parent
+   *
    * @param buffer
    * @param offset
    * @param length
@@ -72,10 +40,10 @@ public class TableBitmap extends Bitmap
    * @param column Column to use strings from
    * @param normalize Whether to normalize strings (underscores to spaces, each word starts with capital letter)
    */
-  public TableBitmap(StructEntry parent, ByteBuffer buffer, int offset, int length, String name,
+  public TableBitmap(ByteBuffer buffer, int offset, int length, String name,
                      String tableName, int column, boolean normalize)
   {
-    super(parent, buffer, offset, length, name, generateList(tableName, column, normalize));
+    super(buffer, offset, length, name, generateList(tableName, column, normalize));
   }
 
 

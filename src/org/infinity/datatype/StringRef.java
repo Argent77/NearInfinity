@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -33,7 +33,6 @@ import org.infinity.gui.ViewFrame;
 import org.infinity.icon.Icons;
 import org.infinity.resource.AbstractStruct;
 import org.infinity.resource.ResourceFactory;
-import org.infinity.resource.StructEntry;
 import org.infinity.resource.key.ResourceEntry;
 import org.infinity.search.StringReferenceSearcher;
 import org.infinity.util.Misc;
@@ -69,21 +68,15 @@ public final class StringRef extends Datatype implements Editable, IsNumeric, Is
   /** Index of this string in the talk table (TLK file). */
   private int value;
 
-  public StringRef(String name, int value)
-  {
-    this(null, name, value);
-  }
-
   /**
-   * Constructs field description of {@code parent} struct, that stores it value.
+   * Constructs field description.
    *
-   * @param parent Structure that contains this field
    * @param name Name of field in parent struct that has {@code StringRef} type
    * @param value Index of the string in the talk table (TLK file)
    */
-  public StringRef(StructEntry parent, String name, int value)
+  public StringRef(String name, int value)
   {
-    super(parent, 0, 4, name);
+    super(0, 4, name);
     this.value = value;
   }
 
@@ -97,22 +90,7 @@ public final class StringRef extends Datatype implements Editable, IsNumeric, Is
    */
   public StringRef(ByteBuffer buffer, int offset, String name)
   {
-    this(null, buffer, offset, name);
-  }
-
-  /**
-   * Constructs field description of {@code parent} struct and reads its value
-   * from {@code buffer} starting with offset {@code offset}. Method reads 4 bytes
-   * from {@code buffer}.
-   *
-   * @param parent Structure that contains this field
-   * @param buffer Storage from which value of this field is readed
-   * @param offset Offset of this field in the {@code buffer}
-   * @param name Name of field in parent struct that has {@code StringRef} type
-   */
-  public StringRef(StructEntry parent, ByteBuffer buffer, int offset, String name)
-  {
-    super(parent, offset, 4, name);
+    super(offset, 4, name);
     read(buffer, offset);
   }
 

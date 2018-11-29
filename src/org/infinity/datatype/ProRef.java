@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Locale;
 
 import org.infinity.resource.ResourceFactory;
-import org.infinity.resource.StructEntry;
 import org.infinity.resource.key.ResourceEntry;
 import org.infinity.util.IdsMap;
 import org.infinity.util.IdsMapCache;
@@ -23,32 +22,22 @@ public final class ProRef extends ResourceBitmap
 
   public ProRef(ByteBuffer buffer, int offset, String name)
   {
-    this(null, buffer, offset, 2, name, true);
+    this(buffer, offset, 2, name, true);
   }
 
   public ProRef(ByteBuffer buffer, int offset, String name, boolean useMissile)
   {
-    this(null, buffer, offset, 2, name, useMissile);
-  }
-
-  public ProRef(StructEntry parent, ByteBuffer buffer, int offset, String name)
-  {
-    this(parent, buffer, offset, 2, name, true);
-  }
-
-  public ProRef(StructEntry parent, ByteBuffer buffer, int offset, String name, boolean useMissile)
-  {
-    this(parent, buffer, offset, 2, name, useMissile);
+    this(buffer, offset, 2, name, useMissile);
   }
 
   public ProRef(ByteBuffer buffer, int offset, int size, String name)
   {
-    this(null, buffer, offset, size, name, true);
+    this(buffer, offset, size, name, true);
   }
 
-  public ProRef(StructEntry parent, ByteBuffer buffer, int offset, int size, String name, boolean useMissile)
+  public ProRef(ByteBuffer buffer, int offset, int size, String name, boolean useMissile)
   {
-    super(parent, buffer, offset, size, name, createRefList(useMissile), null, useMissile ? FMT_NAME_REF_VALUE : FMT_REF_VALUE);
+    super(buffer, offset, size, name, createRefList(useMissile), null, useMissile ? FMT_NAME_REF_VALUE : FMT_REF_VALUE);
   }
 
   public ResourceEntry getSelectedEntry()
@@ -124,4 +113,3 @@ public final class ProRef extends ResourceBitmap
     return proList;
   }
 }
-

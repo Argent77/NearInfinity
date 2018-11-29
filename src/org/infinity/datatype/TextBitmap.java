@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -23,7 +23,6 @@ import javax.swing.table.AbstractTableModel;
 import org.infinity.gui.StructViewer;
 import org.infinity.icon.Icons;
 import org.infinity.resource.AbstractStruct;
-import org.infinity.resource.StructEntry;
 import org.infinity.util.Misc;
 import org.infinity.util.io.StreamUtils;
 
@@ -36,7 +35,7 @@ public final class TextBitmap extends Datatype implements Editable, IsTextual
 
   public TextBitmap(ByteBuffer buffer, int offset, int length, String name, Map<String, String> items)
   {
-    super(null, offset, length, name);
+    super(offset, length, name);
     read(buffer, offset);
     if (items != null) {
       this.ids = new String[items.size()];
@@ -53,15 +52,10 @@ public final class TextBitmap extends Datatype implements Editable, IsTextual
     }
   }
 
-  public TextBitmap(ByteBuffer buffer, int offset, int length, String name, String[] ids, String[] names)
-  {
-    this(null, buffer, offset, length, name, ids, names);
-  }
-
-  public TextBitmap(StructEntry parent, ByteBuffer buffer, int offset, int length, String name,
+  public TextBitmap(ByteBuffer buffer, int offset, int length, String name,
                     String[] ids, String[] names)
   {
-    super(parent, offset, length, name);
+    super(offset, length, name);
     read(buffer, offset);
     this.ids = ids;
     this.names = names;
@@ -229,4 +223,3 @@ public final class TextBitmap extends Datatype implements Editable, IsTextual
     }
   }
 }
-

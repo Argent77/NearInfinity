@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -21,7 +21,6 @@ import org.infinity.gui.InfinityTextArea;
 import org.infinity.gui.StructViewer;
 import org.infinity.icon.Icons;
 import org.infinity.resource.AbstractStruct;
-import org.infinity.resource.StructEntry;
 import org.infinity.util.Misc;
 import org.infinity.util.io.StreamUtils;
 
@@ -32,22 +31,12 @@ public class Unknown extends Datatype implements Editable, IsBinary
 
   public Unknown(ByteBuffer buffer, int offset, int length)
   {
-    this(null, buffer, offset, length, AbstractStruct.COMMON_UNKNOWN);
-  }
-
-  public Unknown(StructEntry parent, ByteBuffer buffer, int offset, int length)
-  {
-    this(parent, buffer, offset, length, AbstractStruct.COMMON_UNKNOWN);
+    this(buffer, offset, length, AbstractStruct.COMMON_UNKNOWN);
   }
 
   public Unknown(ByteBuffer buffer, int offset, int length, String name)
   {
-    this(null, buffer, offset, length, name);
-  }
-
-  public Unknown(StructEntry parent, ByteBuffer buffer, int offset, int length, String name)
-  {
-    super(parent, offset, length, name);
+    super(offset, length, name);
     this.buffer = StreamUtils.getByteBuffer(length);
     read(buffer, offset);
   }
@@ -197,4 +186,3 @@ public class Unknown extends Datatype implements Editable, IsBinary
       return "";
   }
 }
-

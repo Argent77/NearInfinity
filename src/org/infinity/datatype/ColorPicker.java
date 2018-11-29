@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -34,7 +34,6 @@ import org.infinity.gui.StructViewer;
 import org.infinity.gui.ViewerUtil;
 import org.infinity.icon.Icons;
 import org.infinity.resource.AbstractStruct;
-import org.infinity.resource.StructEntry;
 import org.infinity.resource.graphics.ColorConvert;
 import org.infinity.util.Misc;
 
@@ -61,26 +60,15 @@ public class ColorPicker extends Datatype implements Editable, IsNumeric, MouseL
   private int tmpHue, tmpSat, tmpBri, tmpRed, tmpGreen, tmpBlue;
   private int value;
 
-  /** Initializing color picker with the most commonly used color format {@code Format.XRGB}. */
+  /** Initializing color picker with the most commonly used color format {@link Format#XRGB}. */
   public ColorPicker(ByteBuffer buffer, int offset, String name)
   {
-    this(null, buffer, offset, name, Format.XRGB);
-  }
-
-  /** Initializing color picker with the most commonly used color format {@code Format.XRGB}. */
-  public ColorPicker(StructEntry parent, ByteBuffer buffer, int offset, String name)
-  {
-    this(parent, buffer, offset, name, Format.XRGB);
+    this(buffer, offset, name, Format.XRGB);
   }
 
   public ColorPicker(ByteBuffer buffer, int offset, String name, Format fmt)
   {
-    this(null, buffer, offset, name, fmt);
-  }
-
-  public ColorPicker(StructEntry parent, ByteBuffer buffer, int offset, String name, Format fmt)
-  {
-    super(parent, offset, 4, name);
+    super(offset, 4, name);
     switch (fmt) {
       case RGBX: shiftRed = 0; shiftGreen = 8; shiftBlue = 16; break;
       case XRGB: shiftRed = 8; shiftGreen = 16; shiftBlue = 24; break;

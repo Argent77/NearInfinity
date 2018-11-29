@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -7,18 +7,12 @@ package org.infinity.datatype;
 import java.nio.ByteBuffer;
 
 import org.infinity.resource.AbstractStruct;
-import org.infinity.resource.StructEntry;
 
 public final class UnknownBinary extends Unknown
 {
   public UnknownBinary(ByteBuffer buffer, int offset, int length, String name)
   {
-    this(null, buffer, offset, length, name);
-  }
-
-  public UnknownBinary(StructEntry parent, ByteBuffer buffer, int offset, int length, String name)
-  {
-    super(parent, buffer, offset, length, name);
+    super(buffer, offset, length, name);
   }
 
 // --------------------- Begin Interface Editable ---------------------
@@ -72,4 +66,3 @@ public final class UnknownBinary extends Unknown
       return "";
   }
 }
-

@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -13,15 +13,10 @@ public final class SectionOffset extends HexNumber
 {
   private final Class<? extends StructEntry> section;
 
-  public SectionOffset(ByteBuffer buffer, int offset, String desc, Class<? extends StructEntry> section)
-  {
-    this(null, buffer, offset, desc, section);
-  }
-
-  public SectionOffset(StructEntry parent, ByteBuffer buffer, int offset, String desc,
+  public SectionOffset(ByteBuffer buffer, int offset, String desc,
                        Class<? extends StructEntry> section)
   {
-    super(parent, buffer, offset, 4, desc);
+    super(buffer, offset, 4, desc);
     this.section = Objects.requireNonNull(section, "Class for SectionOffset must not be null");
   }
 

@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -9,8 +9,6 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 
-import org.infinity.resource.StructEntry;
-
 public class DecNumber extends Datatype implements InlineEditable, IsNumeric
 {
   private long number;
@@ -18,22 +16,12 @@ public class DecNumber extends Datatype implements InlineEditable, IsNumeric
 
   public DecNumber(ByteBuffer buffer, int offset, int length, String name)
   {
-    this(null, buffer, offset, length, name, true);
+    this(buffer, offset, length, name, true);
   }
 
   public DecNumber(ByteBuffer buffer, int offset, int length, String name, boolean signed)
   {
-    this(null, buffer, offset, length, name, signed);
-  }
-
-  public DecNumber(StructEntry parent, ByteBuffer buffer, int offset, int length, String name)
-  {
-    this(parent, buffer, offset, length, name, true);
-  }
-
-  public DecNumber(StructEntry parent, ByteBuffer buffer, int offset, int length, String name, boolean signed)
-  {
-    super(parent, offset, length, name);
+    super(offset, length, name);
     this.number = 0L;
     this.signed = signed;
     read(buffer, offset);
@@ -160,4 +148,3 @@ public class DecNumber extends Datatype implements InlineEditable, IsNumeric
     return newNumber;
   }
 }
-

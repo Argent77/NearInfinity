@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -51,7 +51,6 @@ import org.infinity.gui.ViewerUtil;
 import org.infinity.icon.Icons;
 import org.infinity.resource.AbstractStruct;
 import org.infinity.resource.ResourceFactory;
-import org.infinity.resource.StructEntry;
 import org.infinity.resource.graphics.GraphicsResource;
 import org.infinity.resource.key.ResourceEntry;
 import org.infinity.util.IdsMap;
@@ -71,24 +70,14 @@ public class ColorValue extends Datatype implements Editable, IsNumeric
   private ResourceEntry colorEntry; // the source of color ranges
   private IdsMap colorMap;          // provides an optional symbolic color name
 
-  public ColorValue(ByteBuffer buffer, int offset, int length, String name, String bmpFile)
-  {
-    this(null, buffer, offset, length, name, bmpFile);
-  }
-
   public ColorValue(ByteBuffer buffer, int offset, int length, String name)
   {
-    this(null, buffer, offset, length, name, null);
+    this(buffer, offset, length, name, null);
   }
 
-  public ColorValue(StructEntry parent, ByteBuffer buffer, int offset, int length, String name)
+  public ColorValue(ByteBuffer buffer, int offset, int length, String name, String bmpFile)
   {
-    this(parent, buffer, offset, length, name, null);
-  }
-
-  public ColorValue(StructEntry parent, ByteBuffer buffer, int offset, int length, String name, String bmpFile)
-  {
-    super(parent, offset, length, name);
+    super(offset, length, name);
     if (bmpFile != null && ResourceFactory.resourceExists(bmpFile)) {
       this.colorEntry = ResourceFactory.getResourceEntry(bmpFile);
     }

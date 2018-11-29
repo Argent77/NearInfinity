@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -88,32 +88,17 @@ public class SpellProtType extends Bitmap
 
   public SpellProtType(ByteBuffer buffer, int offset, int length)
   {
-    this(null, buffer, offset, length, null, -1);
-  }
-
-  public SpellProtType(StructEntry parent, ByteBuffer buffer, int offset, int length)
-  {
-    this(parent, buffer, offset, length, null, -1);
+    this(buffer, offset, length, null, -1);
   }
 
   public SpellProtType(ByteBuffer buffer, int offset, int length, String name)
   {
-    this(null, buffer, offset, length, name, -1);
-  }
-
-  public SpellProtType(StructEntry parent, ByteBuffer buffer, int offset, int length, String name)
-  {
-    this(parent, buffer, offset, length, name, -1);
+    this(buffer, offset, length, name, -1);
   }
 
   public SpellProtType(ByteBuffer buffer, int offset, int length, String name, int idx)
   {
-    this(null, buffer, offset, length, name, idx);
-  }
-
-  public SpellProtType(StructEntry parent, ByteBuffer buffer, int offset, int length, String name, int idx)
-  {
-    super(parent, buffer, offset, length, createFieldName(name, idx, DEFAULT_NAME_TYPE), getTypeTable());
+    super(buffer, offset, length, createFieldName(name, idx, DEFAULT_NAME_TYPE), getTypeTable());
     this.index = idx;
     this.isExternalized = isTableExternalized();
     this.updateIdsValues = true;

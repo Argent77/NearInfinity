@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import org.infinity.resource.StructEntry;
 import org.infinity.util.IdsMap;
 import org.infinity.util.IdsMapCache;
 import org.infinity.util.IdsMapEntry;
@@ -20,12 +19,7 @@ public final class IwdRef extends ResourceBitmap
 
   public IwdRef(ByteBuffer buffer, int offset, String name, String idsFile)
   {
-    this(null, buffer, offset, name, idsFile);
-  }
-
-  public IwdRef(StructEntry parent, ByteBuffer buffer, int offset, String name, String idsFile)
-  {
-    super(parent, buffer, offset, 4, name, createIwdRefList(idsFile), NONE, FMT_REF_NAME);
+    super(buffer, offset, 4, name, createIwdRefList(idsFile), NONE, FMT_REF_NAME);
   }
 
   public long getValue(String ref)
@@ -74,4 +68,3 @@ public final class IwdRef extends ResourceBitmap
     return retVal;
   }
 }
-
