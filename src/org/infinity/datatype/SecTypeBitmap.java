@@ -21,7 +21,7 @@ public class SecTypeBitmap extends HashBitmap
                                               "Divination attack", "Conjuration", "Combat protections",
                                               "Contingency", "Battleground", "Offensive damage",
                                               "Disabling", "Combination", "Non-combat"};
-  private static final LongIntegerHashMap<String> typeMap = new LongIntegerHashMap<String>();
+  private static final LongIntegerHashMap<String> typeMap = new LongIntegerHashMap<>();
 
   public SecTypeBitmap(ByteBuffer buffer, int offset, int length, String name)
   {

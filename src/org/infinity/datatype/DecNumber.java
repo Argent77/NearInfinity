@@ -9,6 +9,9 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 
+/**
+ * Field that represents numerical value which is usually edited in a decimal mode.
+ */
 public class DecNumber extends Datatype implements InlineEditable, IsNumeric
 {
   private long number;
@@ -22,7 +25,6 @@ public class DecNumber extends Datatype implements InlineEditable, IsNumeric
   protected DecNumber(ByteBuffer buffer, int offset, int length, String name, boolean signed)
   {
     super(offset, length, name);
-    this.number = 0L;
     this.signed = signed;
     read(buffer, offset);
   }

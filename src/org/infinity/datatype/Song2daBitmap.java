@@ -88,7 +88,7 @@ public class Song2daBitmap extends ResourceBitmap
         if (defValue.equalsIgnoreCase(ref)) {
           ref = "None";
         }
-        SongList.add(new RefEntry((long)i, ref, name, searchDirs));
+        SongList.add(new RefEntry(i, ref, name, searchDirs));
       }
     }
     return SongList;

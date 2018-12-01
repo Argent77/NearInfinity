@@ -191,7 +191,7 @@ public class Bitmap extends Datatype implements Editable, IsNumeric
       return "Unknown (" + nr + ')';
     } else if (nr < 0) {
       return "Error (" + nr + ')';
-    } else if (table[nr] == null || table[nr].equals("")) {
+    } else if (table[nr] == null || table[nr].isEmpty()) {
       return "Unknown (" + nr + ')';
     } else {
       return table[nr] + " (" + nr + ')';

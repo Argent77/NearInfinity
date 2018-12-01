@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.wmp;
@@ -71,7 +71,7 @@ import org.infinity.util.io.StreamUtils;
 
 public class ViewerMap extends JPanel
 {
-  // Needed to determine map edges to travel from/to
+  /** Needed to determine map edges to travel from/to. */
   private enum Direction { NORTH, WEST, SOUTH, EAST }
 
   private final JPopupMenu pmOptions = new JPopupMenu("Options");
@@ -194,13 +194,13 @@ public class ViewerMap extends JPanel
     }
   }
 
-  // Returns current map entry structure
+  /** Returns current map entry structure. */
   private MapEntry getEntry()
   {
     return mapEntry;
   }
 
-  // Load and return map graphics
+  /** Load and return map graphics. */
   private BufferedImage loadMap()
   {
     String mapName = ((ResourceRef)getEntry().getAttribute(MapEntry.WMP_MAP_RESREF)).getResourceName();
@@ -213,13 +213,13 @@ public class ViewerMap extends JPanel
     return null;
   }
 
-  // show popup menu
+  /** Show popup menu. */
   private void showPopup(Component invoker, int x, int y)
   {
     pmOptions.show(invoker, x, y);
   }
 
-  // display either or both map icons and travel distances
+  /** Display either or both map icons and travel distances. */
   private void showOverlays(boolean showIcons, boolean showIconLabels, boolean showDistances)
   {
     resetMap();
@@ -236,7 +236,7 @@ public class ViewerMap extends JPanel
     rcMap.repaint();
   }
 
-  // Draws map icons onto the map
+  /** Draws map icons onto the map. */
   private void showMapIcons()
   {
     if (mapIcons != null) {
@@ -248,7 +248,7 @@ public class ViewerMap extends JPanel
             int iconIndex = ((DecNumber)area.getAttribute(AreaEntry.WMP_AREA_ICON_INDEX)).getValue();
             int frameIndex = mapIconsCtrl.cycleGetFrameIndexAbsolute(iconIndex, 0);
             if (frameIndex >= 0) {
-              BufferedImage mapIcon = (BufferedImage)mapIcons.frameGet(mapIconsCtrl, frameIndex);
+              final Image mapIcon = mapIcons.frameGet(mapIconsCtrl, frameIndex);
               Point p = getAreaEntryPosition(area, isScaling());
               int width = mapIcons.getFrameInfo(frameIndex).getWidth();
               int height = mapIcons.getFrameInfo(frameIndex).getHeight();
@@ -267,7 +267,7 @@ public class ViewerMap extends JPanel
     }
   }
 
-  // Draws map icon labels onto the map
+  /** Draws map icon labels onto the map. */
   private void showMapIconLabels()
   {
     if (mapIcons != null) {
@@ -347,7 +347,7 @@ public class ViewerMap extends JPanel
     }
   }
 
-  // Displays all map distances from the specified area (by index)
+  /** Displays all map distances from the specified area (by index). */
   private void showMapDistances(int areaIndex)
   {
     AreaEntry area = getAreaEntry(areaIndex, true);
@@ -435,7 +435,7 @@ public class ViewerMap extends JPanel
     }
   }
 
-  // Returns a properly scaled map icon position
+  /** Returns a properly scaled map icon position. */
   private Point getAreaEntryPosition(AreaEntry areaEntry, boolean scaled)
   {
     Point p = new Point();
@@ -450,7 +450,7 @@ public class ViewerMap extends JPanel
     return p;
   }
 
-  // Returns a pixel coordinate for one of the edges of the specified area icon
+  /** Returns a pixel coordinate for one of the edges of the specified area icon. */
   private Point getMapIconCoordinate(int areaIndex, Direction dir, boolean byPanel)
   {
     AreaEntry area = getAreaEntry(areaIndex, byPanel);
@@ -491,7 +491,7 @@ public class ViewerMap extends JPanel
     return null;
   }
 
-  // Returns area structure of specified item index
+  /** Returns area structure of specified item index. */
   private AreaEntry getAreaEntry(int index, boolean byPanel)
   {
     AreaEntry retVal = null;
@@ -510,7 +510,7 @@ public class ViewerMap extends JPanel
     return retVal;
   }
 
-  // Show "dot" on specified map icon, optionally restore background graphics
+  /** Show "dot" on specified map icon, optionally restore background graphics. */
   private void showDot(AreaEntry entry, boolean restore)
   {
     if (restore) {
@@ -537,7 +537,7 @@ public class ViewerMap extends JPanel
     }
   }
 
-  // Stores background graphics of "dot"
+  /** Stores background graphics of "dot". */
   private void storeDot(AreaEntry entry)
   {
     if (entry != null) {
@@ -562,7 +562,7 @@ public class ViewerMap extends JPanel
     }
   }
 
-  // Restores background graphics of "dot"
+  /** Restores background graphics of "dot". */
   private void restoreDot()
   {
     if (dotX != -1 && dotY != -1) {
@@ -583,7 +583,7 @@ public class ViewerMap extends JPanel
     }
   }
 
-  // Attempts to restore the whole map graphics
+  /** Attempts to restore the whole map graphics. */
   private void resetMap()
   {
     Graphics2D g = ((BufferedImage)rcMap.getImage()).createGraphics();
@@ -595,13 +595,13 @@ public class ViewerMap extends JPanel
     }
   }
 
-  // Returns whether to apply map scaling factor
+  /** Returns whether to apply map scaling factor. */
   private boolean isScaling()
   {
     return miScaling.isSelected();
   }
 
-  // Shows specified coordinates as text info. Hides display for negative coordinates.
+  /** Shows specified coordinates as text info. Hides display for negative coordinates. */
   private void updateCursorInfo(int x, int y)
   {
     if (lInfoPos != null) {
@@ -613,7 +613,7 @@ public class ViewerMap extends JPanel
     }
   }
 
-  // Exports current map to PNG
+  /** Exports current map to PNG. */
   private void exportMap()
   {
     final Window wnd = SwingUtilities.getWindowAncestor(this);

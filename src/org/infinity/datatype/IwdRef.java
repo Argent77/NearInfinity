@@ -60,7 +60,7 @@ public final class IwdRef extends ResourceBitmap
   {
     IdsMap idsMap = IdsMapCache.get(idsFile);
 
-    List<RefEntry> retVal = new ArrayList<ResourceBitmap.RefEntry>(idsMap.size());
+    final List<RefEntry> retVal = new ArrayList<>(idsMap.size());
     for (final IdsMapEntry e: idsMap.getAllValues()) {
       retVal.add(new RefEntry(e.getID(), e.getSymbol().toUpperCase(Locale.ENGLISH) + ".SPL"));
     }

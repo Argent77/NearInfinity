@@ -17,8 +17,8 @@ import org.infinity.util.IdsMapEntry;
 
 public final class ProRef extends ResourceBitmap
 {
-  private static final ArrayList<RefEntry> proMissileList = new ArrayList<RefEntry>();
-  private static final ArrayList<RefEntry> proList = new ArrayList<RefEntry>();
+  private static final ArrayList<RefEntry> proMissileList = new ArrayList<>();
+  private static final ArrayList<RefEntry> proList = new ArrayList<>();
 
   public ProRef(ByteBuffer buffer, int offset, String name)
   {
@@ -82,7 +82,7 @@ public final class ProRef extends ResourceBitmap
         long k = key.longValue();
         IdsMapEntry mslEntry = mslMap.get(k);
         IdsMapEntry proEntry = proMap.get(k - 1L);
-        RefEntry entry = null;
+        final RefEntry entry;
         if (proEntry != null) {
           entry = new RefEntry(k, proEntry.getSymbol().toUpperCase(Locale.ENGLISH) + ".PRO",
                                mslEntry.getSymbol());

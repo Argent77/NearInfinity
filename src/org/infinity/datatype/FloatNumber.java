@@ -18,7 +18,6 @@ public class FloatNumber extends Datatype implements InlineEditable
   public FloatNumber(ByteBuffer buffer, int offset, int length, String name)
   {
     super(offset, length, name);
-    value = 0.0;
     read(buffer, offset);
   }
 

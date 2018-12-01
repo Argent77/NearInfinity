@@ -12,11 +12,11 @@ import org.infinity.util.LongIntegerHashMap;
 import org.infinity.util.Table2da;
 import org.infinity.util.Table2daCache;
 
-/** Specialized HashBitmap type for parsing SMTABLES.2DA from IWDEE. */
+/** Specialized HashBitmap type for parsing {@code SMTABLES.2DA} from IWDEE. */
 public class Summon2daBitmap extends HashBitmap
 {
   private static final String TableName = "SMTABLES.2DA";
-  private static final LongIntegerHashMap<String> summonMap = new LongIntegerHashMap<String>();
+  private static final LongIntegerHashMap<String> summonMap = new LongIntegerHashMap<>();
 
   public Summon2daBitmap(ByteBuffer buffer, int offset, int length, String name)
   {

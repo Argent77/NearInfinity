@@ -37,7 +37,7 @@ public final class EffectType extends Bitmap implements UpdateListener
   {
     super.updateValue(struct);
     try {
-      List<StructEntry> list = new ArrayList<StructEntry>();
+      final List<StructEntry> list = new ArrayList<>();
       readAttributes(struct.removeFromList(this, attr_length), 0, list);
       for (int i = 0; i < list.size(); i++) {
         StructEntry entry = list.get(i);

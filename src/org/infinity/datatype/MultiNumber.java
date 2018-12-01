@@ -36,7 +36,7 @@ import org.infinity.util.Misc;
 public class MultiNumber extends Datatype implements Editable, IsNumeric
 {
   private int value;
-  private ValueTableModel mValues;
+  private final ValueTableModel mValues;
   private JTable tValues;
 
   /**
@@ -285,7 +285,7 @@ public class MultiNumber extends Datatype implements Editable, IsNumeric
 
 //-------------------------- INNER CLASSES --------------------------
 
-  // Manages a fixed two columns table with a given number of rows
+  /** Manages a fixed two columns table with a given number of rows. */
   private static class ValueTableModel extends AbstractTableModel
   {
     private static final int ATTRIBUTE = 0;
@@ -293,11 +293,11 @@ public class MultiNumber extends Datatype implements Editable, IsNumeric
 
     private final Object[][] data;
 
-    private int bits;
-    private int numValues;
+    private final int bits;
+    private final int numValues;
     private boolean signed;
 
-    public ValueTableModel(Integer value, int bits, int numValues, String[] labels, boolean signed)
+    public ValueTableModel(int value, int bits, int numValues, String[] labels, boolean signed)
     {
       if (bits < 1) bits = 1; else if (bits > 32) bits = 32;
       if (numValues < 1 || numValues > (32 / bits)) numValues = 32 / bits;
@@ -396,9 +396,10 @@ public class MultiNumber extends Datatype implements Editable, IsNumeric
     {
       StringBuilder sb = new StringBuilder();
       for (int i = 0; i < numValues; i++) {
-        sb.append(String.format("%s: %d", (String)data[ATTRIBUTE][i], ((Integer)data[VALUE][i]).intValue()));
-        if (i+1 < numValues)
+        if (i != 0) {
           sb.append(", ");
+        }
+        sb.append(data[ATTRIBUTE][i]).append(": ").append(data[VALUE][i]);
       }
       return sb.toString();
     }
