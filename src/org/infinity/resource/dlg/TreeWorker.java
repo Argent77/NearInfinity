@@ -100,7 +100,6 @@ class TreeWorker extends SwingWorker<Void, Void>
   /** Collapses all children and their children of the given path. */
   private void collapseNode(final TreePath path)
   {
-    System.err.println("collapse: "+path);
     if (progress.isCanceled()) return;
     advanceProgress();
 
