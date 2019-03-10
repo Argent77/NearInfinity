@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.dlg;
@@ -19,14 +19,14 @@ import org.infinity.gui.BrowserMenuBar;
 import org.infinity.icon.Icons;
 
 /** Encapsulates a dialog transition entry. */
-final class TransitionItem extends StateOwnerItem
+class TransitionItem extends StateOwnerItem
 {
   private static final ImageIcon ICON = Icons.getIcon(Icons.ICON_PLAY_16);
 
   private final Transition trans;
 
   /** Parent tree item from which this transition is available. */
-  private final StateItem parent;
+  protected final StateItem parent;
   /**
    * Item to which need go to in break cycles tree view mode. This item contains
    * referense to the same transition as this one (i.e. {@code this.trans == main.ref.trans})
@@ -35,10 +35,16 @@ final class TransitionItem extends StateOwnerItem
   /** Tree item to which go this transition or {@code null}, if this transition terminates dialog. */
   StateItem nextState;
 
+  protected TransitionItem(StateItem parent)
+  {
+    this.trans  = null;
+    this.parent = Objects.requireNonNull(parent, "Parent state of broken transition item must be not null");
+    this.main   = null;
+  }
   public TransitionItem(Transition trans, StateItem parent, MainRef<TransitionItem> main)
   {
     this.trans  = Objects.requireNonNull(trans,  "Transition dialog entry must be not null");
-    this.parent = Objects.requireNonNull(parent, "Parent tree of transition item must be not null");
+    this.parent = Objects.requireNonNull(parent, "Parent state of transition item must be not null");
     this.main   = main;
   }
 
@@ -72,6 +78,9 @@ final class TransitionItem extends StateOwnerItem
     }
   }
 
+  /** Returns technical name of transition item which uniquely identifying it within dialog. */
+  public String getName() { return trans.getName(); }
+
   //<editor-fold defaultstate="collapsed" desc="TreeNode">
   @Override
   public StateItem getChildAt(int childIndex) { return isMain() && childIndex == 0 ? nextState : null; }
@@ -95,7 +104,7 @@ final class TransitionItem extends StateOwnerItem
   @Override
   public Enumeration<? extends StateItem> children()
   {
-    return enumeration(isLeaf() ?  emptyList(): singletonList(nextState));
+    return enumeration(isLeaf() ? emptyList() : singletonList(nextState));
   }
   //</editor-fold>
 

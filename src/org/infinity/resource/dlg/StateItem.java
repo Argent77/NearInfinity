@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.dlg;
@@ -20,14 +20,14 @@ import org.infinity.gui.BrowserMenuBar;
 import org.infinity.icon.Icons;
 
 /** Encapsulates a dialog state entry. */
-final class StateItem extends ItemBase implements Iterable<TransitionItem>
+class StateItem extends ItemBase implements Iterable<TransitionItem>
 {
   private static final ImageIcon ICON = Icons.getIcon(Icons.ICON_STOP_16);
 
   private final State state;
 
   /** Tree item that represent visual parent of this state in the tree. */
-  private final StateOwnerItem parent;
+  protected final StateOwnerItem parent;
   /**
    * Item to which need go to in break cycles tree view mode. This item contains
    * referense to the same state as this one (i.e. {@code this.state == main.ref.state})
@@ -36,6 +36,12 @@ final class StateItem extends ItemBase implements Iterable<TransitionItem>
   /** Items that represents transition tree nodes from this state. */
   ArrayList<TransitionItem> trans;
 
+  protected StateItem(StateOwnerItem parent)
+  {
+    this.state  = null;
+    this.parent = Objects.requireNonNull(parent, "Parent tree of broken state item must be not null");
+    this.main   = null;
+  }
   public StateItem(State state, StateOwnerItem parent, MainRef<StateItem> main)
   {
     this.state  = Objects.requireNonNull(state,  "State dialog entry must be not null");
@@ -65,6 +71,9 @@ final class StateItem extends ItemBase implements Iterable<TransitionItem>
       trans.forEach(action);
     }
   }
+
+  /** Returns technical name of state item which uniquely identifying it within dialog. */
+  public String getName() { return state.getName(); }
 
   //<editor-fold defaultstate="collapsed" desc="TreeNode">
   @Override

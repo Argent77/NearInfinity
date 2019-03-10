@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.dlg;
@@ -314,7 +314,7 @@ final class DlgTreeModel implements TreeModel, TableModelListener, PropertyChang
         if (s.trans == null) continue;
 
         removeChildTransitions(s, 0, diff);
-        insertChildTransitions(s, newStart, cnt - diff, cnt);
+        insertChildTransitions(s, newStart, cnt - diff, cnt, false);
       }
     } else
     if (diff < 0) {
@@ -324,7 +324,7 @@ final class DlgTreeModel implements TreeModel, TableModelListener, PropertyChang
         if (s.trans == null) continue;
 
         removeChildTransitions(s, cnt + diff, cnt);
-        insertChildTransitions(s, newStart, 0, -diff);
+        insertChildTransitions(s, newStart, 0, -diff, true);
       }
     }
   }
@@ -351,7 +351,7 @@ final class DlgTreeModel implements TreeModel, TableModelListener, PropertyChang
         // If this not main state item and non-main items do not contains childs, skip
         if (s.trans == null) continue;
 
-        insertChildTransitions(s, start, oldCnt, newCnt);
+        insertChildTransitions(s, start, oldCnt, newCnt, false);
       }
     } else
     if (newCnt < oldCnt) {
@@ -376,14 +376,20 @@ final class DlgTreeModel implements TreeModel, TableModelListener, PropertyChang
    *        state to add, inclusive
    * @param toIndex Index of the last child tree item under {@code parent}
    *        state to add, exclusive
+   * @param prepend If {@code true}, then insert child transitions before existing,
+   *        otherwise after existing
    */
-  private void insertChildTransitions(StateItem parent, int startTransition, int fromIndex, int toIndex)
+  private void insertChildTransitions(StateItem parent, int startTransition, int fromIndex, int toIndex, boolean prepend)
   {
-    parent.trans.ensureCapacity(toIndex);
-    addTransitions(parent, startTransition + fromIndex, startTransition + toIndex);
+    final int size = parent.trans.size();
+    final int from = Math.max(0, Math.min(fromIndex, size));
+    final int to   = Math.max(from, toIndex);
 
-    final int[] childIndices = IntStream.range(fromIndex, toIndex).toArray();
-    final Object[] children  = parent.trans.subList(fromIndex, toIndex).toArray();
+    parent.trans.ensureCapacity(to);
+    addTransitions(parent, startTransition + from, startTransition + to, prepend);
+
+    final int[] childIndices = IntStream.range(from, to).toArray();
+    final Object[] children  = parent.trans.subList(from, to).toArray();
 
     fireTreeNodesInserted(parent.getPath(), childIndices, children);
   }
@@ -399,8 +405,12 @@ final class DlgTreeModel implements TreeModel, TableModelListener, PropertyChang
    */
   private void removeChildTransitions(StateItem parent, int fromIndex, int toIndex)
   {
-    final List<TransitionItem> items = parent.trans.subList(fromIndex, toIndex);
-    final int[] childIndices = IntStream.range(fromIndex, toIndex).toArray();
+    final int size = parent.trans.size();
+    final int from = Math.max(0, Math.min(fromIndex, size));
+    final int to   = Math.max(from, Math.min(toIndex, size));
+
+    final List<TransitionItem> items = parent.trans.subList(from, to);
+    final int[] childIndices = IntStream.range(from, to).toArray();
     final Object[] children  = items.toArray();
 
     // Clear global registers and redirect main references
@@ -638,7 +648,7 @@ final class DlgTreeModel implements TreeModel, TableModelListener, PropertyChang
       final int count = state.getEntry().getTransCount();
 
       state.trans = new ArrayList<>(count);
-      addTransitions(state, start, start + count);
+      addTransitions(state, start, start + count, false);
     }
   }
 
@@ -650,20 +660,30 @@ final class DlgTreeModel implements TreeModel, TableModelListener, PropertyChang
    *        {@link StateItem#getDialog() dialog} that need to add, inclusive
    * @param lastTransition Index of the last transition in the state dialog that
    *        need to add, exclusive
+   * @param prepend If {@code true}, then insert child transitions before existing,
+   *        otherwise after existing
    */
-  private void addTransitions(StateItem state, int firstTransition, int lastTransition)
+  @SuppressWarnings("unchecked")
+  private void addTransitions(StateItem state, int firstTransition, int lastTransition, boolean prepend)
   {
     final DlgResource dlg = state.getDialog();
     for (int i = firstTransition; i < lastTransition; ++i) {
       final Transition trans = dlg.getTransition(i);
-      if (trans != null) {
-        @SuppressWarnings("unchecked")
-        final MainRef<TransitionItem> main = (MainRef<TransitionItem>)mainItems.get(trans);
-        final TransitionItem item = new TransitionItem(trans, state, main);
-
-        state.trans.add(item);
-        putItem(item, main);
+      final MainRef<TransitionItem> main;
+      final TransitionItem item;
+      if (trans == null) {
+        main = null;
+        item = new BrokenTransitionItem(i, state);
+      } else {
+        main = (MainRef<TransitionItem>)mainItems.get(trans);
+        item = new TransitionItem(trans, state, main);
       }
+      if (prepend) {
+        state.trans.add(i - firstTransition, item);
+      } else {
+        state.trans.add(item);
+      }
+      putItem(item, main);
     }
   }
 
@@ -675,8 +695,12 @@ final class DlgTreeModel implements TreeModel, TableModelListener, PropertyChang
       final DlgResource nextDlg = getDialogResource(t.getNextDialog());
 
       if (nextDlg != null) {
-        final State state = nextDlg.getState(t.getNextDialogState());
-        if (state != null) {
+        final int nextIndex = t.getNextDialogState();
+        final State state = nextDlg.getState(nextIndex);
+        if (state == null) {
+          trans.nextState = new BrokenStateItem(nextDlg, nextIndex, trans);
+          putItem(trans.nextState, null);
+        } else {
           @SuppressWarnings("unchecked")
           final MainRef<StateItem> main = (MainRef<StateItem>)mainItems.get(state);
 
