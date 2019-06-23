@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.gui;
@@ -182,13 +182,11 @@ public final class ViewerUtil
   {
     JPanel panel = new JPanel(new GridLayout(0, rows, 3, 3));
     for (int i = 0; i < flag.getSize() << 3; i++) {
-      String s = flag.getString(i);
-      if (s != null && !s.equals("") && !s.startsWith("Unknown")) {
-        JLabel check = new JLabel(flag.getString(i));
-        if (flag.isFlagSet(i))
-          check.setIcon(Icons.getIcon(Icons.ICON_CHECK_16));
-        else
-          check.setIcon(Icons.getIcon(Icons.ICON_CHECK_NOT_16));
+      final String label = flag.getString(i);
+      if (label != null) {
+        final JLabel check = new JLabel(label);
+        final String icon = flag.isFlagSet(i) ? Icons.ICON_CHECK_16 : Icons.ICON_CHECK_NOT_16;
+        check.setIcon(Icons.getIcon(icon));
         panel.add(check);
       }
     }
@@ -640,4 +638,3 @@ public final class ViewerUtil
     }
   }
 }
-
