@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2018 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.check;
@@ -56,7 +56,8 @@ public final class IDSRefChecker extends AbstractChecker
     for (StructEntry e : struct.getFlatList()) {
       if (e instanceof IdsBitmap) {
         final IdsBitmap ref = (IdsBitmap)e;
-        if (ref.toString().startsWith("Unknown - ") && ref.getValue() != 0) {//FIXME: remove check of string
+        final long value = ref.getLongValue();
+        if (value != 0L && ref.getValueOf(value) == null) {
           synchronized (hitFrame) {
             hitFrame.addHit(entry, entry.getSearchString(), ref);
           }
