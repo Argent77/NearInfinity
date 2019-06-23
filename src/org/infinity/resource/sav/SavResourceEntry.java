@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.sav;
@@ -81,7 +81,7 @@ public class SavResourceEntry extends ResourceEntry implements Writeable
   @Override
   public String getExtension()
   {
-    return fileName.substring(fileName.lastIndexOf(".") + 1).toUpperCase(Locale.ENGLISH);
+    return fileName.substring(fileName.lastIndexOf('.') + 1).toUpperCase(Locale.ENGLISH);
   }
 
   @Override

@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.datatype;
@@ -72,8 +72,7 @@ public class HashBitmap extends Datatype implements Editable, IsNumeric
     read(buffer, offset);
   }
 
-// --------------------- Begin Interface Editable ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="Editable">
   @Override
   public JComponent edit(final ActionListener container)
   {
@@ -174,20 +173,15 @@ public class HashBitmap extends Datatype implements Editable, IsNumeric
     return true;
   }
 
-// --------------------- End Interface Editable ---------------------
-
-// --------------------- Begin Interface Writeable ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="Writeable">
   @Override
   public void write(OutputStream os) throws IOException
   {
     writeLong(os, value);
   }
+  //</editor-fold>
 
-// --------------------- End Interface Writeable ---------------------
-
-//--------------------- Begin Interface Readable ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="Readable">
   @Override
   public int read(ByteBuffer buffer, int offset)
   {
@@ -208,22 +202,17 @@ public class HashBitmap extends Datatype implements Editable, IsNumeric
 
     return offset + getSize();
   }
-
-//--------------------- End Interface Readable ---------------------
+  //</editor-fold>
+  //</editor-fold>
 
   @Override
   public String toString()
   {
-    Object o = idsmap.get(Long.valueOf(value));
-    if (o == null) {
-      return "Unknown - " + value;
-    } else {
-      return o.toString();
-    }
+    final Object o = getValueOf(value);
+    return o == null ? "Unknown - " + value : o.toString();
   }
 
-//--------------------- Begin Interface IsNumeric ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="IsNumeric">
   @Override
   public long getLongValue()
   {
@@ -235,8 +224,7 @@ public class HashBitmap extends Datatype implements Editable, IsNumeric
   {
     return (int)value;
   }
-
-//--------------------- End Interface IsNumeric ---------------------
+  //</editor-fold>
 
   protected void setValue(long newValue)
   {
@@ -263,31 +251,10 @@ public class HashBitmap extends Datatype implements Editable, IsNumeric
     }
   }
 
-  /** Returns the number of registered buttons. */
-  public int getButtonCount()
-  {
-    return buttonList.size();
-  }
-
-  /**
-   * Returns the button control at the specified index.
-   * First entry is always the "Update value" button.
-   */
-  public JButton getButton(int index)
-  {
-    return buttonList.get(index);
-  }
-
   /** Returns the TextListPanel control used by this datatype. */
   public TextListPanel<Object> getListPanel()
   {
     return list;
-  }
-
-  /** Returns the number if IDS entries. */
-  public int getListSize()
-  {
-    return idsmap.size();
   }
 
   /** Returns the textual representation of the specified IDS value. */
@@ -296,25 +263,13 @@ public class HashBitmap extends Datatype implements Editable, IsNumeric
     return idsmap.get(Long.valueOf(key));
   }
 
-  /** Returns the symbol associated with the specified IDS value. */
-  public String getSymbol(long index)
+  protected Long getCurrentValue()
   {
-    Object o = idsmap.get(index);
-    if (o != null) {
-      if (o instanceof ObjectString) {
-        return ((ObjectString)o).getString();
-      } else {
-        int i = o.toString().lastIndexOf(" - ");//FIXME: Smell code
-        if (i >= 0) {
-          return o.toString().substring(0, i);
-        }
-      }
-    }
-    return null;
+    return getValueOfItem(list.getSelectedValue());
   }
 
   /** Attempts to extract the IDS value from the specified list item. */
-  protected Long getValueOfItem(Object item)
+  private Long getValueOfItem(Object item)
   {
     Long retVal = null;
     if (item != null) {
@@ -354,4 +309,3 @@ public class HashBitmap extends Datatype implements Editable, IsNumeric
     }
   }
 }
-

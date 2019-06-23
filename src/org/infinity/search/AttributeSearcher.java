@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.search;
@@ -62,8 +62,7 @@ public final class AttributeSearcher extends AbstractSearcher implements Runnabl
     this.structEntry = structEntry;
     while (struct.getSuperStruct() != null)
       struct = struct.getSuperStruct();
-    String filename = struct.getResourceEntry().toString();
-    files = ResourceFactory.getResources(filename.substring(filename.lastIndexOf(".") + 1).toUpperCase(Locale.ENGLISH));
+    files = ResourceFactory.getResources(struct.getResourceEntry().getExtension());
     inputFrame = new ChildFrame("Find: " + structEntry.getName(), true);
     inputFrame.setIconImage(Icons.getIcon(Icons.ICON_FIND_16).getImage());
     inputFrame.getRootPane().setDefaultButton(bsearch);

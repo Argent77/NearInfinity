@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.key;
@@ -70,7 +70,7 @@ public final class FileResourceEntry extends ResourceEntry
   public String getExtension()
   {
     String name = file.getFileName().toString();
-    return name.substring(name.lastIndexOf(".") + 1).toUpperCase(Locale.ENGLISH);
+    return name.substring(name.lastIndexOf('.') + 1).toUpperCase(Locale.ENGLISH);
   }
 
   @Override
@@ -177,4 +177,3 @@ public final class FileResourceEntry extends ResourceEntry
     file = Files.move(file, basePath.resolve(newName), options);
   }
 }
-

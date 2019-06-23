@@ -74,7 +74,8 @@ public class AnimateBitmap extends IdsBitmap implements ActionListener
   public void actionPerformed(ActionEvent e)
   {
     if (e.getSource() == showIni) {
-      String animRes = getAnimResource(getValueOfItem(getListPanel().getSelectedValue()));
+      final Long value = getCurrentValue();
+      String animRes = value == null ? null : getAnimResource(value.longValue());
       if (animRes != null) {
         ResourceEntry entry = ResourceFactory.getResourceEntry(animRes);
         if (entry != null) {
@@ -89,7 +90,7 @@ public class AnimateBitmap extends IdsBitmap implements ActionListener
   {
     if (showIni != null) {
       boolean b = false;
-      Long value = getValueOfItem(getListPanel().getSelectedValue());
+      final Long value = getCurrentValue();
       if (value != null) {
         b = (getAnimResource(value) != null);
       }
