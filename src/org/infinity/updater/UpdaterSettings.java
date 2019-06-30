@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.updater;
@@ -40,6 +40,7 @@ import javax.swing.text.Document;
 
 import org.infinity.gui.ViewerUtil;
 import org.infinity.gui.WindowBlocker;
+import org.infinity.util.Misc;
 
 /**
  * Provides a dialog for configuring update-relevant data.
@@ -271,7 +272,7 @@ public class UpdaterSettings extends JDialog
 
     // saving proxy settings
     String addr = tfProxyAddress.getText();
-    int port = Utils.toNumber(tfProxyPort.getText(), -1);
+    int port = Misc.toNumber(tfProxyPort.getText(), -1);
     Updater.getInstance().setProxyEnabled(cbProxyEnabled.isSelected());
     Updater.getInstance().setProxy(addr, port);
   }
@@ -334,7 +335,7 @@ public class UpdaterSettings extends JDialog
 
     // checking proxy settings
     if (!tfProxyAddress.getText().trim().isEmpty()) {
-      int port = Utils.toNumber(tfProxyPort.getText().trim(), -1);
+      int port = Misc.toNumber(tfProxyPort.getText().trim(), -1);
       if (port >= 0 && port < 65536) {
         tfProxyPort.setText(Integer.toString(port));
       } else {
@@ -591,4 +592,3 @@ public class UpdaterSettings extends JDialog
 //    }
   }
 }
-

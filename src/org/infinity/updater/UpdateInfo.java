@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.updater;
@@ -21,6 +21,7 @@ import java.util.List;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.infinity.util.Misc;
 import org.infinity.util.Pair;
 import org.infinity.util.io.StreamUtils;
 import org.w3c.dom.Document;
@@ -243,7 +244,7 @@ public class UpdateInfo
       if (!elemRoot.getNodeName().equals(NODE_UPDATE)) {
         throw new Exception("Update.xml: Unsupported root node name: " + elemRoot.getNodeName());
       }
-      version = Utils.toNumber(elemRoot.getAttribute(ATTR_VERSION), 0);
+      version = Misc.toNumber(elemRoot.getAttribute(ATTR_VERSION), 0);
       if (getUpdateInfoVersion() < 1) {
         throw new Exception("Update.xml: Unsupported or missing specification version");
       }

@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.updater;
@@ -46,6 +46,8 @@ import java.util.zip.ZipInputStream;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLPeerUnverifiedException;
+
+import static org.infinity.util.Misc.toNumber;
 
 /**
  * Generic collection of updater-related methods.
@@ -745,18 +747,6 @@ public class Utils
 //    }
 //    return null;
 //  }
-
-  /** Convenience method for converting a String into an Integer. */
-  static int toNumber(String value, int defValue)
-  {
-    if (value != null) {
-      try {
-        return Integer.parseInt(value);
-      } catch (NumberFormatException e) {
-      }
-    }
-    return defValue;
-  }
 
   private Utils() {}
 
