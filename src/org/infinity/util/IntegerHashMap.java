@@ -31,18 +31,6 @@ public final class IntegerHashMap<V> extends HashMap<Integer, V>
     super(m);
   }
 
-  public int[] keys()
-  {
-    Set<Integer> set = keySet();
-    int[] result = new int[set.size()];
-    Iterator<Integer> iter = set.iterator();
-    int i = 0;
-    while (iter.hasNext() && i < result.length) {
-      result[i++] = iter.next().intValue();
-    }
-    return result;
-  }
-
   @Override
   public String toString()
   {

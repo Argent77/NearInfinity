@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.key;
@@ -23,24 +23,28 @@ import org.infinity.util.io.StreamUtils;
 
 public final class BIFFResourceEntry extends ResourceEntry implements Writeable
 {
-  private final Path keyFile;           // Full path to KEY file containing BIFF entry
-  private final String resourceName;    // Resource name without extension
-  private final int type;               // Resource type
-  private final String extension;       // cached resource extension
+  /** Full path to KEY file containing BIFF entry. */
+  private final Path keyFile;
+  /** Resource name without extension. */
+  private final String resourceName;
+  /** Resource type. */
+  private final int type;
+  /** Cached resource extension (in upper case). */
+  private final String extension;
   private boolean hasOverride = false;
   private int locator;
 
   public BIFFResourceEntry(BIFFEntry bifEntry, String resourceName, int offset)
   {
-    this.keyFile = ResourceFactory.getKeyfile().getKeyfile();
-    int p = resourceName.lastIndexOf('.');
-    if (p > 0) {
-      this.resourceName = resourceName.substring(0, p);
-      this.type = ResourceFactory.getKeyfile().getExtensionType(resourceName.substring(p+1));
-      this.extension = ResourceFactory.getKeyfile().getExtension(this.type);
-    } else {
-      throw new UnsupportedOperationException();
+    final int p = resourceName.lastIndexOf('.');
+    if (p <= 0) {
+      throw new IllegalArgumentException("BIFF resource name '"+resourceName+"' doesn't contain extension");
     }
+    this.keyFile = ResourceFactory.getKeyfile().getKeyfile();
+    this.resourceName = resourceName.substring(0, p);
+    this.type = ResourceFactory.getKeyfile().getExtensionType(resourceName.substring(p+1));
+    this.extension = ResourceFactory.getKeyfile().getExtension(this.type);
+
     int bifIndex = bifEntry.getIndex();
     this.locator = bifIndex << 20;
     if (this.type == Keyfile.TYPE_TIS) { // TIS
@@ -50,13 +54,13 @@ public final class BIFFResourceEntry extends ResourceEntry implements Writeable
     }
   }
 
-  public BIFFResourceEntry(Path keyFile, ByteBuffer buffer, int offset, int stringLength)
+  BIFFResourceEntry(Path keyFile, ByteBuffer buffer, int offset)
   {
     if (keyFile == null || buffer == null) {
-      throw new NullPointerException();
+      throw new NullPointerException("Path to KEY file and byte buffer with BIFF content must not be null");
     }
     this.keyFile = keyFile;
-    this.resourceName = StreamUtils.readString(buffer, offset, stringLength);
+    this.resourceName = StreamUtils.readString(buffer, offset, 8);
     this.type = buffer.getShort() & 0xffff;
 
     String ext = ResourceFactory.getKeyfile().getExtension(type);
@@ -286,4 +290,3 @@ public final class BIFFResourceEntry extends ResourceEntry implements Writeable
     }
   }
 }
-

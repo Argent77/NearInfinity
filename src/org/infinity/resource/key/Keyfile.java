@@ -4,6 +4,7 @@
 
 package org.infinity.resource.key;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -91,26 +92,28 @@ public class Keyfile
   private static final String KEY_SIGNATURE = "KEY ";
   private static final String KEY_VERSION   = "V1  ";
 
-  private final Path keyFile;         // primary key file
-  private final List<Path> keyList;   // list of additional DLC key files
+  /** Path to primary key file (usually {@code chitin.key}). */
+  private final Path keyFile;
+  /** List of additional DLC key files. */
+  private final List<Path> keyList;
 
-  private final IntegerHashMap<String> extMap = new IntegerHashMap<String>();
-  private final Map<String, ImageIcon> resourceIcons = new HashMap<String, ImageIcon>();
+  private final IntegerHashMap<String> extMap = new IntegerHashMap<>();
+  private final Map<String, ImageIcon> resourceIcons = new HashMap<>();
 
-  // Map of key file path => list of associated key files
+  /** Map of key file path => list of associated key files. */
   private final Map<Path, List<BIFFEntry>> biffEntries = new HashMap<>();
 
-  // Sorted map of effective BIFFResourceEntry objects
+  /** Sorted map of effective BIFFResourceEntry objects. */
   private final TreeMap<String, BIFFResourceEntry> resourceEntries = new TreeMap<>(Misc.getIgnoreCaseComparator());
 
 
-  public Keyfile(Path keyFile) throws IOException
+  public Keyfile(Path keyFile) throws FileNotFoundException
   {
     if (keyFile == null) {
       throw new NullPointerException("No keyfile specified");
     }
     if (!Files.isRegularFile(keyFile)) {
-      throw new IOException("Keyfile not found");
+      throw new FileNotFoundException("Keyfile " + keyFile + " not found or is not regular file");
     }
 
     this.keyFile = keyFile;
@@ -223,7 +226,8 @@ public class Keyfile
   {
     if (o == this) {
       return true;
-    } else if (o instanceof Keyfile) {
+    }
+    if (o instanceof Keyfile) {
       Keyfile other = (Keyfile)o;
       return (keyFile.equals(other.keyFile));
     }
@@ -255,7 +259,7 @@ public class Keyfile
   public void addKeyfile(Path keyFile) throws IOException
   {
     if (keyFile == null) {
-      throw new NullPointerException();
+      throw new NullPointerException("No DLC keyfile specified");
     }
     if (!keyList.contains(keyFile)) {
       keyList.add(keyFile);
@@ -273,24 +277,28 @@ public class Keyfile
     }
   }
 
-  /** Returns the resource extension string of specified type. */
+  /**
+   * Returns the resource extension string of specified type.
+   *
+   * @param type One of the {@code TYPE_} constants
+   * @return Extension (in upper case) for that type or null, if type is unknown
+   */
   public String getExtension(int type)
   {
     return extMap.get(type);
   }
 
-  /** Attempts to determine the resource type of the specified extension. */
+  /**
+   * Attempts to determine the resource type of the specified extension.
+   *
+   * @param extension Extension string, that can be in any case
+   */
   public int getExtensionType(String extension)
   {
     if (extension != null) {
-      if (extension.length() > 0 && extension.charAt(0) == '.') {
-        extension = extension.substring(1);
-      }
-      extension = extension.toUpperCase(Locale.ENGLISH);
-      int[] keys = extMap.keys();
-      for (final int type: keys) {
-        if (extMap.get(type).equals(extension)) {
-          return type;
+      for (final Map.Entry<Integer, String> e : extMap.entrySet()) {
+        if (e.getValue().equalsIgnoreCase(extension)) {
+          return e.getKey().intValue();
         }
       }
     }
@@ -558,7 +566,7 @@ public class Keyfile
 
         // processing resource entries
         for (int i = 0, ofs = ofsRes; i < numRes; i++, ofs += 14) {
-          addResourceEntry(new BIFFResourceEntry(file, buffer, ofs, 8));
+          addResourceEntry(new BIFFResourceEntry(file, buffer, ofs));
         }
       }
     }
