@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.gui;
@@ -56,7 +56,7 @@ import org.infinity.util.SimpleListModel;
 public class OpenResourceDialog extends JDialog
     implements ItemListener, ListSelectionListener, DocumentListener
 {
-  private final List<List<ResourceEntry>> resources = new ArrayList<List<ResourceEntry>>();
+  private final List<List<ResourceEntry>> resources = new ArrayList<>();
 
   private ResourceEntry[] result;
   private ObjectString[] extensions;
@@ -218,11 +218,11 @@ public class OpenResourceDialog extends JDialog
   /** Returns a list of resource types defined for this dialog. */
   protected String[] getExtensions()
   {
-    if (!extensions[0].getObject().toString().isEmpty()) {
-      return extensions[0].getObject().toString().split(";");
-    } else {
-      return new String[]{""};
+    final String str = extensions[0].getObject().toString();
+    if (!str.isEmpty()) {
+      return str.split(";");
     }
+    return new String[]{""};
   }
 
   /** Returns {@code true} if multiple list items can be selected. */
@@ -269,21 +269,21 @@ public class OpenResourceDialog extends JDialog
     result = null;
   }
 
-  // Generates a list of available resources for all supported types
+  /** Generates a list of available resources for all supported types. */
   private void updateResources()
   {
     resources.clear();
-    for (int i = 0; i < extensions.length; i++) {
-      List<ResourceEntry> list = new ArrayList<ResourceEntry>();
-      String data = extensions[i].getObject();
-      String[] ext = null;
+    for (final ObjectString extension : extensions) {
+      final String data = extension.getObject();
+      final String[] types;
       if (data.isEmpty()) {
-        ext = Profile.getAvailableResourceTypes();
+        types = Profile.getAvailableResourceTypes();
       } else {
-        ext = data.split(";");
+        types = data.split(";");
       }
-      for (int j = 0; j < ext.length; j++) {
-        list.addAll(ResourceFactory.getResources(ext[j]));
+      final List<ResourceEntry> list = new ArrayList<>();
+      for (final String type : types) {
+        list.addAll(ResourceFactory.getResources(type));
       }
       Collections.sort(list);
       resources.add(list);
@@ -291,7 +291,7 @@ public class OpenResourceDialog extends JDialog
     updateGui();
   }
 
-  // Initializes type combobox
+  /** Initializes type combobox. */
   private void updateGui()
   {
     DefaultComboBoxModel<ObjectString> model = (DefaultComboBoxModel<ObjectString>)cbType.getModel();
@@ -306,7 +306,7 @@ public class OpenResourceDialog extends JDialog
     }
   }
 
-  // Initializes resource list
+  /** Initializes resource list. */
   private void updateList(List<ResourceEntry> entries)
   {
     listModel.clear();
@@ -320,7 +320,7 @@ public class OpenResourceDialog extends JDialog
     }
   }
 
-  // Select one or more list items based on search text
+  /** Select one or more list items based on search text. */
   private void updateListSelection(String search)
   {
     if (search == null) {
@@ -343,16 +343,15 @@ public class OpenResourceDialog extends JDialog
     // selecting entries
     if (isMultiSelection()) {
       // multi-selection mode
-      List<Integer> indexList = new ArrayList<Integer>();
-      for (int i = 0; i < entries.length; i++) {
-        String entry = entries[i];
-        Integer idx = getClosestIndex(entry);
+      final List<Integer> indexList = new ArrayList<>();
+      for (final String entry : entries) {
+        final int idx = getClosestIndex(entry);
         if (idx >= 0 && !indexList.contains(idx)) {
           indexList.add(idx);
         }
       }
       int[] indices;
-      if (indexList.size() > 0) {
+      if (!indexList.isEmpty()) {
         indices = new int[indexList.size()];
         for (int i = 0; i < indexList.size(); i++) {
           indices[i] = indexList.get(i);
@@ -379,27 +378,21 @@ public class OpenResourceDialog extends JDialog
     }
   }
 
-  // Returns index of closest list item match for given string
+  /** Returns index of closest list item match for given string. */
   private int getClosestIndex(String text)
   {
-    int retVal = -1;
-    if (text != null) {
-      text = text.toUpperCase(Locale.ENGLISH);
-      int selected = 0;
-      for (int size = listModel.getSize(); selected < size; selected++) {
-        String s = listModel.get(selected).toString().toUpperCase(Locale.ENGLISH);
-        if (s.startsWith(text)) {
-          break;
-        }
-      }
-      if (selected < listModel.getSize()) {
-        retVal = selected;
+    text = text.toUpperCase(Locale.ENGLISH);
+    final int size = listModel.getSize();
+    for (int selected = 0; selected < size; selected++) {
+      final String s = listModel.get(selected).toString().toUpperCase(Locale.ENGLISH);
+      if (s.startsWith(text)) {
+        return selected;
       }
     }
-    return retVal;
+    return -1;
   }
 
-  // Synchronizes search field with list selections
+  /** Synchronizes search field with list selections. */
   private void updateSearchField()
   {
     int[] indices = list.getSelectedIndices();
@@ -434,7 +427,7 @@ public class OpenResourceDialog extends JDialog
     }
   }
 
-  // Constructs the dialog elements
+  /** Constructs the dialog elements. */
   private void init()
   {
     AbstractAction actOpen = new AbstractAction("Open") {
@@ -465,7 +458,7 @@ public class OpenResourceDialog extends JDialog
     getRootPane().getActionMap().put(bOpen, actOpen);
     getRootPane().getActionMap().put(bCancel, actCancel);
 
-    cbType = new JComboBox<>(new DefaultComboBoxModel<ObjectString>());
+    cbType = new JComboBox<>(new DefaultComboBoxModel<>());
     cbType.setEditable(false);
     cbType.addItemListener(this);
     JLabel lType = new JLabel("Type:");
@@ -479,7 +472,7 @@ public class OpenResourceDialog extends JDialog
     lSearch.setDisplayedMnemonic('S');
     lSearch.setLabelFor(tfSearch);
 
-    listModel = new SimpleListModel<ResourceEntry>();
+    listModel = new SimpleListModel<>();
     list = new JList<>(listModel);
     list.setLayoutOrientation(JList.VERTICAL_WRAP);
     list.setVisibleRowCount(0);   // no limit
