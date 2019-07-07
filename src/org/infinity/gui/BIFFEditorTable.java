@@ -42,9 +42,6 @@ final class BIFFEditorTable extends JPanel implements ActionListener
   private static final ImageIcon updatedicon20 = Icons.getIcon(Icons.ICON_BLUE_CIRCLE_20);
   private static final ImageIcon newicon20 = Icons.getIcon(Icons.ICON_YELLOW_CIRCLE_20);
   private static final ImageIcon bificon20 = Icons.getIcon(Icons.ICON_CIRCLE_20);
-  private static final ImageIcon updatedicon16 = Icons.getIcon(Icons.ICON_BLUE_CIRCLE_16);
-  private static final ImageIcon newicon16 = Icons.getIcon(Icons.ICON_YELLOW_CIRCLE_16);
-  private static final ImageIcon bificon16 = Icons.getIcon(Icons.ICON_GREEN_CIRCLE_16);
 
   private final BifEditorTableModel tablemodel;
   private final JTable table;
@@ -55,9 +52,16 @@ final class BIFFEditorTable extends JPanel implements ActionListener
   private int sortbycolumn = 2;
 
   enum State {
-    BIF,
-    NEW,
-    UPD
+    BIF(Icons.ICON_GREEN_CIRCLE_16),
+    NEW(Icons.ICON_YELLOW_CIRCLE_16),
+    UPD(Icons.ICON_BLUE_CIRCLE_16);
+
+    private final ImageIcon icon;
+
+    private State(String icon)
+    {
+      this.icon = Icons.getIcon(icon);
+    }
   }
 
   BIFFEditorTable()
@@ -313,11 +317,7 @@ final class BIFFEditorTable extends JPanel implements ActionListener
         return line.entry;
       if (column == 1)
         return line.entry.getIcon();
-      if (line.state == State.NEW)
-        return newicon16;
-      if (line.state == State.UPD)
-        return updatedicon16;
-      return bificon16;
+      return line.state.icon;
     }
 
     public BifEditorTableLine get(int row)
