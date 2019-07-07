@@ -19,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Vector;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -35,6 +36,7 @@ import org.infinity.NearInfinity;
 import org.infinity.icon.Icons;
 import org.infinity.resource.Profile;
 import org.infinity.resource.ResourceFactory;
+import org.infinity.resource.key.AbstractBIFFReader;
 import org.infinity.resource.key.BIFFEntry;
 import org.infinity.resource.key.BIFFResourceEntry;
 import org.infinity.resource.key.BIFFWriter;
@@ -45,10 +47,6 @@ import org.infinity.util.io.StreamUtils;
 
 public final class BIFFEditor implements ActionListener, ListSelectionListener, Runnable
 {
-  public static final int BIFF = 0;
-  public static final int BIF = 1;
-  public static final int BIFC = 2;
-  private static final String[] s_bifformat = {"BIFF", "BIF", "BIFC"};
   private static boolean firstrun = true;
   private final BIFFEditorTable biftable = new BIFFEditorTable();
   private final BIFFEditorTable overridetable = new BIFFEditorTable();
@@ -57,8 +55,8 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
   private ChildFrame editframe;
 
   private JButton bcancel, bsave, btobif, bfrombif;
-  private JComboBox<String> cbformat;
-  private int format;
+  private JComboBox<AbstractBIFFReader.Type> cbformat;
+  private AbstractBIFFReader.Type format;
 
   public BIFFEditor()
   {
@@ -81,12 +79,7 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
     }
     else if (event.getSource() == bsave) {
       editframe.close();
-      String s_format = (String)cbformat.getSelectedItem();
-      for (int i = 0; i < s_bifformat.length; i++)
-        if (s_format.equals(s_bifformat[i])) {
-          format = i;
-          break;
-        }
+      format = (AbstractBIFFReader.Type)cbformat.getSelectedItem();
       new Thread(this).start();
     }
     else if (event.getSource() == btobif) {
@@ -209,7 +202,7 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
   }
   //</editor-fold>
 
-  public void makeEditor(BIFFEntry bifentry, int format)
+  public void makeEditor(BIFFEntry bifentry, AbstractBIFFReader.Type format)
   {
     this.bifentry = bifentry;
     this.format = format;
@@ -260,17 +253,17 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
     bpanel2.add(bsave);
     bpanel2.add(bcancel);
 
-    List<String> formats = new ArrayList<String>();
-    formats.add(s_bifformat[BIFF]);
+    final Vector<AbstractBIFFReader.Type> formats = new Vector<>();
+    formats.add(AbstractBIFFReader.Type.BIFF);
     if ((Boolean)Profile.getProperty(Profile.Key.IS_SUPPORTED_BIF)) {
-      formats.add(s_bifformat[BIF]);
+      formats.add(AbstractBIFFReader.Type.BIF);
     }
     if ((Boolean)Profile.getProperty(Profile.Key.IS_SUPPORTED_BIFC)) {
-      formats.add(s_bifformat[BIFC]);
+      formats.add(AbstractBIFFReader.Type.BIFC);
     }
-    cbformat = new JComboBox<>(formats.toArray(new String[formats.size()]));
+    cbformat = new JComboBox<>(formats);
     cbformat.addActionListener(this);
-    if (format != BIFF) {
+    if (format != AbstractBIFFReader.Type.BIFF) {
       cbformat.setSelectedIndex(1);
     } else {
       cbformat.setSelectedIndex(0);

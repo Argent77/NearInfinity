@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 
-import org.infinity.gui.BIFFEditor;
 import org.infinity.resource.Profile;
 import org.infinity.resource.ResourceFactory;
 import org.infinity.util.io.FileManager;
@@ -29,7 +28,7 @@ public final class BIFFWriter
   private final BIFFEntry bifEntry;
   private final Map<ResourceEntry, Boolean> resources = new HashMap<>();
   private final Map<ResourceEntry, Boolean> tileResources = new HashMap<>();
-  private final int format;
+  private final AbstractBIFFReader.Type format;
 
   private static byte[] compress(byte data[])
   {
@@ -101,7 +100,7 @@ public final class BIFFWriter
     return Arrays.copyOfRange(buffer, 0, bytesread);
   }
 
-  public BIFFWriter(BIFFEntry bifEntry, int format)
+  public BIFFWriter(BIFFEntry bifEntry, AbstractBIFFReader.Type format)
   {
     this.bifEntry = bifEntry;
     this.format = format;
@@ -131,7 +130,7 @@ public final class BIFFWriter
       writeBIFF(dummyFile);
       ResourceFactory.getKeyfile().closeBIFFFiles();
       bifEntry.setFileSize((int)Files.size(dummyFile)); // Uncompressed length
-      if (format == BIFFEditor.BIFF) {
+      if (format == AbstractBIFFReader.Type.BIFF) {
         // Delete old BIFF, rename this to real name
         Path realFile = bifEntry.getPath();
         if (realFile == null) {
@@ -141,7 +140,7 @@ public final class BIFFWriter
           Files.delete(realFile);
         }
         Files.move(dummyFile, realFile);
-      } else if (format == BIFFEditor.BIF) {
+      } else if (format == AbstractBIFFReader.Type.BIF) {
         compressedFile = Files.createTempFile(biffPath, "_dummy", ".cbf");
         compressBIF(dummyFile, compressedFile, bifEntry.getFileName());
         Files.delete(dummyFile);
@@ -154,7 +153,7 @@ public final class BIFFWriter
           Files.delete(realFile);
         }
         Files.move(compressedFile, realFile);
-      } else if (format == BIFFEditor.BIFC) {
+      } else if (format == AbstractBIFFReader.Type.BIFC) {
         compressedFile = Files.createTempFile(biffPath, "_dummy", ".bif");
         compressBIFC(dummyFile, compressedFile);
         Files.delete(dummyFile);

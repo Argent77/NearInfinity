@@ -190,11 +190,11 @@ final class ChooseBIFFrame extends ChildFrame implements ActionListener
           return;
         }
         name = "data\\" + name;
-        int form = BIFFEditor.BIFF;
+        AbstractBIFFReader.Type form = AbstractBIFFReader.Type.BIFF;
         if (rbbif.isSelected()) {
-          form = BIFFEditor.BIF;
+          form = AbstractBIFFReader.Type.BIF;
         } else if (rbbifc.isSelected()) {
-          form = BIFFEditor.BIFC;
+          form = AbstractBIFFReader.Type.BIFC;
         }
         if (!name.endsWith(".bif")) {
           name += ".bif";
@@ -216,14 +216,8 @@ final class ChooseBIFFrame extends ChildFrame implements ActionListener
                                       "Warning", JOptionPane.WARNING_MESSAGE);
         try {
           AbstractBIFFReader file = ResourceFactory.getKeyfile().getBIFFFile(entry);
-          int form;
-          switch (file.getType()) {
-            case BIF:   form = BIFFEditor.BIF; break;
-            case BIFC:  form = BIFFEditor.BIFC; break;
-            default:    form = BIFFEditor.BIFF; break;
-          }
           close();
-          editor.makeEditor(entry, form);
+          editor.makeEditor(entry, file.getType());
         } catch (Exception e) {
           e.printStackTrace();
         }
