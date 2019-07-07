@@ -142,8 +142,7 @@ final class BIFFEditorTable extends JPanel implements ActionListener
     add(new JScrollPane(table), BorderLayout.CENTER);
   }
 
-// --------------------- Begin Interface ActionListener ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="ActionListener">
   @Override
   public void actionPerformed(ActionEvent event)
   {
@@ -154,8 +153,7 @@ final class BIFFEditorTable extends JPanel implements ActionListener
     else if (event.getSource() == bnew)
       tablemodel.fireTableDataChanged();
   }
-
-// --------------------- End Interface ActionListener ---------------------
+  //</editor-fold>
 
   public void addEntry(ResourceEntry entry, State state)
   {
@@ -167,18 +165,20 @@ final class BIFFEditorTable extends JPanel implements ActionListener
     table.getSelectionModel().addListSelectionListener(listener);
   }
 
-  public boolean addTableLine(Object o)
+  public void moveSelectedTo(BIFFEditorTable other)
   {
-    boolean b = tablemodel.add((BifEditorTableLine)o);
-    tablemodel.sort();
-    table.clearSelection();
-    tablemodel.fireTableDataChanged();
-    return b;
+    for (final BifEditorTableLine value : getSelectedValues()) {
+      if (other.tablemodel.add(value)) {
+        tablemodel.remove(value);
+      }
+    }
+    fireChanges();
+    other.fireChanges();
   }
 
-  public Object[] getSelectedValues()
+  public BifEditorTableLine[] getSelectedValues()
   {
-    Object[] selected = new Object[table.getSelectedRowCount()];
+    final BifEditorTableLine[] selected = new BifEditorTableLine[table.getSelectedRowCount()];
     int isel[] = table.getSelectedRows();
     for (int i = 0; i < isel.length; i++)
       selected[i] = tablemodel.get(isel[i]);
@@ -187,12 +187,11 @@ final class BIFFEditorTable extends JPanel implements ActionListener
 
   public List<ResourceEntry> getValueList(State state)
   {
-    List<ResourceEntry> list = new ArrayList<ResourceEntry>();
-    List<BifEditorTableLine> entries = tablemodel.getEntries();
-    for (int i = 0; i < entries.size(); i++) {
-      BifEditorTableLine line = entries.get(i);
-      if (line.state == state)
+    final List<ResourceEntry> list = new ArrayList<>();
+    for (final BifEditorTableLine line : tablemodel.getEntries()) {
+      if (line.state == state) {
         list.add(line.entry);
+      }
     }
     return list;
   }
@@ -202,22 +201,21 @@ final class BIFFEditorTable extends JPanel implements ActionListener
     return tablemodel.getEntries().isEmpty();
   }
 
-  public void removeTableLine(Object o)
-  {
-    tablemodel.remove((BifEditorTableLine)o);
-    table.clearSelection();
-    tablemodel.sort();
-    tablemodel.fireTableDataChanged();
-  }
-
   public void sortTable()
   {
     tablemodel.sort();
   }
 
+  private void fireChanges()
+  {
+    table.clearSelection();
+    tablemodel.sort();
+    tablemodel.fireTableDataChanged();
+  }
+
 // -------------------------- INNER CLASSES --------------------------
 
-  private static final class BifEditorTableLine
+  static final class BifEditorTableLine
   {
     private final State state;
     private final ResourceEntry entry;
@@ -231,8 +229,8 @@ final class BIFFEditorTable extends JPanel implements ActionListener
 
   private final class BifEditorTableModel extends AbstractTableModel implements Comparator<BifEditorTableLine>
   {
-    private final List<BifEditorTableLine> entries = new ArrayList<BifEditorTableLine>();
-    private final List<BifEditorTableLine> hiddenentries = new ArrayList<BifEditorTableLine>();
+    private final List<BifEditorTableLine> entries = new ArrayList<>();
+    private final List<BifEditorTableLine> hiddenentries = new ArrayList<>();
     private final Component parent;
 
     private BifEditorTableModel(Component parent)
@@ -297,8 +295,7 @@ final class BIFFEditorTable extends JPanel implements ActionListener
     public int getRowCount()
     {
       int count = 0;
-      for (int i = 0; i < entries.size(); i++) {
-        BifEditorTableLine line = entries.get(i);
+      for (final BifEditorTableLine line : entries) {
         if (line.state == State.BIF && bbif.isSelected())
           count++;
         else if (line.state == State.NEW && bnew.isSelected())
@@ -322,9 +319,8 @@ final class BIFFEditorTable extends JPanel implements ActionListener
 
     public BifEditorTableLine get(int row)
     {
-      List<BifEditorTableLine> newlist = new ArrayList<BifEditorTableLine>();
-      for (int i = 0; i < entries.size(); i++) {
-        BifEditorTableLine line = entries.get(i);
+      final List<BifEditorTableLine> newlist = new ArrayList<>();
+      for (final BifEditorTableLine line : entries) {
         if (line.state == State.BIF && bbif.isSelected())
           newlist.add(line);
         else if (line.state == State.NEW && bnew.isSelected())

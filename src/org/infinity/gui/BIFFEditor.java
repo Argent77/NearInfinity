@@ -52,7 +52,7 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
   private static boolean firstrun = true;
   private final BIFFEditorTable biftable = new BIFFEditorTable();
   private final BIFFEditorTable overridetable = new BIFFEditorTable();
-  private final List<BIFFResourceEntry> origbiflist = new ArrayList<BIFFResourceEntry>();
+  private final List<BIFFResourceEntry> origbiflist = new ArrayList<>();
   private BIFFEntry bifentry;
   private ChildFrame editframe;
 
@@ -72,8 +72,7 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
     new ChooseBIFFrame(this);
   }
 
-// --------------------- Begin Interface ActionListener ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="ActionListener">
   @Override
   public void actionPerformed(ActionEvent event)
   {
@@ -91,31 +90,20 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
       new Thread(this).start();
     }
     else if (event.getSource() == btobif) {
-      Object selected[] = overridetable.getSelectedValues();
-      for (final Object value : selected) {
-        if (biftable.addTableLine(value))
-          overridetable.removeTableLine(value);
-      }
+      overridetable.moveSelectedTo(biftable);
       bsave.setEnabled(!biftable.isEmpty());
     }
     else if (event.getSource() == bfrombif) {
-      Object selected[] = biftable.getSelectedValues();
-      for (final Object value : selected) {
-        if (overridetable.addTableLine(value))
-          biftable.removeTableLine(value);
-      }
+      biftable.moveSelectedTo(overridetable);
       bsave.setEnabled(!biftable.isEmpty());
     }
     else if (event.getSource() == cbformat) {
       bsave.setEnabled(!biftable.isEmpty());
     }
   }
+  //</editor-fold>
 
-// --------------------- End Interface ActionListener ---------------------
-
-
-// --------------------- Begin Interface ListSelectionListener ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="ListSelectionListener">
   @Override
   public void valueChanged(ListSelectionEvent event)
   {
@@ -124,12 +112,9 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
       btobif.setEnabled(overridetable.getSelectedValues().length != 0);
     }
   }
+  //</editor-fold>
 
-// --------------------- End Interface ListSelectionListener ---------------------
-
-
-// --------------------- Begin Interface Runnable ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="Runnable">
   @Override
   public void run()
   {
@@ -137,15 +122,14 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
     BifSaveProgress progress = new BifSaveProgress();
     blocker.setBlocked(true);
     // 1: Delete old entries from keyfile
-    for (int i = 0; i < origbiflist.size(); i++) {
-      ResourceFactory.getResourceTreeModel().removeResourceEntry(origbiflist.get(i));
+    for (final ResourceEntry entry : origbiflist) {
+      ResourceFactory.getResourceTreeModel().removeResourceEntry(entry);
     }
     progress.setProgress(1, true);
 
     // 2: Extract files from BIF (if applicable)
     List<ResourceEntry> overrideBif = overridetable.getValueList(BIFFEditorTable.State.BIF);
-    for (int i = 0; i < overrideBif.size(); i++) {
-      ResourceEntry entry = overrideBif.get(i);
+    for (final ResourceEntry entry : overrideBif) {
       Path file = FileManager.query(Profile.getRootFolders(), Profile.getOverrideFolderName(), entry.getResourceName());
       try (OutputStream os = StreamUtils.getOutputStream(file, true)) {
         StreamUtils.writeBytes(os, entry.getResourceBuffer(true));
@@ -165,13 +149,13 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
     // 3: Write new BIF
     BIFFWriter biffwriter = new BIFFWriter(bifentry, format);
     List<ResourceEntry> bifBif = biftable.getValueList(BIFFEditorTable.State.BIF);
-    for (int i = 0; i < bifBif.size(); i++) {
-      biffwriter.addResource(bifBif.get(i), true); // Ignore overrides
+    for (final ResourceEntry entry : bifBif) {
+      biffwriter.addResource(entry, true); // Ignore overrides
     }
     List<ResourceEntry> tobif = biftable.getValueList(BIFFEditorTable.State.NEW);
     tobif.addAll(biftable.getValueList(BIFFEditorTable.State.UPD));
-    for (int i = 0; i < tobif.size(); i++) {
-      biffwriter.addResource(tobif.get(i), false);
+    for (final ResourceEntry entry : tobif) {
+      biffwriter.addResource(entry, false);
     }
     try {
       biffwriter.write();
@@ -223,8 +207,7 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
     ResourceFactory.getResourceTreeModel().sort();
     blocker.setBlocked(false);
   }
-
-// --------------------- End Interface Runnable ---------------------
+  //</editor-fold>
 
   public void makeEditor(BIFFEntry bifentry, int format)
   {
