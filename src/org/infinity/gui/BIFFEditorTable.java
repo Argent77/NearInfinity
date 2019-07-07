@@ -45,9 +45,7 @@ final class BIFFEditorTable extends JPanel implements ActionListener
   private static final ImageIcon updatedicon16 = Icons.getIcon(Icons.ICON_BLUE_CIRCLE_16);
   private static final ImageIcon newicon16 = Icons.getIcon(Icons.ICON_YELLOW_CIRCLE_16);
   private static final ImageIcon bificon16 = Icons.getIcon(Icons.ICON_GREEN_CIRCLE_16);
-  static final int TYPE_BIF = 0;
-  static final int TYPE_NEW = 1;
-  static final int TYPE_UPD = 2;
+
   private final BifEditorTableModel tablemodel;
   private final JTable table;
   private final JToggleButton bbif;
@@ -55,6 +53,12 @@ final class BIFFEditorTable extends JPanel implements ActionListener
   private final JToggleButton bnew;
   private boolean sortreverse;
   private int sortbycolumn = 2;
+
+  enum State {
+    BIF,
+    NEW,
+    UPD
+  }
 
   BIFFEditorTable()
   {
@@ -149,9 +153,9 @@ final class BIFFEditorTable extends JPanel implements ActionListener
 
 // --------------------- End Interface ActionListener ---------------------
 
-  public void addEntry(ResourceEntry entry, int type)
+  public void addEntry(ResourceEntry entry, State state)
   {
-    tablemodel.add(new BifEditorTableLine(entry, type));
+    tablemodel.add(new BifEditorTableLine(entry, state));
   }
 
   public void addListSelectionListener(ListSelectionListener listener)
@@ -177,13 +181,13 @@ final class BIFFEditorTable extends JPanel implements ActionListener
     return selected;
   }
 
-  public List<ResourceEntry> getValueList(int type)
+  public List<ResourceEntry> getValueList(State state)
   {
     List<ResourceEntry> list = new ArrayList<ResourceEntry>();
     List<BifEditorTableLine> entries = tablemodel.getEntries();
     for (int i = 0; i < entries.size(); i++) {
       BifEditorTableLine line = entries.get(i);
-      if (line.type == type)
+      if (line.state == state)
         list.add(line.entry);
     }
     return list;
@@ -211,13 +215,13 @@ final class BIFFEditorTable extends JPanel implements ActionListener
 
   private static final class BifEditorTableLine
   {
-    private final int type;
+    private final State state;
     private final ResourceEntry entry;
 
-    private BifEditorTableLine(ResourceEntry entry, int type)
+    private BifEditorTableLine(ResourceEntry entry, State state)
     {
       this.entry = entry;
-      this.type = type;
+      this.state = state;
     }
   }
 
@@ -234,20 +238,20 @@ final class BIFFEditorTable extends JPanel implements ActionListener
 
     private boolean add(BifEditorTableLine line)
     {
-      if (line.type == TYPE_NEW) {
+      if (line.state == State.NEW) {
         entries.add(line);
         return true;
       }
       for (Iterator<BifEditorTableLine> i = entries.iterator(); i.hasNext();) {
         BifEditorTableLine oldline = i.next();
         if (oldline.entry.getResourceName().equalsIgnoreCase(line.entry.getResourceName())) {
-          if (line.type == TYPE_UPD) {
+          if (line.state == State.UPD) {
             i.remove();
             hiddenentries.add(oldline);
             entries.add(line);
             return true;
           }
-          else if (line.type == TYPE_BIF) {
+          else if (line.state == State.BIF) {
             String options[] = {"Keep updated", "Overwrite updated", "Cancel"};
             int choice = JOptionPane.showOptionDialog(parent,
                                                       "An updated version of this file already exists.",
@@ -271,7 +275,7 @@ final class BIFFEditorTable extends JPanel implements ActionListener
 
     private void remove(BifEditorTableLine line)
     {
-      if (line.type == TYPE_UPD) {
+      if (line.state == State.UPD) {
         for (Iterator<BifEditorTableLine> i = hiddenentries.iterator(); i.hasNext();) {
           BifEditorTableLine hidden = i.next();
           if (line.entry.getResourceName().equalsIgnoreCase(hidden.entry.getResourceName())) {
@@ -291,11 +295,11 @@ final class BIFFEditorTable extends JPanel implements ActionListener
       int count = 0;
       for (int i = 0; i < entries.size(); i++) {
         BifEditorTableLine line = entries.get(i);
-        if (line.type == TYPE_BIF && bbif.isSelected())
+        if (line.state == State.BIF && bbif.isSelected())
           count++;
-        else if (line.type == TYPE_NEW && bnew.isSelected())
+        else if (line.state == State.NEW && bnew.isSelected())
           count++;
-        else if (line.type == TYPE_UPD && bupdated.isSelected())
+        else if (line.state == State.UPD && bupdated.isSelected())
           count++;
       }
       return count;
@@ -309,9 +313,9 @@ final class BIFFEditorTable extends JPanel implements ActionListener
         return line.entry;
       if (column == 1)
         return line.entry.getIcon();
-      if (line.type == TYPE_NEW)
+      if (line.state == State.NEW)
         return newicon16;
-      if (line.type == TYPE_UPD)
+      if (line.state == State.UPD)
         return updatedicon16;
       return bificon16;
     }
@@ -321,11 +325,11 @@ final class BIFFEditorTable extends JPanel implements ActionListener
       List<BifEditorTableLine> newlist = new ArrayList<BifEditorTableLine>();
       for (int i = 0; i < entries.size(); i++) {
         BifEditorTableLine line = entries.get(i);
-        if (line.type == TYPE_BIF && bbif.isSelected())
+        if (line.state == State.BIF && bbif.isSelected())
           newlist.add(line);
-        else if (line.type == TYPE_NEW && bnew.isSelected())
+        else if (line.state == State.NEW && bnew.isSelected())
           newlist.add(line);
-        else if (line.type == TYPE_UPD && bupdated.isSelected())
+        else if (line.state == State.UPD && bupdated.isSelected())
           newlist.add(line);
         if (row < newlist.size())
           return newlist.get(row);
@@ -362,7 +366,7 @@ final class BIFFEditorTable extends JPanel implements ActionListener
     {
       int result = 0;
       if (sortbycolumn == 0)
-        result = Integer.compare(line1.type, line2.type);
+        result = Integer.compare(line1.state.ordinal(), line2.state.ordinal());
       else if (sortbycolumn == 1)
         result = line1.entry.getExtension().compareTo(line2.entry.getExtension());
       else if (sortbycolumn == 2)
