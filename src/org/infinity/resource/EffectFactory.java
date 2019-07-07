@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource;
@@ -785,7 +785,7 @@ public final class EffectFactory
             case 11:  // Mold Touch/Single
             case 12:  // Mold Touch/Decrement
               replaceEntry(struct, EffectEntry.IDX_RESOURCE, EffectEntry.OFS_RESOURCE,
-                           new ResourceRef(getEntryData(struct, EffectEntry.IDX_RESOURCE), 0, 8,
+                           new ResourceRef(getEntryData(struct, EffectEntry.IDX_RESOURCE), 0,
                                            EFFECT_RESOURCE, "SPL"));
               break;
             default:

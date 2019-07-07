@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.are;
@@ -70,7 +70,7 @@ public final class Animation extends AbstractStruct implements AddRemovable
     addField(new DecNumber(buffer, offset + 34, 2, ARE_ANIMATION_LOCATION_Y));
     addField(new Flag(buffer, offset + 36, 4, ARE_ANIMATION_ACTIVE_AT, Actor.s_schedule));
     if (Profile.isEnhancedEdition()) {
-      addField(new ResourceRef(buffer, offset + 40, ARE_ANIMATION_RESREF, new String[]{"BAM", "WBM", "PVRZ"}));
+      addField(new ResourceRef(buffer, offset + 40, ARE_ANIMATION_RESREF, "BAM", "WBM", "PVRZ"));
     } else {
       addField(new ResourceRef(buffer, offset + 40, ARE_ANIMATION_RESREF, "BAM"));
     }
@@ -98,4 +98,3 @@ public final class Animation extends AbstractStruct implements AddRemovable
     return offset + 76;
   }
 }
-

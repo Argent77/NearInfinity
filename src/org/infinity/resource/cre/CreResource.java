@@ -1170,7 +1170,7 @@ public final class CreResource extends AbstractStruct
     addField(new DecNumber(buffer, offset + 614, 2, CRE_MORALE_RECOVERY));
     addField(new KitIdsBitmap(buffer, offset + 616, CRE_KIT));
     addField(new ResourceRef(buffer, offset + 620, CRE_SCRIPT_OVERRIDE, "BCS"));
-    addField(new ResourceRef(buffer, offset + 628, CRE_SCRIPT_SPECIAL_2, new String[]{"BCS", "BS"}));
+    addField(new ResourceRef(buffer, offset + 628, CRE_SCRIPT_SPECIAL_2, "BCS", "BS"));
     addField(new ResourceRef(buffer, offset + 636, CRE_SCRIPT_COMBAT, "BCS"));
     addField(new ResourceRef(buffer, offset + 644, CRE_SCRIPT_SPECIAL_3, "BCS"));
     addField(new ResourceRef(buffer, offset + 652, CRE_SCRIPT_MOVEMENT, "BCS"));
@@ -1640,7 +1640,7 @@ public final class CreResource extends AbstractStruct
       }
     }
     addField(new ResourceRef(buffer, offset + 576, CRE_SCRIPT_OVERRIDE, "BCS"));
-    addField(new ResourceRef(buffer, offset + 584, CRE_SCRIPT_CLASS, new String[]{"BCS", "BS"}));
+    addField(new ResourceRef(buffer, offset + 584, CRE_SCRIPT_CLASS, "BCS", "BS"));
     addField(new ResourceRef(buffer, offset + 592, CRE_SCRIPT_RACE, "BCS"));
     addField(new ResourceRef(buffer, offset + 600, CRE_SCRIPT_GENERAL, "BCS"));
     addField(new ResourceRef(buffer, offset + 608, CRE_SCRIPT_DEFAULT, "BCS"));

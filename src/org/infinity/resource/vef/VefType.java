@@ -56,13 +56,13 @@ public final class VefType extends Bitmap
   {
     switch (getValue()) {
     case 0:
-      list.add(new ResourceRef(buffer, off, 8, VEF_TYPE_RESOURCE, "WAV"));
+      list.add(new ResourceRef(buffer, off, VEF_TYPE_RESOURCE, "WAV"));
       break;
     case 1:
-      list.add(new ResourceRef(buffer, off, 8, VEF_TYPE_RESOURCE, new String[]{"VVC", "BAM"}));
+      list.add(new ResourceRef(buffer, off, VEF_TYPE_RESOURCE, "VVC", "BAM"));
       break;
     case 2:
-      list.add(new ResourceRef(buffer, off, 8, VEF_TYPE_RESOURCE, new String[]{"VEF", "VVC", "BAM"}));
+      list.add(new ResourceRef(buffer, off, VEF_TYPE_RESOURCE, "VEF", "VVC", "BAM"));
       break;
     default:
       list.add(new TextString(buffer, off, 8, VEF_TYPE_RESOURCE));

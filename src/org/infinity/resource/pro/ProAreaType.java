@@ -1,5 +1,5 @@
 // Near Infinity - An Infinity Engine Browser and Editor
-// Copyright (C) 2001 - 2005 Jon Olav Hauglid
+// Copyright (C) 2001 - 2019 Jon Olav Hauglid
 // See LICENSE.txt for license information
 
 package org.infinity.resource.pro;
@@ -97,21 +97,17 @@ public final class ProAreaType extends AbstractStruct implements AddRemovable
     super(superStruct, PRO_AREA, buffer, offset);
   }
 
-//--------------------- Begin Interface AddRemovable ---------------------
-
+  //<editor-fold defaultstate="collapsed" desc="AddRemovable">
   @Override
   public boolean canRemove()
   {
     return false;   // can not be removed manually
   }
-
-//--------------------- End Interface AddRemovable ---------------------
+  //</editor-fold>
 
   @Override
   public int read(ByteBuffer buffer, int offset) throws Exception
   {
-    final String[] s_types = new String[]{"VEF", "VVC", "BAM"};
-
     addField(new Flag(buffer, offset, 2, PRO_AREA_FLAGS, s_areaflags));
     addField(new DecNumber(buffer, offset + 2, 2, PRO_AREA_RAY_COUNT));
     addField(new DecNumber(buffer, offset + 4, 2, PRO_AREA_TRAP_SIZE));
@@ -125,7 +121,7 @@ public final class ProAreaType extends AbstractStruct implements AddRemovable
     addField(new ColorValue(buffer, offset + 24, 1, PRO_AREA_EXPLOSION_COLOR));
     addField(new Unknown(buffer, offset + 25, 1, COMMON_UNUSED));
     addField(new ProRef(buffer, offset + 26, PRO_AREA_EXPLOSION_PROJECTILE));
-    addField(new ResourceRef(buffer, offset + 28, PRO_AREA_EXPLOSION_ANIMATION, s_types));
+    addField(new ResourceRef(buffer, offset + 28, PRO_AREA_EXPLOSION_ANIMATION, "VEF", "VVC", "BAM"));
     addField(new DecNumber(buffer, offset + 36, 2, PRO_AREA_CONE_WIDTH));
     if (Profile.isEnhancedEdition()) {
       addField(new Unknown(buffer, offset + 38, 2));
