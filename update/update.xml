@@ -15,50 +15,52 @@
       <link>http://forum.baldursgate.com/discussion/30593/new-versions-of-nearinfinity-available/</link>
     </info>
     <info>
-      <name>AstroBryGuy's Mac OS X specific app packages of Near Infinity (outdated)</name>
-      <link>https://github.com/AstroBryGuy/NearInfinity-OSX/releases</link>
+      <name>MacOS-specific app packages (formerly made by AstroBryGuy) are now available from the regular Near Infinity download page</name>
+      <link>https://github.com/Argent77/NearInfinity/releases/latest</link>
     </info>
   </general>
 
   <release type="latest">
     <file>
       <name>NearInfinity.jar</name>
-      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.2-20210501/NearInfinity-20210501.zip</url>
-      <version>v2.2-20210501</version>
-      <timestamp>2021-05-01T09:54+01:00</timestamp>
-      <hash>e4a7dbac494edcd37e9749245c333deb</hash>
-      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.2-20210501</link>
+      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.2-20211218/NearInfinity-20211218.zip</url>
+      <version>v2.2-20211218</version>
+      <timestamp>2021-12-18T14:21+01:00</timestamp>
+      <hash>cb339b813c4bf9fbe5c7a22da83a5184</hash>
+      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.2-20211218</link>
     </file>
     <changelog>
-      <entry>New feature "Creature Animation Decoding": Implemented as a creature animation browser, a quick viewer and creature animation support in the Area Viewer</entry>
-      <entry>Area Viewer: Show global characters on maps (e.g. party members, familiars, potential NPCs)</entry>
-      <entry>Area Viewer: Fixed actors sometimes not being displayed on maps in saved games</entry>
-      <entry>Area Viewer: Fixed rendering issues with water overlays in BGEE</entry>
-      <entry>Improved color selection list control used by color-related opcodes and CRE resource fields</entry>
-      <entry>List datatype: CRE animation id is shown in hexadecimal notation</entry>
-      <entry>List datatype: Fixed special entries in ARE song selection</entry>
-      <entry>List datatype: Optimized display of unsupported list entries</entry>
-      <entry>Added new command line parameter "-i" as a workaround for file reading issues on Linux with non-case-sensitive filesystems</entry>
-      <entry>BAM Converter: Improved palette generation for BAM V1 when alpha blending is enabled</entry>
-      <entry>Fixed loading performance of PVRZ-based graphics files if PVRZ files are read from override folder (affects TIS/MOS/BAM resource viewers and Area Viewer)</entry>
-      <entry>ARE automap notes: marker color field uses values from MAPNOTES.IDS if available</entry>
-      <entry>Marked several SPL fields as unused</entry>
-      <entry>Updated PRO area effect fields related to "Ray count"</entry>
-      <entry>Updated SPL V2.0 flags</entry>
-      <entry>Added missing "Half-Orc" to ITM V2.0 kit usability flags</entry>
-      <entry>ITM V2.0 kit usability1 is generated dynamically (experimental feature)</entry>
-      <entry>ITM V1.1 weapon color field improvement</entry>
-      <entry>ITM view panel shows both general and identified descriptions (if available)</entry>
-      <entry>Improved wording of STO flags descriptions</entry>
-      <entry>BAM view uses 0-based indices for cycles and frames</entry>
-      <entry>Improved usability of input control for setting proficiency values</entry>
-      <entry>Added parameter2 support (Color) to opcode 253</entry>
-      <entry>Improved opcode 12 special flags descriptions</entry>
-      <entry>Improved opcode 232 parameter descriptions</entry>
-      <entry>Minor adjustments to CRE V2.2 field definitions</entry>
-      <entry>Fixed corruption of CRE V2.2 resources when adding/removing effect or item structures</entry>
-      <entry>Fixed parameter1 handling when parameter2 = 3 in opcode 15 and 44</entry>
-      <entry>Many internal fixes and optimizations</entry>
+      <entry>Added basic wildcard support  to the "Find resource" feature (magnifier icon above the resource tree): Question mark characters (?) are treated as "match any single character"</entry>
+      <entry>Added new Check option: Check for string encoding errors (menu Tools > Check)</entry>
+      <entry>Added dialog tree viewer option "Sort states by weight"</entry>
+      <entry>BAM Converter: Added basic file/folder drag&amp;drop support to the frames list</entry>
+      <entry>BAM Converter: Delete key shortcut can be used to remove selected entries from frame or cycle lists</entry>
+      <entry>Item ability flags are now presented based on ITM version</entry>
+      <entry>Redesigned credits section in "About Near Infinity" dialog</entry>
+      <entry>Improved loading time for games with large override folders</entry>
+      <entry>Improved symbolic names detection in decompiled scripts</entry>
+      <entry>Removed link to original Near Infinity website (which became unavailable recently) in "About Near Infinity" dialog</entry>
+      <entry>Removed unused "Times per day" field from SPL V1 ability structure</entry>
+      <entry>Removed useless timing mode 4096 from EFF V1 structures</entry>
+      <entry>Updated CRE flags</entry>
+      <entry>Updated SPL V1 flags</entry>
+      <entry>Updated EFF V2 "Dispel/Resist" and "Parent resource flags"</entry>
+      <entry>Updated VVC flags</entry>
+      <entry>Updated opcode 1: Add support for negative modifiers in EE games</entry>
+      <entry>Updated parameters of opcodes 135, 184 and 232</entry>
+      <entry>EEex-specific opcodes are properly handled on non-EEex game installations</entry>
+      <entry>Fixed case-sensitivity issues with file paths on Linux systems</entry>
+      <entry>Fixed (sometimes) choosing an incorrect script action when decompiling scripts if multiple definitions are specified in ACTION.IDS</entry>
+      <entry>Fixed sound references associated with string entries not being available if sound file is located in special override folders (e.g. "sounds")</entry>
+      <entry>Fixed deriving INI actor resource name in Area Viewer</entry>
+      <entry>Fixed issues with inline editing data in table view of structured resources</entry>
+      <entry>Fixed issue with exporting string table as TRA file when dialog.tlk path was located on a different (physical or virtual) filesystem as the game root path</entry>
+      <entry>Fixed ARE Entrance orientation field size</entry>
+      <entry>Fixed ARE search names not properly updated when loading a new game</entry>
+      <entry>Fixed data types referencing symbolic names not properly updated when loading or refreshing the game</entry>
+      <entry>Fixed selected string entry not being shown when String Editor is opened for the first time</entry>
+      <entry>Fixed incorrect BAM cycle check in creature animation decoder > "character_old" type</entry>
+      <entry>Several more minor bugfixes and improvements</entry>
     </changelog>
   </release>
 
