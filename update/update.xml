@@ -19,44 +19,33 @@
   <release type="latest">
     <file>
       <name>NearInfinity.jar</name>
-      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.2-20211218/NearInfinity-20211218.zip</url>
-      <version>v2.2-20211218</version>
-      <timestamp>2021-12-18T14:21+01:00</timestamp>
-      <hash>cb339b813c4bf9fbe5c7a22da83a5184</hash>
-      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.2-20211218</link>
+      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.2-20220408/NearInfinity-20220408.zip</url>
+      <version>v2.2-20220408</version>
+      <timestamp>2022-04-08T11:03+01:00</timestamp>
+      <hash>4449c959303b5e3f1ba6dd817aaed182</hash>
+      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.2-20220408</link>
     </file>
     <changelog>
-      <entry>Added basic wildcard support  to the "Find resource" feature (magnifier icon above the resource tree): Question mark characters (?) are treated as "match any single character"</entry>
-      <entry>Added new Check option: Check for string encoding errors (menu Tools > Check)</entry>
-      <entry>Added dialog tree viewer option "Sort states by weight"</entry>
-      <entry>BAM Converter: Added basic file/folder drag&amp;drop support to the frames list</entry>
-      <entry>BAM Converter: Delete key shortcut can be used to remove selected entries from frame or cycle lists</entry>
-      <entry>Item ability flags are now presented based on ITM version</entry>
-      <entry>Redesigned credits section in "About Near Infinity" dialog</entry>
-      <entry>Improved loading time for games with large override folders</entry>
-      <entry>Improved symbolic names detection in decompiled scripts</entry>
-      <entry>Removed link to original Near Infinity website (which became unavailable recently) in "About Near Infinity" dialog</entry>
-      <entry>Removed unused "Times per day" field from SPL V1 ability structure</entry>
-      <entry>Removed useless timing mode 4096 from EFF V1 structures</entry>
-      <entry>Updated CRE flags</entry>
-      <entry>Updated SPL V1 flags</entry>
-      <entry>Updated EFF V2 "Dispel/Resist" and "Parent resource flags"</entry>
-      <entry>Updated VVC flags</entry>
-      <entry>Updated opcode 1: Add support for negative modifiers in EE games</entry>
-      <entry>Updated parameters of opcodes 135, 184 and 232</entry>
-      <entry>EEex-specific opcodes are properly handled on non-EEex game installations</entry>
-      <entry>Fixed case-sensitivity issues with file paths on Linux systems</entry>
-      <entry>Fixed (sometimes) choosing an incorrect script action when decompiling scripts if multiple definitions are specified in ACTION.IDS</entry>
-      <entry>Fixed sound references associated with string entries not being available if sound file is located in special override folders (e.g. "sounds")</entry>
-      <entry>Fixed deriving INI actor resource name in Area Viewer</entry>
-      <entry>Fixed issues with inline editing data in table view of structured resources</entry>
-      <entry>Fixed issue with exporting string table as TRA file when dialog.tlk path was located on a different (physical or virtual) filesystem as the game root path</entry>
-      <entry>Fixed ARE Entrance orientation field size</entry>
-      <entry>Fixed ARE search names not properly updated when loading a new game</entry>
-      <entry>Fixed data types referencing symbolic names not properly updated when loading or refreshing the game</entry>
-      <entry>Fixed selected string entry not being shown when String Editor is opened for the first time</entry>
-      <entry>Fixed incorrect BAM cycle check in creature animation decoder > "character_old" type</entry>
-      <entry>Several more minor bugfixes and improvements</entry>
+      <entry></entry>
+      <entry>Reactivated BIFF editor (menu Edit &gt; BIFF)</entry>
+      <entry>Added experimental "Export animation sequence" as APNG file to the Creature Animation Browser</entry>
+      <entry>Added search options (case-sensitive, regular expression, invert match) to the "Find CRE/ITM/SPL/STO" feature</entry>
+      <entry>Added system information summary when NI starts up (can be toggled via menu Options &gt; Display system information at startup)</entry>
+      <entry>Added native macOS menu bar integration (it is still recommended to use the macOS-specific NI package instead)</entry>
+      <entry>Added check for invalid STO V1.1 sale triggers to "Check for corrupted files" feature</entry>
+      <entry>Fixed audio playback blocking the whole application when an error occurred</entry>
+      <entry>Fixed using incorrect string table on BGEE with unmerged SoD DLC</entry>
+      <entry>Fixed creature name display for CHR resources in the View panel</entry>
+      <entry>Fixed false positives in "Check dialogues" feature</entry>
+      <entry>Fixed issue when sorting results by strref in the "Check for Illegal Strrefs" feature</entry>
+      <entry>Reduced false positives in "Check for Illegal Strrefs" feature</entry>
+      <entry>Improved 2DA file parsing in "Check for Illegal Strrefs" feature</entry>
+      <entry>Updated ITM V1 field for PSTEE: "Description image" -&gt; "Pick up sound"</entry>
+      <entry>Updated parameters of opcode 232</entry>
+      <entry>Updated fields in GAM resources</entry>
+      <entry>Updated area type flags for PSTEE</entry>
+      <entry>Internal restructuring of the code design</entry>
+      <entry>Various internal fixes and optimizations</entry>
     </changelog>
   </release>
 
