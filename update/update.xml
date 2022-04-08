@@ -19,11 +19,11 @@
   <release type="latest">
     <file>
       <name>NearInfinity.jar</name>
-      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.2-20220408/NearInfinity-20220408.zip</url>
-      <version>v2.2-20220408</version>
-      <timestamp>2022-04-08T11:03+01:00</timestamp>
-      <hash>4449c959303b5e3f1ba6dd817aaed182</hash>
-      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.2-20220408</link>
+      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.2-20220408-1/NearInfinity-20220408-1.zip</url>
+      <version>v2.2-20220408-1</version>
+      <timestamp>2022-04-08T18:07+01:00</timestamp>
+      <hash>e2e0410fa80de9486acff856112105e3</hash>
+      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.2-20220408-1</link>
     </file>
     <changelog>
       <entry></entry>
@@ -38,6 +38,7 @@
       <entry>Fixed creature name display for CHR resources in the View panel</entry>
       <entry>Fixed false positives in "Check dialogues" feature</entry>
       <entry>Fixed issue when sorting results by strref in the "Check for Illegal Strrefs" feature</entry>
+      <entry>Fixed a parser error in the 2DA table reader which affected various features of NI</entry>
       <entry>Reduced false positives in "Check for Illegal Strrefs" feature</entry>
       <entry>Improved 2DA file parsing in "Check for Illegal Strrefs" feature</entry>
       <entry>Updated ITM V1 field for PSTEE: "Description image" -&gt; "Pick up sound"</entry>
