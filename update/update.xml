@@ -19,34 +19,29 @@
   <release type="latest">
     <file>
       <name>NearInfinity.jar</name>
-      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.2-20220408-1/NearInfinity-20220408-1.zip</url>
-      <version>v2.2-20220408-1</version>
-      <timestamp>2022-04-08T18:07+01:00</timestamp>
-      <hash>e2e0410fa80de9486acff856112105e3</hash>
-      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.2-20220408-1</link>
+      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.3-20220906/NearInfinity-20220906.zip</url>
+      <version>v2.3-20220906</version>
+      <timestamp>2022-09-06T11:44+01:00</timestamp>
+      <hash>69b4bb4768d8d2baadc3a6711934f7fb</hash>
+      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.3-20220906</link>
     </file>
     <changelog>
-      <entry></entry>
-      <entry>Reactivated BIFF editor (menu Edit &gt; BIFF)</entry>
-      <entry>Added experimental "Export animation sequence" as APNG file to the Creature Animation Browser</entry>
-      <entry>Added search options (case-sensitive, regular expression, invert match) to the "Find CRE/ITM/SPL/STO" feature</entry>
-      <entry>Added system information summary when NI starts up (can be toggled via menu Options &gt; Display system information at startup)</entry>
-      <entry>Added native macOS menu bar integration (it is still recommended to use the macOS-specific NI package instead)</entry>
-      <entry>Added check for invalid STO V1.1 sale triggers to "Check for corrupted files" feature</entry>
-      <entry>Fixed audio playback blocking the whole application when an error occurred</entry>
-      <entry>Fixed using incorrect string table on BGEE with unmerged SoD DLC</entry>
-      <entry>Fixed creature name display for CHR resources in the View panel</entry>
-      <entry>Fixed false positives in "Check dialogues" feature</entry>
-      <entry>Fixed issue when sorting results by strref in the "Check for Illegal Strrefs" feature</entry>
-      <entry>Fixed a parser error in the 2DA table reader which affected various features of NI</entry>
-      <entry>Reduced false positives in "Check for Illegal Strrefs" feature</entry>
-      <entry>Improved 2DA file parsing in "Check for Illegal Strrefs" feature</entry>
-      <entry>Updated ITM V1 field for PSTEE: "Description image" -&gt; "Pick up sound"</entry>
-      <entry>Updated parameters of opcode 232</entry>
-      <entry>Updated fields in GAM resources</entry>
-      <entry>Updated area type flags for PSTEE</entry>
-      <entry>Internal restructuring of the code design</entry>
-      <entry>Various internal fixes and optimizations</entry>
+      <entry>Added new option to Bookmark feature: Define custom home folder for EE games.</entry>
+      <entry>Added new "Align table (uniform)" command to 2DA resources which mimics WeiDU's PRETTY_PRINT_2DA-style formatting.</entry>
+      <entry>Added support for more hardcoded save folders in EE games (ImportSave and ImportBPSave).</entry>
+      <entry>Added new feature: Check for duplicate strings.</entry>
+      <entry>Fixed a bug in the 2DA table parse which prevented the SoD-specific save folder from showing up in the resource tree.</entry>
+      <entry>Fixed value type "Bitfield" in Advanced Search filter options to match all numeric data in structured resources.</entry>
+      <entry>Fixed BAM frames export not always appending the correct file extension.</entry>
+      <entry>Fixed transparent color index handling in BAM Converter (thanks Bubb).</entry>
+      <entry>Fixed a regression in rendering creature animations with tint effects.</entry>
+      <entry>Fixed incorrectly calculated marker of a selected area in WMP View tab.</entry>
+      <entry>Fixed PSTEE bestiary parsing issue in "Check for unused strings".</entry>
+      <entry>Fixed: Confirm overwriting animation file on export in Creature Animation Browser.</entry>
+      <entry>Improved function-matching algorithm in script decompiler.</entry>
+      <entry>Improved display of creature names in View tab for CRE, CHR and embedded CRE structures in GAM files.</entry>
+      <entry>Improved View tab layout of ARE, ITM and SPL resources for smaller window sizes.</entry>
+      <entry>Improved parser for TRIGGER.IDS and ACTION.IDS tables.</entry>
     </changelog>
   </release>
 
