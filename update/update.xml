@@ -19,29 +19,24 @@
   <release type="latest">
     <file>
       <name>NearInfinity.jar</name>
-      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.3-20220906/NearInfinity-20220906.zip</url>
-      <version>v2.3-20220906</version>
-      <timestamp>2022-09-06T11:44+01:00</timestamp>
-      <hash>69b4bb4768d8d2baadc3a6711934f7fb</hash>
-      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.3-20220906</link>
+      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.3-20221108/NearInfinity-20221108.zip</url>
+      <version>v2.3-20221108</version>
+      <timestamp>2022-11-08T11:45+01:00</timestamp>
+      <hash>619bf369ac536065412aa62200baba1c</hash>
+      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.3-20221108</link>
     </file>
     <changelog>
-      <entry>Added new option to Bookmark feature: Define custom home folder for EE games.</entry>
-      <entry>Added new "Align table (uniform)" command to 2DA resources which mimics WeiDU's PRETTY_PRINT_2DA-style formatting.</entry>
-      <entry>Added support for more hardcoded save folders in EE games (ImportSave and ImportBPSave).</entry>
-      <entry>Added new feature: Check for duplicate strings.</entry>
-      <entry>Fixed a bug in the 2DA table parse which prevented the SoD-specific save folder from showing up in the resource tree.</entry>
-      <entry>Fixed value type "Bitfield" in Advanced Search filter options to match all numeric data in structured resources.</entry>
-      <entry>Fixed BAM frames export not always appending the correct file extension.</entry>
-      <entry>Fixed transparent color index handling in BAM Converter (thanks Bubb).</entry>
-      <entry>Fixed a regression in rendering creature animations with tint effects.</entry>
-      <entry>Fixed incorrectly calculated marker of a selected area in WMP View tab.</entry>
-      <entry>Fixed PSTEE bestiary parsing issue in "Check for unused strings".</entry>
-      <entry>Fixed: Confirm overwriting animation file on export in Creature Animation Browser.</entry>
-      <entry>Improved function-matching algorithm in script decompiler.</entry>
-      <entry>Improved display of creature names in View tab for CRE, CHR and embedded CRE structures in GAM files.</entry>
-      <entry>Improved View tab layout of ARE, ITM and SPL resources for smaller window sizes.</entry>
-      <entry>Improved parser for TRIGGER.IDS and ACTION.IDS tables.</entry>
+      <entry>Added partial support for the non-interactive Baldur's Gate demo.</entry>
+      <entry>Added check option for illegal soundrefs in strings.</entry>
+      <entry>Added option to override UI scaling.</entry>
+      <entry>Completely redesigned the effect opcode handling.</entry>
+      <entry>Improved Mass Exporter.</entry>
+      <entry>Improvements for the Bookmark feature.</entry>
+      <entry>Improved text resource features: Trim, Align, Sort.</entry>
+      <entry>Improved EEex detection for EE games.</entry>
+      <entry>Updated ARE location flags for PST(EE).</entry>
+      <entry>Updated "face target" field in PRO resources.</entry>
+      <entry>Various internal updates.</entry>
     </changelog>
   </release>
 
