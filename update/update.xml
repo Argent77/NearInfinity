@@ -19,24 +19,24 @@
   <release type="latest">
     <file>
       <name>NearInfinity.jar</name>
-      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.3-20221108/NearInfinity-20221108.zip</url>
-      <version>v2.3-20221108</version>
-      <timestamp>2022-11-08T11:45+01:00</timestamp>
-      <hash>619bf369ac536065412aa62200baba1c</hash>
-      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.3-20221108</link>
+      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.3-20230303/NearInfinity-20230303.zip</url>
+      <version>v2.3-20230303</version>
+      <timestamp>2023-03-03T19:12+01:00</timestamp>
+      <hash>221aec49b1710ae92876e22f0cd3d2d8</hash>
+      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.3-20230303</link>
     </file>
     <changelog>
-      <entry>Added partial support for the non-interactive Baldur's Gate demo.</entry>
-      <entry>Added check option for illegal soundrefs in strings.</entry>
-      <entry>Added option to override UI scaling.</entry>
-      <entry>Completely redesigned the effect opcode handling.</entry>
-      <entry>Improved Mass Exporter.</entry>
-      <entry>Improvements for the Bookmark feature.</entry>
-      <entry>Improved text resource features: Trim, Align, Sort.</entry>
-      <entry>Improved EEex detection for EE games.</entry>
-      <entry>Updated ARE location flags for PST(EE).</entry>
-      <entry>Updated "face target" field in PRO resources.</entry>
-      <entry>Various internal updates.</entry>
+      <entry>Improved WAV/ACM audio playback controls.</entry>
+      <entry>Improvements for MOS and TIS resource viewer.</entry>
+      <entry>Native ETC1 and ETC2 texture decoding support for PVRZ files.</entry>
+      <entry>Confirmation options for opening bookmarked games.</entry>
+      <entry>Fixed stuttering sound playback and potential crashes when playing back multiple sound clips simultaneously.</entry>
+      <entry>Fixed display of animated primary tiles in the Area Viewer.</entry>
+      <entry>Fixed issue in the creature animation viewer which incorrectly applied visual effect multiple times.</entry>
+      <entry>Fixed a scrollbar-related visibility issue in the "Raw" tab of structured resources.</entry>
+      <entry>Fixed viewing and saving TOT files in original games.</entry>
+      <entry>Fixed BIFF-related issues with the GemRB demo (thanks lynx).</entry>
+      <entry>Updated library responsible for the various text editing components in NI.</entry>
     </changelog>
   </release>
 
