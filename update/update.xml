@@ -27,32 +27,36 @@
   <release type="stable">
     <github>
       <url type="json">https://api.github.com/repos/Argent77/NearInfinity/releases/latest</url>
-      <!-- <url type="json">https://api.github.com/repos/Argent77/NearInfinity/releases/tags/v2.3-20230303</url> -->
+      <!-- <url type="json">https://api.github.com/repos/Argent77/NearInfinity/releases/tags/v2.3-20230609</url> -->
     </github>
 
     <!-- Kept for compatibility with older Near Infinity releases -->
     <file>
       <name>NearInfinity.jar</name>
-      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.3-20230303/NearInfinity-20230303.zip</url>
-      <version>v2.3-20230303</version>
-      <timestamp>2023-03-03T19:12+01:00</timestamp>
-      <hash>221aec49b1710ae92876e22f0cd3d2d8</hash>
-      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.3-20230303</link>
+      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.3-20230609/NearInfinity-20230609.zip</url>
+      <version>v2.3-20230609</version>
+      <timestamp>2023-06-09T20:41+02:00</timestamp>
+      <hash>3e9b0de0c8feb437012aa5e37b9930c4</hash>
+      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.3-20230609</link>
     </file>
 
     <!-- Kept for compatibility with older Near Infinity releases -->
     <changelog>
-      <entry>Improved WAV/ACM audio playback controls.</entry>
-      <entry>Improvements for MOS and TIS resource viewer.</entry>
-      <entry>Native ETC1 and ETC2 texture decoding support for PVRZ files.</entry>
-      <entry>Confirmation options for opening bookmarked games.</entry>
-      <entry>Fixed stuttering sound playback and potential crashes when playing back multiple sound clips simultaneously.</entry>
-      <entry>Fixed display of animated primary tiles in the Area Viewer.</entry>
-      <entry>Fixed issue in the creature animation viewer which incorrectly applied visual effect multiple times.</entry>
-      <entry>Fixed a scrollbar-related visibility issue in the "Raw" tab of structured resources.</entry>
-      <entry>Fixed viewing and saving TOT files in original games.</entry>
-      <entry>Fixed BIFF-related issues with the GemRB demo (thanks lynx).</entry>
-      <entry>Updated library responsible for the various text editing components in NI.</entry>
+      <entry>Prepackaged Near Infinity installers for Windows and macOS available with a preinstalled Java Runtime and improved system integration</entry>
+      <entry>Added option to remember size and position of resource child windows across a single NI session (menu Options &gt; Remember last child frame size and position)</entry>
+      <entry>Added new command line options for controlling availability of specific features</entry>
+      <entry>Upgraded the "Update Check and Notification" feature to notify users of new Near Infinity releases with an improved changelog summary</entry>
+      <entry>Improved methods for opening files and URLs in associated applications on Linux and macOS platforms</entry>
+      <entry>Opcodes: Added definitions for PSTEE-specific opcodes 348, 349, 350, 351 and 377</entry>
+      <entry>Opcode 319: Fixed resource field not using the correct datatype when effect with param2=11 is loaded</entry>
+      <entry>Mass Exporter: Added option to filter resource names by literal strings or regular expressions</entry>
+      <entry>Mass Exporter: Available list of resource types to export is generated dynamically, based on the current game</entry>
+      <entry>Mass Exporter: Fixed a hardcoded character encoding issue for script comments</entry>
+      <entry>BAM Converter: Fixed two issues related to the transparent color entry in BAM V1 animations</entry>
+      <entry>PRO resources: Fixed a regression that failed to change structure size depending on selected projectile type</entry>
+      <entry>Creature Animation Browser: Modifications to character equipment (e.g. new coloring, effects or styles) should be correctly applied to the creature animation on reload</entry>
+      <entry>Minor improvements to Near Infinity application icon</entry>
+      <entry>Various internal optimizations</entry>
     </changelog>
   </release>
 </update>
