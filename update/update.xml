@@ -24,6 +24,42 @@
     </info>
   </general>
 
+  <release type="latest">
+    <github>
+      <url type="json">https://api.github.com/repos/Argent77/NearInfinity/releases/latest</url>
+      <!-- <url type="json">https://api.github.com/repos/Argent77/NearInfinity/releases/tags/v2.3-20230609</url> -->
+    </github>
+
+    <!-- Kept for compatibility with older Near Infinity releases -->
+    <file>
+      <name>NearInfinity.jar</name>
+      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.3-20230609/NearInfinity-20230609.zip</url>
+      <version>v2.3-20230609</version>
+      <timestamp>2023-06-09T20:41+02:00</timestamp>
+      <hash>3e9b0de0c8feb437012aa5e37b9930c4</hash>
+      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.3-20230609</link>
+    </file>
+
+    <!-- Kept for compatibility with older Near Infinity releases -->
+    <changelog>
+      <entry>Prepackaged Near Infinity installers for Windows and macOS available with a preinstalled Java Runtime and improved system integration</entry>
+      <entry>Added option to remember size and position of resource child windows across a single NI session (menu Options &gt; Remember last child frame size and position)</entry>
+      <entry>Added new command line options for controlling availability of specific features</entry>
+      <entry>Upgraded the "Update Check and Notification" feature to notify users of new Near Infinity releases with an improved changelog summary</entry>
+      <entry>Improved methods for opening files and URLs in associated applications on Linux and macOS platforms</entry>
+      <entry>Opcodes: Added definitions for PSTEE-specific opcodes 348, 349, 350, 351 and 377</entry>
+      <entry>Opcode 319: Fixed resource field not using the correct datatype when effect with param2=11 is loaded</entry>
+      <entry>Mass Exporter: Added option to filter resource names by literal strings or regular expressions</entry>
+      <entry>Mass Exporter: Available list of resource types to export is generated dynamically, based on the current game</entry>
+      <entry>Mass Exporter: Fixed a hardcoded character encoding issue for script comments</entry>
+      <entry>BAM Converter: Fixed two issues related to the transparent color entry in BAM V1 animations</entry>
+      <entry>PRO resources: Fixed a regression that failed to change structure size depending on selected projectile type</entry>
+      <entry>Creature Animation Browser: Modifications to character equipment (e.g. new coloring, effects or styles) should be correctly applied to the creature animation on reload</entry>
+      <entry>Minor improvements to Near Infinity application icon</entry>
+      <entry>Various internal optimizations</entry>
+    </changelog>
+  </release>
+
   <release type="stable">
     <github>
       <url type="json">https://api.github.com/repos/Argent77/NearInfinity/releases/latest</url>
