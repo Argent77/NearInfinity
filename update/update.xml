@@ -1,11 +1,19 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
-<!DOCTYPE update SYSTEM "update_v1.dtd">
+<!DOCTYPE update SYSTEM "update_v2.dtd">
 
-<update version="1">
+<update version="2">
   <general>
     <server>
       <link>https://nearinfinitybrowser.github.io/NearInfinity/update/update.xml</link>
     </server>
+    <info>
+      <name>Near Infinity Releases</name>
+      <link>https://github.com/Argent77/NearInfinity/releases</link>
+    </info>
+    <info>
+      <name>Near Infinity on GitHub Discussions</name>
+      <link>https://github.com/NearInfinityBrowser/NearInfinity/discussions</link>
+    </info>
     <info>
       <name>Near Infinity on SHS Forums</name>
       <link>http://www.shsforums.net/topic/45358-nearinfinity/</link>
@@ -16,7 +24,13 @@
     </info>
   </general>
 
-  <release type="latest">
+  <release type="stable">
+    <github>
+      <url type="json">https://api.github.com/repos/Argent77/NearInfinity/releases/latest</url>
+      <!-- <url type="json">https://api.github.com/repos/Argent77/NearInfinity/releases/tags/v2.3-20230303</url> -->
+    </github>
+
+    <!-- Kept for compatibility with older Near Infinity releases -->
     <file>
       <name>NearInfinity.jar</name>
       <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.3-20230303/NearInfinity-20230303.zip</url>
@@ -25,6 +39,8 @@
       <hash>221aec49b1710ae92876e22f0cd3d2d8</hash>
       <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.3-20230303</link>
     </file>
+
+    <!-- Kept for compatibility with older Near Infinity releases -->
     <changelog>
       <entry>Improved WAV/ACM audio playback controls.</entry>
       <entry>Improvements for MOS and TIS resource viewer.</entry>
@@ -37,63 +53,6 @@
       <entry>Fixed viewing and saving TOT files in original games.</entry>
       <entry>Fixed BIFF-related issues with the GemRB demo (thanks lynx).</entry>
       <entry>Updated library responsible for the various text editing components in NI.</entry>
-    </changelog>
-  </release>
-
-  <release type="stable">
-    <file>
-      <name>NearInfinity.jar</name>
-      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.1-20200401/NearInfinity-20200401.zip</url>
-      <version>v2.1-20200401</version>
-      <timestamp>2020-04-01T09:56+01:00</timestamp>
-      <hash>a1328d7a317a461b55d40e5b14eb22d1</hash>
-      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.1-20200401</link>
-    </file>
-    <changelog>
-      <entry>Show search names of areas (if available), creatures, items, spells and stores in the resource navigation tree (thanks Mingun) &lt;- can be turned on/off in Options menu</entry>
-      <entry>Show overridden resources in bold in the resource navigation tree (thanks Mingun) &lt;- can be turned on/off in Options menu</entry>
-      <entry>Moved game-related configuration files (such as baldur.lua, WeiDU.log, ...) from Edit menu to the new "Special" folder in the resource navigation tree</entry>
-      <entry>Bookmarks: Use game name by default (thanks Mingun)</entry>
-      <entry>Copy or rename game resources: Show a default naming suggestion; allow change of extension for rename operation</entry>
-      <entry>Added script compiler option "Autogenerate BCS comments" for scripts, mass exporter and bcs drop zone</entry>
-      <entry>Improved enforcing global font size for all UI text (useful for high dpi displays)</entry>
-      <entry>BAM Converter -&gt; Splitted BAM Output: Fixed filename suffix generation</entry>
-      <entry>Mass Converter: Fixed automatic TIS V1 -&gt; V2 conversion</entry>
-      <entry>Reference Searcher: Included type MENU</entry>
-      <entry>Improved DLG checker: cover more potential issues (thanks Mingun)</entry>
-      <entry>Improved tooltips in Area Viewer: Show parent structure names or search names if available (thanks Mingun)</entry>
-      <entry>ARE -&gt; Actor View tab: Show CRE information in separate tab if available</entry>
-      <entry>Visual improvements in View tabs for ARE Container, GAM and SPL Ability structures</entry>
-      <entry>Show item ability name (from tooltip.2da) in View tab</entry>
-      <entry>Show dialog resref of conversable itemsin View tab</entry>
-      <entry>IWD2: Fixed misaligned controls and background dimension in CHU viewer</entry>
-      <entry>Added Raw tab to DLG resources (thanks Mingun)</entry>
-      <entry>Fixed various bugs in View tab of DLG resources (thanks Mingun)</entry>
-      <entry>Fixed permanent high CPU/GFX load when states or responses with script blocks are selected</entry>
-      <entry>Greatly improved dialog tree viewer (thanks Mingun)</entry>
-      <entry>Various improvements to Edit view of structured resources</entry>
-      <entry>BCS decompiler: Edge cases, such as functions with empty strings or wildcards, are decoded properly.</entry>
-      <entry>BCS decompiler: Order of signature definition in action.ids and trigger.ids have no impact on script decoding anymore</entry>
-      <entry>Added support for virtual string references via ENGINEST.2DA</entry>
-      <entry>New field in ARE -&gt; Actor structure: Alternate actor name</entry>
-      <entry>New field in GAM V2.2: Nightmare mode</entry>
-      <entry>Improved CRE field label: Undead level -&gt; Turn undead level</entry>
-      <entry>Updated SPL and ITM ability flag labels</entry>
-      <entry>Retrieve custom ITM flag labels dynamically from itemflag.ids</entry>
-      <entry>Fixed ambiguous description of spellprot stat 0x104</entry>
-      <entry>Added default entry to source item slot list in EFF V2</entry>
-      <entry>Updated STO flags</entry>
-      <entry>Updated opcodes 13, 23, 24, 25, 78, 98, 108, 109, 272, 279, 282, 290</entry>
-      <entry>IWD2: Fixed opcode 402</entry>
-      <entry>Allow negative numbers in parameter 1 of opcode 233</entry>
-      <entry>PST: Added Quest Viewer to GAM resources and Resource Tree -&gt; Special -&gt; quest.ini (thanks Mingun)</entry>
-      <entry>PST: Added custom Viewer for Bestiary structure in GAM resources (thanks Mingun)</entry>
-      <entry>Fixed priority order of override folders</entry>
-      <entry>Fixed adding removables in CHR when section offset is 0</entry>
-      <entry>Fixed reading BAM V1 resources with non-standard palette size</entry>
-      <entry>Improved BG Tutu detection</entry>
-      <entry>Various stability fixes (thanks Mingun)</entry>
-      <entry>Internal code refactoring and cleanup (thanks Mingun)</entry>
     </changelog>
   </release>
 </update>

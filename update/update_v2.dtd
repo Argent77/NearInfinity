@@ -1,0 +1,34 @@
+<!ELEMENT update (general?, release+)>
+<!ATTLIST update version CDATA #REQUIRED>
+
+<!ELEMENT general (server*, info*)>
+
+<!ELEMENT release (github, file?, changelog?)>
+<!ATTLIST release type (latest|stable|updater) "latest">
+
+<!ELEMENT server (link)>
+
+<!ELEMENT info (name, link)>
+
+<!ELEMENT name (#PCDATA)>
+
+<!ELEMENT link (#PCDATA)>
+
+<!ELEMENT github (url+)>
+
+<!ELEMENT file (name, url, version, timestamp, hash, link)>
+
+<!ELEMENT changelog (entry+)>
+
+<!ELEMENT url (#PCDATA)>
+<!ATTLIST url type (json|xml|jar|zip|gzip) #REQUIRED>
+
+<!ELEMENT type (#PCDATA)>
+
+<!ELEMENT version (#PCDATA)>
+
+<!ELEMENT timestamp (#PCDATA)>
+
+<!ELEMENT hash (#PCDATA)>
+
+<!ELEMENT entry (#PCDATA)>
