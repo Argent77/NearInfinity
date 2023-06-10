@@ -27,17 +27,17 @@
   <release type="latest">
     <github>
       <url type="json">https://api.github.com/repos/Argent77/NearInfinity/releases/latest</url>
-      <!-- <url type="json">https://api.github.com/repos/Argent77/NearInfinity/releases/tags/v2.3-20230609</url> -->
+      <!-- <url type="json">https://api.github.com/repos/Argent77/NearInfinity/releases/tags/v2.3-20230610</url> -->
     </github>
 
     <!-- Kept for compatibility with older Near Infinity releases -->
     <file>
       <name>NearInfinity.jar</name>
-      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.3-20230609/NearInfinity-20230609.zip</url>
-      <version>v2.3-20230609</version>
-      <timestamp>2023-06-09T20:41+02:00</timestamp>
-      <hash>3e9b0de0c8feb437012aa5e37b9930c4</hash>
-      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.3-20230609</link>
+      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.3-20230610/NearInfinity-20230610.zip</url>
+      <version>v2.3-20230610</version>
+      <timestamp>2023-06-10T14:56+02:00</timestamp>
+      <hash>3d5c0dd67ffe8b998957e4680a139e9e</hash>
+      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.3-20230610</link>
     </file>
 
     <!-- Kept for compatibility with older Near Infinity releases -->
@@ -63,17 +63,17 @@
   <release type="stable">
     <github>
       <url type="json">https://api.github.com/repos/Argent77/NearInfinity/releases/latest</url>
-      <!-- <url type="json">https://api.github.com/repos/Argent77/NearInfinity/releases/tags/v2.3-20230609</url> -->
+      <!-- <url type="json">https://api.github.com/repos/Argent77/NearInfinity/releases/tags/v2.3-20230610</url> -->
     </github>
 
     <!-- Kept for compatibility with older Near Infinity releases -->
     <file>
       <name>NearInfinity.jar</name>
-      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.3-20230609/NearInfinity-20230609.zip</url>
-      <version>v2.3-20230609</version>
-      <timestamp>2023-06-09T20:41+02:00</timestamp>
-      <hash>3e9b0de0c8feb437012aa5e37b9930c4</hash>
-      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.3-20230609</link>
+      <url type="zip">https://github.com/Argent77/NearInfinity/releases/download/v2.3-20230610/NearInfinity-20230610.zip</url>
+      <version>v2.3-20230610</version>
+      <timestamp>2023-06-10T14:56+02:00</timestamp>
+      <hash>3d5c0dd67ffe8b998957e4680a139e9e</hash>
+      <link>https://github.com/Argent77/NearInfinity/releases/tag/v2.3-20230610</link>
     </file>
 
     <!-- Kept for compatibility with older Near Infinity releases -->
