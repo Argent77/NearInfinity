@@ -6,3 +6,4 @@ jar/NearInfinity.jar
 /.idea
 /.settings
 .vscode/launch.json
+*iml

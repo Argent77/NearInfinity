@@ -9,6 +9,7 @@
   <property name="tinylog-impl.file" value="${lib.path.rel}/tinylog/tinylog-impl-2.7.0.jar"/>
   <property name="jorbis.file" value="${lib.path.rel}/jorbis/jorbis.jar"/>
   <property name="rsyntaxtextarea.file" value="${lib.path.rel}/rsyntaxtextarea/rsyntaxtextarea.jar"/>
+  <property name="tinylog.file" value="${lib.path.rel}/tinylog/tinylog.jar"/>
   <property name="jhexview.file" value="${lib.path.rel}/jhexview/jhexview.jar"/>
   <property name="montemedia.file" value="${lib.path.rel}/montemedia/montemedia.jar"/>
   <property name="apng_writer.file" value="${lib.path.rel}/apng-writer/apng-writer-core.jar"/>
