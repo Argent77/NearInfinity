@@ -1168,7 +1168,7 @@ public class ConvertToBam extends ChildFrame implements ActionListener, Property
     updateFrameInfo(listFrames.getSelectedIndices());
     updateQuickPreview(rcFramesPreview, listFrames.getSelectedIndices(), true);
     updateQuickPreview(rcCyclesPreview, listFramesAvail.getSelectedIndices(), false);
-    initCurrentCycle(listCycles.getSelectedIndex());
+    initCurrentCycle(listCycles.getSelectedIndex(), false);
     updateStatus();
     setVisible(true);
   }
@@ -2076,7 +2076,7 @@ public class ConvertToBam extends ChildFrame implements ActionListener, Property
     bMacroRemoveAll.setEnabled(!modelCycles.isEmpty());
     bMacroReverseCycles.setEnabled(!modelCycles.isEmpty());
 
-    initCurrentCycle(bounds);
+    initCurrentCycle(bounds, true);
     updateStatus();
   }
 
@@ -2094,12 +2094,12 @@ public class ConvertToBam extends ChildFrame implements ActionListener, Property
     pCurrentCycle.validate();
   }
 
-  private void initCurrentCycle(int cycleIdx) {
-    initCurrentCycle(Couple.with(cycleIdx, cycleIdx));
+  private void initCurrentCycle(int cycleIdx, boolean forced) {
+    initCurrentCycle(Couple.with(cycleIdx, cycleIdx), forced);
   }
 
   /** Initializes the "Current cycle" section of the Cycles tab. */
-  private void initCurrentCycle(Couple<Integer, Integer> cycleIndices) {
+  private void initCurrentCycle(Couple<Integer, Integer> cycleIndices, boolean forced) {
     if (cycleIndices != null) {
       if (cycleIndices.getValue0().compareTo(cycleIndices.getValue1()) == 0 && cycleIndices.getValue0() >= 0
           && cycleIndices.getValue0() < modelCycles.getSize()) {
@@ -2117,7 +2117,7 @@ public class ConvertToBam extends ChildFrame implements ActionListener, Property
         listFramesAvail.setSelectedIndices(new int[] {});
 
         // updating current cycle list view
-        modelCurCycle.setCycle(cycleIdx);
+        modelCurCycle.setCycle(cycleIdx, forced);
 
         listCurCycle.setSelectedIndices(new int[] {});
 

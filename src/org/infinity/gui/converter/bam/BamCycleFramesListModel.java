@@ -46,12 +46,17 @@ class BamCycleFramesListModel extends AbstractListModel<PseudoBamFrameEntry> {
 
   /** Sets a new active cycle. */
   public void setCycle(int cycle) {
+    setCycle(cycle, false);
+  }
+
+  /** Sets a new active cycle. */
+  public void setCycle(int cycle, boolean forced) {
     if (cycle < 0) {
       cycle = 0;
     } else if (cycle >= getControl().cycleCount()) {
       cycle = getControl().cycleCount() - 1;
     }
-    if (cycle != getControl().cycleGet()) {
+    if (forced || cycle != getControl().cycleGet()) {
       int oldCount = getControl().cycleFrameCount();
       getControl().cycleSet(cycle);
       int newCount = getControl().cycleFrameCount();
