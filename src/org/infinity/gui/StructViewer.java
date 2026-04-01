@@ -563,7 +563,7 @@ public final class StructViewer extends JPanel implements ListSelectionListener,
           int[] rows = table.getSelectedRows();
           for (int i = rows.length - 1; i >= 0; i--) {
             Object entry = table.getModel().getValueAt(rows[i], 1);
-            if (entry instanceof AddRemovable) {
+            if (entry instanceof AddRemovable && ((AddRemovable)entry).canRemove()) {
               try {
                 struct.removeDatatype((AddRemovable) entry, true);
               } catch (Exception e) {
@@ -763,7 +763,8 @@ public final class StructViewer extends JPanel implements ListSelectionListener,
       // allow removal of multiple AddRemovable entries
       boolean removeEnabled = !lsm.isSelectionEmpty();
       for (int cur = lsm.getMinSelectionIndex(), max = lsm.getMaxSelectionIndex(); cur <= max && removeEnabled; cur++) {
-        removeEnabled = table.getModel().getValueAt(cur, 1) instanceof AddRemovable;
+        final Object entry = table.getModel().getValueAt(cur, 1);
+        removeEnabled = entry instanceof AddRemovable && ((AddRemovable)entry).canRemove();
       }
       JButton bRemove = (JButton) buttonPanel.getControlByType(ButtonPanel.Control.REMOVE);
       if (bRemove != null) {
