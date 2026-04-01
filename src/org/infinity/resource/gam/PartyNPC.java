@@ -26,6 +26,8 @@ import org.infinity.datatype.IdsBitmap;
 import org.infinity.datatype.IsNumeric;
 import org.infinity.datatype.IsTextual;
 import org.infinity.datatype.ResourceRef;
+import org.infinity.datatype.SectionCount;
+import org.infinity.datatype.SectionOffset;
 import org.infinity.datatype.StringRef;
 import org.infinity.datatype.TextString;
 import org.infinity.datatype.Unknown;
@@ -34,6 +36,7 @@ import org.infinity.gui.ButtonPanel;
 import org.infinity.gui.StructViewer;
 import org.infinity.resource.AbstractStruct;
 import org.infinity.resource.AddRemovable;
+import org.infinity.resource.HasChildStructs;
 import org.infinity.resource.HasViewerTabs;
 import org.infinity.resource.Profile;
 import org.infinity.resource.ResourceFactory;
@@ -46,7 +49,7 @@ import org.infinity.util.io.FileEx;
 import org.infinity.util.io.StreamUtils;
 import org.tinylog.Logger;
 
-public class PartyNPC extends AbstractStruct implements HasViewerTabs, AddRemovable {
+public class PartyNPC extends AbstractStruct implements HasViewerTabs, AddRemovable, HasChildStructs {
   // GAM/PartyNPC-specific field labels
   public static final String GAM_NPC                            = "Party member";
   public static final String GAM_NPC_SELECTION_STATE            = "Selection state";
@@ -132,12 +135,36 @@ public class PartyNPC extends AbstractStruct implements HasViewerTabs, AddRemova
     super(superStruct, name, buffer, offset);
   }
 
+  // --------------------- Begin Interface HasChildStructs ---------------------
+
+  @Override
+  public AddRemovable[] getPrototypes() throws Exception {
+    return new AddRemovable[] { new CreResource(GAM_NPC_CRE_RESOURCE) };
+  }
+
+  @Override
+  public AddRemovable confirmAddEntry(AddRemovable entry) throws Exception {
+    if (entry instanceof CreResource) {
+      if (((DecNumber) getAttribute(GAM_NPC_CRE_SIZE)).getValue() != 0) {
+        final String structName = (this instanceof NonPartyNPC) ? NonPartyNPC.GAM_EXNPC : GAM_NPC;
+        JOptionPane.showMessageDialog(getViewer(),
+            "Only one " + GAM_NPC_CRE_RESOURCE + " allowed per " + structName + " structure.", "Error",
+            JOptionPane.ERROR_MESSAGE);
+        return null;
+      }
+
+      return updateCreFields((CreResource)entry);
+    }
+    return entry;
+  }
+
+  // --------------------- End Interface HasChildStructs ---------------------
+
   // --------------------- Begin Interface AddRemovable ---------------------
 
   @Override
   public boolean canRemove() {
-    // TODO: re-enable after fixing GAM corruption after adding/removing PartyNPC structures
-    return false;
+    return true;
   }
 
   // --------------------- End Interface AddRemovable ---------------------
@@ -703,5 +730,50 @@ public class PartyNPC extends AbstractStruct implements HasViewerTabs, AddRemova
     }
 
     return retVal;
+  }
+
+  /** Adjusts PartyNPC fields if {@code cre} is added to the structure. */
+  private CreResource updateCreFields(CreResource cre) {
+    if (cre == null) {
+      return null;
+    }
+
+    final SectionCount sc = getParent().getSectionCount(getClass());
+    final SectionOffset so = getParent().getSectionOffset(getClass());
+    if (sc == null || so == null) {
+      return null;
+    }
+
+    int newOffset = so.getValue() + sc.getValue() * getSize();
+    for (int i = 0, cnt = sc.getValue(); i < cnt; i++) {
+      final PartyNPC npc = getAttribute(so.getValue() + i * getSize(), getClass());
+      if (npc != null) {
+        final int curCreOfs = ((IsNumeric)getAttribute(GAM_NPC_OFFSET_CRE)).getValue();
+        final int curCreSize = ((IsNumeric)getAttribute(GAM_NPC_CRE_SIZE)).getValue();
+        if (curCreOfs > 0 && curCreSize > 0) {
+          newOffset = Math.max(newOffset, curCreOfs + curCreSize);
+        }
+      }
+    }
+
+    cre.setOffset(newOffset);
+    ((HexNumber)getAttribute(GAM_NPC_OFFSET_CRE)).setValue(newOffset);
+    ((DecNumber)getAttribute(GAM_NPC_CRE_SIZE)).setValue(cre.getSize());
+
+    final StructEntry creAttr = getAttribute(GAM_NPC_CHARACTER);
+    if (creAttr instanceof ResourceRef) {
+      final ResourceRef creRef = (ResourceRef)creAttr;
+      String res = creRef.getText();
+      String initial = "";
+      if (!res.isEmpty()) {
+        initial = Character.toString(res.charAt(0));
+        res = "*" + res.substring(1);
+      } else {
+        res = "*";
+      }
+      creRef.setValue(res);
+      ((TextString)getAttribute(GAM_NPC_STAT_INITIAL_CHAR)).setValue(initial);
+    }
+    return cre;
   }
 }

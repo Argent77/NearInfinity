@@ -139,14 +139,10 @@ public final class GamResource extends AbstractStruct implements Resource, HasCh
   @Override
   public AddRemovable[] getPrototypes() throws Exception {
     if (Profile.getEngine() == Profile.Engine.PST) {
-      // TODO: missing CRE resource when adding PartyNPC structures
-      return new AddRemovable[] { new Variable(), new JournalEntry(), new KillVariable() };
-      // return new AddRemovable[]{new Variable(), new JournalEntry(), new KillVariable(),
-      // new PartyNPC(), new NonPartyNPC()};
+      return new AddRemovable[] { new Variable(), new JournalEntry(), new KillVariable(), new PartyNPC(),
+          new NonPartyNPC() };
     } else {
-      return new AddRemovable[] { new Variable(), new JournalEntry() };
-      // return new AddRemovable[]{new Variable(), new JournalEntry(), new PartyNPC(),
-      // new NonPartyNPC()};
+      return new AddRemovable[]{new Variable(), new JournalEntry(), new PartyNPC(), new NonPartyNPC()};
     }
   }
 

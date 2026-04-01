@@ -469,7 +469,7 @@ public class ResourceRef extends Datatype
     return ref != null && ref.entry != null && ref.entry.isSound();
   }
 
-  private void setValue(String newValue) {
+  public void setValue(String newValue) {
     final String oldValue = NONE.name.equals(resname) ? null : resname;
     resname = newValue;
 

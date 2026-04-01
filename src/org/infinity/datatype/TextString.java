@@ -135,7 +135,7 @@ public final class TextString extends Datatype implements InlineEditable, IsText
     return Objects.equals(text, other.text);
   }
 
-  private void setValue(String newValue) {
+  public void setValue(String newValue) {
     final String oldValue = getText();
     text = newValue;
     if (!Objects.equals(oldValue, newValue)) {
