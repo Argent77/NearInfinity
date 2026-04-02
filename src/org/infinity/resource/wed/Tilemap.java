@@ -11,9 +11,11 @@ import org.infinity.datatype.Flag;
 import org.infinity.datatype.IsNumeric;
 import org.infinity.datatype.Unknown;
 import org.infinity.resource.AbstractStruct;
+import org.infinity.resource.AddRemovable;
+import org.infinity.util.io.StreamUtils;
 
-// implements AddRemovable
-public final class Tilemap extends AbstractStruct { // WED/Tilemap-specific field labels
+public final class Tilemap extends AbstractStruct implements AddRemovable {
+  // WED/Tilemap-specific field labels
   public static final String WED_TILEMAP                  = "Tilemap";
   public static final String WED_TILEMAP_TILE_INDEX_PRI   = "Tilemap index (primary)";
   public static final String WED_TILEMAP_TILE_COUNT_PRI   = "Tilemap count (primary)";
@@ -23,6 +25,10 @@ public final class Tilemap extends AbstractStruct { // WED/Tilemap-specific fiel
   private static final String[] FLAGS_ARRAY = { "Primary overlay only", "Unused", "Overlay 1", "Overlay 2", "Overlay 3",
       "Overlay 4", "Overlay 5", "Overlay 6", "Overlay 7" };
 
+  protected Tilemap() throws Exception {
+    super(null, WED_TILEMAP, createEmptyBuffer(true), 0);
+  }
+
   public Tilemap(AbstractStruct superStruct, ByteBuffer buffer, int offset, int number) throws Exception {
     super(superStruct, WED_TILEMAP + " " + number, buffer, offset, 5);
   }
@@ -30,6 +36,15 @@ public final class Tilemap extends AbstractStruct { // WED/Tilemap-specific fiel
   public int getTileCount() {
     return ((IsNumeric) getAttribute(WED_TILEMAP_TILE_COUNT_PRI)).getValue();
   }
+
+  // --------------------- Begin Interface AddRemovable ---------------------
+
+  @Override
+  public boolean canRemove() {
+    return true;
+  }
+
+  // --------------------- End Interface AddRemovable ---------------------
 
   @Override
   public int read(ByteBuffer buffer, int offset) throws Exception {
@@ -60,5 +75,15 @@ public final class Tilemap extends AbstractStruct { // WED/Tilemap-specific fiel
     addField(new Flag(buffer, offset + 6, 1, WED_TILEMAP_DRAW_OVERLAYS, FLAGS_ARRAY));
     addField(new Unknown(buffer, offset + 7, 3));
     return offset + 10;
+  }
+
+  /** Creates an empty {@code Tilemap} buffer, optionally initialized with sane default values. */
+  private static ByteBuffer createEmptyBuffer(boolean applyDefaults) {
+    final ByteBuffer bb = StreamUtils.getByteBuffer(10);
+    if (applyDefaults) {
+      bb.putShort(2, (short)1);
+      bb.putShort(4, (short)-1);
+    }
+    return bb;
   }
 }

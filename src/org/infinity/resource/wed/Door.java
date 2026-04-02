@@ -9,7 +9,6 @@ import java.nio.ByteBuffer;
 import org.infinity.datatype.Bitmap;
 import org.infinity.datatype.DecNumber;
 import org.infinity.datatype.IsNumeric;
-import org.infinity.datatype.RemovableDecNumber;
 import org.infinity.datatype.SectionCount;
 import org.infinity.datatype.SectionOffset;
 import org.infinity.datatype.TextString;
@@ -42,7 +41,7 @@ public final class Door extends AbstractStruct implements AddRemovable, HasChild
 
   @Override
   public AddRemovable[] getPrototypes() throws Exception {
-    return new AddRemovable[] { new OpenPolygon(), new ClosedPolygon() };
+    return new AddRemovable[] { new IndexNumber(2, WED_DOOR_TILEMAP_INDEX), new OpenPolygon(), new ClosedPolygon() };
   }
 
   @Override
@@ -57,10 +56,17 @@ public final class Door extends AbstractStruct implements AddRemovable, HasChild
 
   @Override
   protected void setAddRemovableOffset(AddRemovable datatype) {
-    if (datatype instanceof RemovableDecNumber) {
+    if (datatype instanceof IndexNumber) {
       final int offset = ((IsNumeric) getParent().getAttribute(WedResource.WED_OFFSET_DOOR_TILEMAP_LOOKUP)).getValue();
       int index = getTilemapIndex().getValue();
       datatype.setOffset(offset + index * 2);
+    }
+  }
+
+  @Override
+  protected void datatypeAdded(AddRemovable datatype) {
+    if (datatype instanceof Polygon) {
+      WedResource.updatePolygon(getParent(), datatype);
     }
   }
 
@@ -107,7 +113,7 @@ public final class Door extends AbstractStruct implements AddRemovable, HasChild
     DecNumber indexTileCell = new DecNumber(buffer, offset + 10, 2, WED_DOOR_TILEMAP_LOOKUP_INDEX);
     addField(indexTileCell);
     SectionCount countTileCell = new SectionCount(buffer, offset + 12, 2, WED_DOOR_NUM_TILEMAP_INDICES,
-        RemovableDecNumber.class);
+        IndexNumber.class);
     addField(countTileCell);
     SectionCount countOpen = new SectionCount(buffer, offset + 14, 2, WED_DOOR_NUM_POLYGONS_OPEN, OpenPolygon.class);
     addField(countOpen);
@@ -131,7 +137,7 @@ public final class Door extends AbstractStruct implements AddRemovable, HasChild
     if (getParent() != null) {
       final IsNumeric offsetTileCell = (IsNumeric) getParent().getAttribute(WedResource.WED_OFFSET_DOOR_TILEMAP_LOOKUP);
       for (int i = 0; i < countTileCell.getValue(); i++) {
-        addField(new RemovableDecNumber(buffer, offsetTileCell.getValue() + 2 * (indexTileCell.getValue() + i), 2,
+        addField(new IndexNumber(buffer, offsetTileCell.getValue() + 2 * (indexTileCell.getValue() + i), 2,
             WED_DOOR_TILEMAP_INDEX + " " + i));
       }
     }

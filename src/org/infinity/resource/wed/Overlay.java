@@ -8,14 +8,16 @@ import java.nio.ByteBuffer;
 
 import org.infinity.datatype.Bitmap;
 import org.infinity.datatype.DecNumber;
-import org.infinity.datatype.HexNumber;
 import org.infinity.datatype.ResourceRef;
 import org.infinity.datatype.SectionOffset;
 import org.infinity.datatype.Unknown;
 import org.infinity.resource.AbstractStruct;
+import org.infinity.resource.AddRemovable;
+import org.infinity.resource.HasChildStructs;
 import org.infinity.resource.Profile;
+import org.infinity.util.io.StreamUtils;
 
-public final class Overlay extends AbstractStruct { // implements AddRemovable, HasChildStructs
+public final class Overlay extends AbstractStruct implements HasChildStructs, AddRemovable {
   // WED/Overlay-specific field labels
   public static final String WED_OVERLAY                        = "Overlay";
   public static final String WED_OVERLAY_WIDTH                  = "Width";
@@ -29,21 +31,50 @@ public final class Overlay extends AbstractStruct { // implements AddRemovable, 
 
   public static final String[] MOVEMENT_ARRAY = { "Default", "Disable rendering", "Alternate rendering" };
 
+  public Overlay() throws Exception {
+    super(null, WED_OVERLAY, StreamUtils.getByteBuffer(24), 0);
+  }
+
   public Overlay(AbstractStruct superStruct, ByteBuffer buffer, int offset, int number) throws Exception {
     super(superStruct, WED_OVERLAY + " " + number, buffer, offset);
   }
 
-  public void updateOffsets(int offset, int size) {
-    HexNumber offsetTileMap = (HexNumber) getAttribute(WED_OVERLAY_OFFSET_TILEMAP);
-    if (offsetTileMap.getValue() >= offset) {
+  public void updateOffsets(AddRemovable datatype, int size) {
+    final SectionOffset offsetTileMap = (SectionOffset)getAttribute(WED_OVERLAY_OFFSET_TILEMAP);
+    boolean skip = (datatype.getParent() == this) && offsetTileMap.getSection().isAssignableFrom(datatype.getClass());
+    if (!skip && offsetTileMap.getValue() >= datatype.getOffset()) {
       offsetTileMap.incValue(size);
     }
 
-    HexNumber offsetTileLookup = (HexNumber) getAttribute(WED_OVERLAY_OFFSET_TILEMAP_LOOKUP);
-    if (offsetTileLookup.getValue() >= offset) {
+    final SectionOffset offsetTileLookup = (SectionOffset)getAttribute(WED_OVERLAY_OFFSET_TILEMAP_LOOKUP);
+    skip = (datatype.getParent() == this) && offsetTileLookup.getSection().isAssignableFrom(datatype.getClass());
+    if (!skip && offsetTileLookup.getValue() >= datatype.getOffset()) {
       offsetTileLookup.incValue(size);
     }
   }
+
+  // --------------------- Begin Interface HasChildStructs ---------------------
+
+  @Override
+  public AddRemovable[] getPrototypes() throws Exception {
+    return new AddRemovable[] { new Tilemap(), new IndexNumber(2, WED_OVERLAY_TILEMAP_INDEX) };
+  }
+
+  @Override
+  public AddRemovable confirmAddEntry(AddRemovable entry) throws Exception {
+    return entry;
+  }
+
+  // --------------------- Begin Interface HasChildStructs ---------------------
+
+  // --------------------- Begin Interface AddRemovable ---------------------
+
+  @Override
+  public boolean canRemove() {
+    return true;
+  }
+
+  // --------------------- End Interface AddRemovable ---------------------
 
   @Override
   public int read(ByteBuffer buffer, int offset) throws Exception {
