@@ -200,10 +200,10 @@ public class ButtonPopupMenu extends JButton {
   /**
    * Replaces current list of menu items with the given list.
    *
-   * @param menuItems List of menu items. Items will be sorted alphabetically before adding to the button.
+   * @param menuItems List of menu items. Original item order will be retained.
    */
   public void setMenuItems(JMenuItem[] menuItems) {
-    setMenuItems(menuItems, true);
+    setMenuItems(menuItems, false);
   }
 
   /**
