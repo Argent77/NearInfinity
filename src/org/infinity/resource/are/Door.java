@@ -4,7 +4,11 @@
 
 package org.infinity.resource.are;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.nio.ByteBuffer;
+
+import javax.swing.JButton;
 
 import org.infinity.datatype.Bitmap;
 import org.infinity.datatype.DecNumber;
@@ -15,8 +19,12 @@ import org.infinity.datatype.SectionCount;
 import org.infinity.datatype.StringRef;
 import org.infinity.datatype.TextString;
 import org.infinity.datatype.Unknown;
+import org.infinity.gui.ButtonPanel;
+import org.infinity.gui.StructViewer;
+import org.infinity.icon.Icons;
 import org.infinity.resource.AbstractStruct;
 import org.infinity.resource.AddRemovable;
+import org.infinity.resource.BoundingBox;
 import org.infinity.resource.HasChildStructs;
 import org.infinity.resource.Profile;
 import org.infinity.resource.StructEntry;
@@ -27,7 +35,7 @@ import org.infinity.resource.vertex.OpenVertexImpeded;
 import org.infinity.resource.vertex.Vertex;
 import org.infinity.util.io.StreamUtils;
 
-public final class Door extends AbstractStruct implements AddRemovable, HasVertices, HasChildStructs {
+public final class Door extends AbstractStruct implements AddRemovable, HasVertices, HasChildStructs, ActionListener {
   // ARE/Door-specific field labels
   public static final String ARE_DOOR                                   = "Door";
   public static final String ARE_DOOR_NAME                              = "Name";
@@ -81,6 +89,8 @@ public final class Door extends AbstractStruct implements AddRemovable, HasVerti
       "Detectable trap", "Door forced", "Cannot close", "Door located", "Door secret", "Secret door detected",
       "Alternate lock string", "Can be looked through", "Warn on activate", "Displayed warning", "Door hidden",
       "Uses key" };
+
+  private JButton bCalcBoundingBox;
 
   public Door() throws Exception {
     super(null, ARE_DOOR, StreamUtils.getByteBuffer(200), 0);
@@ -153,6 +163,21 @@ public final class Door extends AbstractStruct implements AddRemovable, HasVerti
       }
     }
     return count;
+  }
+
+  @Override
+  public void actionPerformed(ActionEvent e) {
+    if (e.getSource() == bCalcBoundingBox) {
+      updateBoundingBox();
+    }
+  }
+
+  @Override
+  protected void viewerInitialized(StructViewer viewer) {
+    final ButtonPanel buttonPanel = viewer.getButtonPanel();
+    bCalcBoundingBox = new JButton("Calculate bounding boxes", Icons.ICON_REFRESH_16.getIcon());
+    bCalcBoundingBox.addActionListener(this);
+    buttonPanel.addControl(bCalcBoundingBox, ButtonPanel.Control.CUSTOM_1);
   }
 
   @Override
@@ -230,5 +255,34 @@ public final class Door extends AbstractStruct implements AddRemovable, HasVerti
     addField(new ResourceRef(buffer, offset + 184, ARE_DOOR_DIALOG, "DLG"));
     addField(new Unknown(buffer, offset + 192, 8));
     return offset + 200;
+  }
+
+  private void updateBoundingBox() {
+    final AreResource are = (AreResource)getRoot();
+    if (are == null) {
+      return;
+    }
+
+    final int ofsVertices = ((IsNumeric)are.getAttribute(AreResource.ARE_OFFSET_VERTICES)).getValue();
+
+    // open door polygon
+    int idxVertices = ((IsNumeric)getAttribute(ARE_DOOR_FIRST_VERTEX_INDEX_OPEN)).getValue();
+    int cntVertices = ((IsNumeric)getAttribute(ARE_DOOR_NUM_VERTICES_OPEN)).getValue();
+    BoundingBox box = BoundingBox.calculateBoundingBox(this, ofsVertices, idxVertices, cntVertices);
+    ((DecNumber)getAttribute(ARE_DOOR_OPEN_BOUNDING_BOX_LEFT)).setValue(box.minX);
+    ((DecNumber)getAttribute(ARE_DOOR_OPEN_BOUNDING_BOX_TOP)).setValue(box.minY);
+    ((DecNumber)getAttribute(ARE_DOOR_OPEN_BOUNDING_BOX_RIGHT)).setValue(box.maxX);
+    ((DecNumber)getAttribute(ARE_DOOR_OPEN_BOUNDING_BOX_BOTTOM)).setValue(box.maxY);
+
+    // closed door polygon
+    idxVertices = ((IsNumeric)getAttribute(ARE_DOOR_FIRST_VERTEX_INDEX_CLOSED)).getValue();
+    cntVertices = ((IsNumeric)getAttribute(ARE_DOOR_NUM_VERTICES_CLOSED)).getValue();
+    box = BoundingBox.calculateBoundingBox(this, ofsVertices, idxVertices, cntVertices);
+    ((DecNumber)getAttribute(ARE_DOOR_CLOSED_BOUNDING_BOX_LEFT)).setValue(box.minX);
+    ((DecNumber)getAttribute(ARE_DOOR_CLOSED_BOUNDING_BOX_TOP)).setValue(box.minY);
+    ((DecNumber)getAttribute(ARE_DOOR_CLOSED_BOUNDING_BOX_RIGHT)).setValue(box.maxX);
+    ((DecNumber)getAttribute(ARE_DOOR_CLOSED_BOUNDING_BOX_BOTTOM)).setValue(box.maxY);
+
+    fireTableDataChanged();
   }
 }

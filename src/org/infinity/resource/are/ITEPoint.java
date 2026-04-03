@@ -4,7 +4,11 @@
 
 package org.infinity.resource.are;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.nio.ByteBuffer;
+
+import javax.swing.JButton;
 
 import org.infinity.datatype.Bitmap;
 import org.infinity.datatype.DecNumber;
@@ -14,15 +18,20 @@ import org.infinity.datatype.ResourceRef;
 import org.infinity.datatype.StringRef;
 import org.infinity.datatype.TextString;
 import org.infinity.datatype.Unknown;
+import org.infinity.gui.ButtonPanel;
+import org.infinity.gui.StructViewer;
+import org.infinity.icon.Icons;
 import org.infinity.resource.AbstractStruct;
 import org.infinity.resource.AddRemovable;
+import org.infinity.resource.BoundingBox;
 import org.infinity.resource.HasChildStructs;
 import org.infinity.resource.Profile;
 import org.infinity.resource.StructEntry;
 import org.infinity.resource.vertex.Vertex;
 import org.infinity.util.io.StreamUtils;
 
-public final class ITEPoint extends AbstractStruct implements AddRemovable, HasVertices, HasChildStructs {
+public final class ITEPoint extends AbstractStruct
+    implements AddRemovable, HasVertices, HasChildStructs, ActionListener {
   // ARE/Trigger-specific field labels
   public static final String ARE_TRIGGER                            = "Trigger";
   public static final String ARE_TRIGGER_NAME                       = "Name";
@@ -64,6 +73,8 @@ public final class ITEPoint extends AbstractStruct implements AddRemovable, HasV
   public static final String[] FLAG_ARRAY = { "No flags set", "Locked", "Trap resets", "Party required",
       "Trap detectable", "Trap set off by enemy", "Tutorial trigger", "Trap set off by NPC", "Trigger silent",
       "Trigger deactivated", "Cannot be passed by NPC", "Use activation point", "Connected to door" };
+
+  private JButton bCalcBoundingBox;
 
   public ITEPoint() throws Exception {
     super(null, ARE_TRIGGER, StreamUtils.getByteBuffer(196), 0);
@@ -112,6 +123,21 @@ public final class ITEPoint extends AbstractStruct implements AddRemovable, HasV
     }
     ((DecNumber) getAttribute(ARE_TRIGGER_NUM_VERTICES)).setValue(count);
     return count;
+  }
+
+  @Override
+  public void actionPerformed(ActionEvent e) {
+    if (e.getSource() == bCalcBoundingBox) {
+      updateBoundingBox();
+    }
+  }
+
+  @Override
+  protected void viewerInitialized(StructViewer viewer) {
+    final ButtonPanel buttonPanel = viewer.getButtonPanel();
+    bCalcBoundingBox = new JButton("Calculate bounding box", Icons.ICON_REFRESH_16.getIcon());
+    bCalcBoundingBox.addActionListener(this);
+    buttonPanel.addControl(bCalcBoundingBox, ButtonPanel.Control.CUSTOM_1);
   }
 
   @Override
@@ -177,5 +203,22 @@ public final class ITEPoint extends AbstractStruct implements AddRemovable, HasV
       }
     }
     return offset + 196;
+  }
+
+  private void updateBoundingBox() {
+    final AreResource are = (AreResource)getRoot();
+    if (are == null) {
+      return;
+    }
+
+    final int ofsVertices = ((IsNumeric)are.getAttribute(AreResource.ARE_OFFSET_VERTICES)).getValue();
+    final int idxVertices = ((IsNumeric)getAttribute(ARE_TRIGGER_FIRST_VERTEX_INDEX)).getValue();
+    final int cntVertices = ((IsNumeric)getAttribute(ARE_TRIGGER_NUM_VERTICES)).getValue();
+    final BoundingBox box = BoundingBox.calculateBoundingBox(this, ofsVertices, idxVertices, cntVertices);
+    ((DecNumber)getAttribute(ARE_TRIGGER_BOUNDING_BOX_LEFT)).setValue(box.minX);
+    ((DecNumber)getAttribute(ARE_TRIGGER_BOUNDING_BOX_TOP)).setValue(box.minY);
+    ((DecNumber)getAttribute(ARE_TRIGGER_BOUNDING_BOX_RIGHT)).setValue(box.maxX);
+    ((DecNumber)getAttribute(ARE_TRIGGER_BOUNDING_BOX_BOTTOM)).setValue(box.maxY);
+    fireTableDataChanged();
   }
 }

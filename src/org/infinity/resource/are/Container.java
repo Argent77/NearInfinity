@@ -4,12 +4,15 @@
 
 package org.infinity.resource.are;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import javax.swing.JButton;
 import javax.swing.JComponent;
 
 import org.infinity.datatype.Bitmap;
@@ -20,9 +23,12 @@ import org.infinity.datatype.ResourceRef;
 import org.infinity.datatype.StringRef;
 import org.infinity.datatype.TextString;
 import org.infinity.datatype.Unknown;
+import org.infinity.gui.ButtonPanel;
 import org.infinity.gui.StructViewer;
+import org.infinity.icon.Icons;
 import org.infinity.resource.AbstractStruct;
 import org.infinity.resource.AddRemovable;
+import org.infinity.resource.BoundingBox;
 import org.infinity.resource.HasChildStructs;
 import org.infinity.resource.HasViewerTabs;
 import org.infinity.resource.Profile;
@@ -34,7 +40,7 @@ import org.infinity.util.Table2daCache;
 import org.infinity.util.io.StreamUtils;
 
 public final class Container extends AbstractStruct
-    implements AddRemovable, HasVertices, HasViewerTabs, HasChildStructs {
+    implements AddRemovable, HasVertices, HasViewerTabs, HasChildStructs, ActionListener {
   // ARE/Container-specific field labels
   public static final String ARE_CONTAINER                            = "Container";
   public static final String ARE_CONTAINER_NAME                       = "Name";
@@ -69,6 +75,8 @@ public final class Container extends AbstractStruct
 
   public static final String[] FLAG_ARRAY = { "No flags set", "Locked", "Disable if no owner", "Magical lock",
       "Trap resets", "Remove only", "Disabled", "EE: Don't clear" };
+
+  private JButton bCalcBoundingBox;
 
   public Container() throws Exception {
     super(null, ARE_CONTAINER, StreamUtils.getByteBuffer(192), 0);
@@ -137,6 +145,21 @@ public final class Container extends AbstractStruct
     }
     ((DecNumber) getAttribute(ARE_CONTAINER_NUM_VERTICES)).setValue(count);
     return count;
+  }
+
+  @Override
+  public void actionPerformed(ActionEvent e) {
+    if (e.getSource() == bCalcBoundingBox) {
+      updateBoundingBox();
+    }
+  }
+
+  @Override
+  protected void viewerInitialized(StructViewer viewer) {
+    final ButtonPanel buttonPanel = viewer.getButtonPanel();
+    bCalcBoundingBox = new JButton("Calculate bounding box", Icons.ICON_REFRESH_16.getIcon());
+    bCalcBoundingBox.addActionListener(this);
+    buttonPanel.addControl(bCalcBoundingBox, ButtonPanel.Control.CUSTOM_1);
   }
 
   @Override
@@ -238,5 +261,22 @@ public final class Container extends AbstractStruct
       }
     }
     return retVal;
+  }
+
+  private void updateBoundingBox() {
+    final AreResource are = (AreResource)getRoot();
+    if (are == null) {
+      return;
+    }
+
+    final int ofsVertices = ((IsNumeric)are.getAttribute(AreResource.ARE_OFFSET_VERTICES)).getValue();
+    final int idxVertices = ((IsNumeric)getAttribute(ARE_CONTAINER_FIRST_VERTEX_INDEX)).getValue();
+    final int cntVertices = ((IsNumeric)getAttribute(ARE_CONTAINER_NUM_VERTICES)).getValue();
+    final BoundingBox box = BoundingBox.calculateBoundingBox(this, ofsVertices, idxVertices, cntVertices);
+    ((DecNumber)getAttribute(ARE_CONTAINER_BOUNDING_BOX_LEFT)).setValue(box.minX);
+    ((DecNumber)getAttribute(ARE_CONTAINER_BOUNDING_BOX_TOP)).setValue(box.minY);
+    ((DecNumber)getAttribute(ARE_CONTAINER_BOUNDING_BOX_RIGHT)).setValue(box.maxX);
+    ((DecNumber)getAttribute(ARE_CONTAINER_BOUNDING_BOX_BOTTOM)).setValue(box.maxY);
+    fireTableDataChanged();
   }
 }

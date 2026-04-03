@@ -4,19 +4,27 @@
 
 package org.infinity.resource.wed;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.nio.ByteBuffer;
+
+import javax.swing.JButton;
 
 import org.infinity.datatype.DecNumber;
 import org.infinity.datatype.Flag;
 import org.infinity.datatype.IsNumeric;
 import org.infinity.datatype.SectionCount;
+import org.infinity.gui.ButtonPanel;
+import org.infinity.gui.StructViewer;
+import org.infinity.icon.Icons;
 import org.infinity.resource.AbstractStruct;
 import org.infinity.resource.AddRemovable;
+import org.infinity.resource.BoundingBox;
 import org.infinity.resource.HasChildStructs;
 import org.infinity.resource.StructEntry;
 import org.infinity.resource.vertex.Vertex;
 
-public abstract class Polygon extends AbstractStruct implements AddRemovable, HasChildStructs {
+public abstract class Polygon extends AbstractStruct implements AddRemovable, HasChildStructs, ActionListener {
   // WED/Polygon-specific field labels
   public static final String WED_POLY_VERTEX_INDEX  = "Vertex index";
   public static final String WED_POLY_NUM_VERTICES  = "# vertices";
@@ -29,6 +37,8 @@ public abstract class Polygon extends AbstractStruct implements AddRemovable, Ha
 
   public static final String[] FLAGS_ARRAY = { "No flags set", "Shade wall", "Semi transparent", "Hovering wall",
       "Cover animations", null, null, null, "Is door" };
+
+  private JButton bCalcBoundingBox;
 
   public Polygon(AbstractStruct superStruct, String name, ByteBuffer buffer, int offset) throws Exception {
     super(superStruct, name, buffer, offset, 8);
@@ -47,6 +57,21 @@ public abstract class Polygon extends AbstractStruct implements AddRemovable, Ha
   @Override
   public boolean canRemove() {
     return true;
+  }
+
+  @Override
+  public void actionPerformed(ActionEvent e) {
+    if (e.getSource() == bCalcBoundingBox) {
+      updateBoundingBox();
+    }
+  }
+
+  @Override
+  protected void viewerInitialized(StructViewer viewer) {
+    final ButtonPanel buttonPanel = viewer.getButtonPanel();
+    bCalcBoundingBox = new JButton("Calculate bounding box", Icons.ICON_REFRESH_16.getIcon());
+    bCalcBoundingBox.addActionListener(this);
+    buttonPanel.addControl(bCalcBoundingBox, ButtonPanel.Control.CUSTOM_1);
   }
 
   @Override
@@ -95,5 +120,22 @@ public abstract class Polygon extends AbstractStruct implements AddRemovable, Ha
     addField(new DecNumber(buffer, offset + 14, 2, WED_POLY_MIN_COORD_Y));
     addField(new DecNumber(buffer, offset + 16, 2, WED_POLY_MAX_COORD_Y));
     return offset + 18;
+  }
+
+  private void updateBoundingBox() {
+    final WedResource wed = (WedResource)getRoot();
+    if (wed == null) {
+      return;
+    }
+
+    final int ofsVertices = ((IsNumeric)wed.getAttribute(WedResource.WED_OFFSET_VERTICES)).getValue();
+    final int idxVertices = ((IsNumeric)getAttribute(WED_POLY_VERTEX_INDEX)).getValue();
+    final int cntVertices = ((IsNumeric)getAttribute(WED_POLY_NUM_VERTICES)).getValue();
+    final BoundingBox box = BoundingBox.calculateBoundingBox(this, ofsVertices, idxVertices, cntVertices);
+    ((DecNumber)getAttribute(WED_POLY_MIN_COORD_X)).setValue(box.minX);
+    ((DecNumber)getAttribute(WED_POLY_MIN_COORD_Y)).setValue(box.minY);
+    ((DecNumber)getAttribute(WED_POLY_MAX_COORD_X)).setValue(box.maxX);
+    ((DecNumber)getAttribute(WED_POLY_MAX_COORD_Y)).setValue(box.maxY);
+    fireTableDataChanged();
   }
 }
