@@ -14,6 +14,7 @@ import java.util.Vector;
 
 import javax.sound.sampled.AudioFormat;
 
+import org.infinity.exceptions.UnsupportedFormatException;
 import org.infinity.resource.key.ResourceEntry;
 import org.infinity.util.Logger;
 import org.infinity.util.io.StreamUtils;
@@ -24,6 +25,7 @@ import org.infinity.util.io.StreamUtils;
 public class MveDecoder {
   // MVE header signature
   public static final String MVE_SIGNATURE = "Interplay MVE File\u001a\u0000\u001a\u0000\u0000\u0001\u0033\u0011";
+  public static final String BIK_SIGNATURE = "BIKi";  // IWD2 contains Bink video files with MVE file extension
 
   // supported MVE chunks
   public static final int MVE_CHUNK_NONE          =     -1;   // used internally
@@ -184,7 +186,11 @@ public class MveDecoder {
       throw new Exception("Unexpected end of file");
     }
     if (!Arrays.equals(MVE_SIGNATURE.getBytes(), buf)) {
-      throw new Exception("Invalid MVE signature found");
+      if (BIK_SIGNATURE.equals(new String(buf, 0, BIK_SIGNATURE.length()))) {
+        throw new UnsupportedFormatException("Bink video format not supported.");
+      } else {
+        throw new Exception("Invalid MVE signature found");
+      }
     }
 
     // 2. initializing MveChunk structure

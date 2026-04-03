@@ -49,11 +49,15 @@ import org.infinity.NearInfinity;
 import org.infinity.gui.ViewerUtil;
 import org.infinity.gui.menu.Bookmark;
 import org.infinity.gui.menu.BrowserMenuBar;
+import org.infinity.resource.key.FileResourceEntry;
 import org.infinity.resource.key.ResourceEntry;
 import org.infinity.resource.key.ResourceTreeModel;
 import org.infinity.util.CharsetDetector;
 import org.infinity.util.DataString;
 import org.infinity.util.DebugTimer;
+import org.infinity.util.IniMap;
+import org.infinity.util.IniMapCache;
+import org.infinity.util.IniMapSection;
 import org.infinity.util.Logger;
 import org.infinity.util.Misc;
 import org.infinity.util.Platform;
@@ -1894,6 +1898,26 @@ public final class Profile {
       if (ini != null && FileEx.create(ini).isFile()) {
         addEntry(Key.GET_GAME_INI_FILE, Type.PATH, ini);
       }
+      // special: movies are found in biff folders
+      final Path rootPath = getGameRoot();
+      final List<String> folderList = new ArrayList<>(GAME_EXTRA_FOLDERS.get(game));
+      final IniMap iniMap = IniMapCache.get(new FileResourceEntry(rootPath.resolve("icewind2.ini")), true);
+      if (iniMap != null) {
+        final IniMapSection iniSection = iniMap.getSection("Alias");
+        if (iniSection != null) {
+          for (final String key : new String[] {"HD0:", "CD0:", "CD1:", "CD2:", "CD3:"}) {
+            final String pathString = iniSection.getAsString(key, "");
+            if (!pathString.isEmpty()) {
+              final Path path = FileManager.resolveExisting(pathString);
+              if (path != null && !rootPath.equals(path) && path.startsWith(rootPath) && Files.isDirectory(path)) {
+                final Path relPath = rootPath.relativize(path);
+                folderList.add(relPath.getName(0).toString());
+              }
+            }
+          }
+        }
+      }
+      GAME_EXTRA_FOLDERS.put(game, folderList);
     } else if (game == Game.Tutu || FileEx.create(FileManager.query(gameRoots, "bg1tutu.exe")).isFile()
         || FileEx.create(FileManager.query(gameRoots, "bg1mov/MovieCD1.bif")).isFile()) {
       if (game == null) {

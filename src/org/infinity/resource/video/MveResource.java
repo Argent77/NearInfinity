@@ -28,6 +28,7 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
+import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -36,7 +37,9 @@ import javax.swing.ProgressMonitor;
 import javax.swing.SwingConstants;
 
 import org.infinity.NearInfinity;
+import org.infinity.exceptions.UnsupportedFormatException;
 import org.infinity.gui.ButtonPanel;
+import org.infinity.gui.ButtonPanel.Control;
 import org.infinity.gui.ButtonPopupMenu;
 import org.infinity.gui.ViewerUtil;
 import org.infinity.gui.WindowBlocker;
@@ -97,6 +100,9 @@ public class MveResource implements Resource, ActionListener, ItemListener, Clos
         decoder.close();
         throw new Exception("");
       }
+    } catch (UnsupportedFormatException e) {
+      decoder = null;
+      Logger.warn("{}: {}", entry, e.getMessage());
     } catch (Exception e) {
       decoder = null;
       Logger.error(e);
@@ -138,6 +144,8 @@ public class MveResource implements Resource, ActionListener, ItemListener, Clos
       buttonPanel.getControlByType(CTRL_STOP).setEnabled(false);
       buttonPanel.getControlByType(CTRL_PAUSE).setEnabled(false);
       buttonPanel.getControlByType(CTRL_PLAY).setEnabled(true);
+    } else if (buttonPanel.getControlByType(Control.EXPORT_BUTTON) == event.getSource()) {
+      ResourceFactory.exportResource(entry, panel.getTopLevelAncestor());
     }
   }
 
@@ -280,23 +288,38 @@ public class MveResource implements Resource, ActionListener, ItemListener, Clos
     bStop.addActionListener(this);
     bStop.setEnabled(false);
 
-    miExport = new JMenuItem("as MVE");
-    miExport.addActionListener(this);
-    miExportAvi = new JMenuItem("as AVI");
-    miExportAvi.addActionListener(this);
-    ButtonPopupMenu bpmExport = (ButtonPopupMenu) ButtonPanel.createControl(ButtonPanel.Control.EXPORT_MENU);
-    bpmExport.setMenuItems(new JMenuItem[] { miExport, miExportAvi });
+    final JComponent viewControl;
+    final ButtonPanel.Control exportType;
+    final JComponent exportControl;
+    if (decoder != null) {
+      miExport = new JMenuItem("as MVE");
+      miExport.addActionListener(this);
+      miExportAvi = new JMenuItem("as AVI");
+      miExportAvi.addActionListener(this);
+      exportType = ButtonPanel.Control.EXPORT_MENU;
+      ButtonPopupMenu bpmExport = (ButtonPopupMenu) ButtonPanel.createControl(exportType);
+      bpmExport.setMenuItems(new JMenuItem[] { miExport, miExportAvi });
+      exportControl = bpmExport;
+      viewControl = scroll;
+    } else {
+      exportType = ButtonPanel.Control.EXPORT_BUTTON;
+      JButton bExport = (JButton) ButtonPanel.createControl(exportType);
+      bExport.addActionListener(this);
+      exportControl = bExport;
+      viewControl = new JLabel("Invalid or unsupported video format.", Icons.ICON_WARNING_16.getIcon(),
+          SwingConstants.CENTER);
+    }
 
     buttonPanel.addControl(bPlay, CTRL_PLAY);
     buttonPanel.addControl(bPause, CTRL_PAUSE);
     buttonPanel.addControl(bStop, CTRL_STOP);
     ((JButton) buttonPanel.addControl(ButtonPanel.Control.FIND_REFERENCES)).addActionListener(this);
-    buttonPanel.addControl(bpmExport, ButtonPanel.Control.EXPORT_MENU);
+    buttonPanel.addControl(exportControl, exportType);
     buttonPanel.addControl(optionsPanel);
 
     panel = new JPanel();
     panel.setLayout(new BorderLayout());
-    panel.add(scroll, BorderLayout.CENTER);
+    panel.add(viewControl, BorderLayout.CENTER);
     panel.add(buttonPanel, BorderLayout.SOUTH);
 
     buttonPanel.addControl(0, ViewerUtil.createViewerSyncButton(panel, getResourceEntry()), ButtonPanel.Control.SYNC_VIEW);
