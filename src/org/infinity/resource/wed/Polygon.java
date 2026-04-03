@@ -54,10 +54,7 @@ public abstract class Polygon extends AbstractStruct implements AddRemovable, Ha
     if (datatype instanceof Vertex) {
       int index = ((IsNumeric) getAttribute(WED_POLY_VERTEX_INDEX)).getValue();
       index += ((IsNumeric) getAttribute(WED_POLY_NUM_VERTICES)).getValue();
-      AbstractStruct superStruct = getParent();
-      while (superStruct.getParent() != null) {
-        superStruct = superStruct.getParent();
-      }
+      final AbstractStruct superStruct = getRoot();
       int offset = ((IsNumeric) superStruct.getAttribute(WedResource.WED_OFFSET_VERTICES)).getValue();
       datatype.setOffset(offset + 4 * index);
       ((AbstractStruct) datatype).realignStructOffsets();

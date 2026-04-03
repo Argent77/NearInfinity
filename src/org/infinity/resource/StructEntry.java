@@ -25,6 +25,18 @@ public interface StructEntry extends Comparable<StructEntry>, Cloneable, Writeab
   AbstractStruct getParent();
 
   /**
+   * Returns first non-{@code null} entry at the top of the hierarchy, or {@code null} if this entry is not an
+   * {@code AbstractStruct} and has no parent.
+   */
+  default AbstractStruct getRoot() {
+    AbstractStruct retVal = (this instanceof AbstractStruct) ? (AbstractStruct)this : getParent();
+    while (retVal.getParent() != null) {
+      retVal = retVal.getParent();
+    }
+    return retVal;
+  }
+
+  /**
    * Returns byte count of serialized value of this object.
    *
    * @return Count of bytes that needed to store this object in it's {@link Writeable natural format}

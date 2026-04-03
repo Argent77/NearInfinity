@@ -13,9 +13,10 @@ import org.infinity.datatype.TextString;
 import org.infinity.datatype.Unknown;
 import org.infinity.datatype.WmpLinkBitmap;
 import org.infinity.resource.AbstractStruct;
+import org.infinity.resource.AddRemovable;
 import org.infinity.util.io.StreamUtils;
 
-public abstract class AreaLink extends AbstractStruct {
+public abstract class AreaLink extends AbstractStruct implements AddRemovable {
   // WMP/AreaLink-specific field labels
   public static final String WMP_LINK_TARGET_AREA                   = "Target area";
   public static final String WMP_LINK_TARGET_ENTRANCE               = "Target entrance";
@@ -33,6 +34,15 @@ public abstract class AreaLink extends AbstractStruct {
   public AreaLink(AbstractStruct superStruct, ByteBuffer buffer, int offset, String name) throws Exception {
     super(superStruct, name, buffer, offset);
   }
+
+  // --------------------- Begin Interface AddRemovable ---------------------
+
+  @Override
+  public boolean canRemove() {
+    return true;
+  }
+
+  // --------------------- End Interface AddRemovable ---------------------
 
   @Override
   public int read(ByteBuffer buffer, int offset) throws Exception {

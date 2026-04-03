@@ -22,6 +22,7 @@ import org.infinity.resource.AbstractStruct;
 import org.infinity.resource.AddRemovable;
 import org.infinity.resource.HasViewerTabs;
 import org.infinity.resource.Resource;
+import org.infinity.resource.StructEntry;
 import org.infinity.resource.graphics.BamResource;
 import org.infinity.resource.graphics.MosResource;
 import org.infinity.resource.key.ResourceEntry;
@@ -114,13 +115,19 @@ public class WmpResource extends AbstractStruct implements Resource, HasViewerTa
     addField(entryCount);
     SectionOffset entryOffset = new SectionOffset(buffer, offset + 12, WMP_OFFSET_MAPS, MapEntry.class);
     addField(entryOffset);
+
     offset = entryOffset.getValue();
     for (int i = 0; i < entryCount.getValue(); i++) {
       MapEntry entry = new MapEntry(this, buffer, offset, i);
       offset = entry.getEndOffset();
       addField(entry);
     }
-    return offset;
+
+    int endoffset = offset;
+    for (final StructEntry entry : getFlatFields()) {
+      endoffset = Math.max(endoffset, entry.getOffset() + entry.getSize());
+    }
+    return endoffset;
   }
 
   @Override

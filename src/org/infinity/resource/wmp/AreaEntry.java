@@ -5,6 +5,7 @@
 package org.infinity.resource.wmp;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 import javax.swing.JComponent;
 
@@ -18,9 +19,13 @@ import org.infinity.datatype.TextString;
 import org.infinity.datatype.Unknown;
 import org.infinity.gui.StructViewer;
 import org.infinity.resource.AbstractStruct;
+import org.infinity.resource.AddRemovable;
+import org.infinity.resource.HasChildStructs;
 import org.infinity.resource.HasViewerTabs;
+import org.infinity.resource.StructEntry;
+import org.infinity.util.io.StreamUtils;
 
-public class AreaEntry extends AbstractStruct implements HasViewerTabs {
+public class AreaEntry extends AbstractStruct implements HasViewerTabs, AddRemovable, HasChildStructs {
   // WMP/AreaEntry-specific field labels
   public static final String WMP_AREA                   = "Area";
   public static final String WMP_AREA_CURRENT           = "Current area";
@@ -45,9 +50,27 @@ public class AreaEntry extends AbstractStruct implements HasViewerTabs {
   private static final String[] FLAGS_ARRAY = { "No flags set", "Visible", "Reveal from linked area", "Can be visited",
       "Has been visited" };
 
+  public AreaEntry() throws Exception {
+    super(null, WMP_AREA, StreamUtils.getByteBuffer(240), 0);
+  }
+
   public AreaEntry(AbstractStruct superStruct, ByteBuffer buffer, int offset, int nr) throws Exception {
     super(superStruct, WMP_AREA + " " + nr, buffer, offset);
   }
+
+  // --------------------- Begin Interface HasChildStructs ---------------------
+
+  @Override
+  public AddRemovable[] getPrototypes() throws Exception {
+    return new AddRemovable[] { new AreaLinkNorth(), new AreaLinkWest(), new AreaLinkSouth(), new AreaLinkEast() };
+  }
+
+  @Override
+  public AddRemovable confirmAddEntry(AddRemovable entry) throws Exception {
+    return entry;
+  }
+
+  // --------------------- End Interface HasChildStructs ---------------------
 
   // --------------------- Begin Interface HasViewerTabs ---------------------
 
@@ -73,6 +96,15 @@ public class AreaEntry extends AbstractStruct implements HasViewerTabs {
 
   // --------------------- End Interface HasViewerTabs ---------------------
 
+  // --------------------- Begin Interface AddRemovable ---------------------
+
+  @Override
+  public boolean canRemove() {
+    return true;
+  }
+
+  // --------------------- End Interface AddRemovable ---------------------
+
   @Override
   public int read(ByteBuffer buffer, int offset) throws Exception {
     addField(new ResourceRef(buffer, offset, WMP_AREA_CURRENT, "ARE"));
@@ -95,6 +127,39 @@ public class AreaEntry extends AbstractStruct implements HasViewerTabs {
     addField(new SectionCount(buffer, offset + 108, 4, WMP_AREA_NUM_LINKS_EAST, AreaLinkEast.class));
     addField(new Unknown(buffer, offset + 112, 128));
     return offset + 240;
+  }
+
+  @Override
+  public int getDatatypeIndex(AddRemovable addedEntry) {
+    if (addedEntry instanceof AreaLink) {
+      // add new entry to the end of the specific link section
+      final SectionCount cntAreaLinks = getSectionCount(addedEntry.getClass());
+      if (cntAreaLinks != null) {
+        final List<StructEntry> fields = getFields();
+        for (int i = 0, cnt = fields.size(); i < cnt; i++) {
+          if (fields.get(i).getClass() == addedEntry.getClass()) {
+            return i + cntAreaLinks.getValue();
+          }
+        }
+      }
+    }
+    return super.getDatatypeIndex(addedEntry);
+  }
+
+  @Override
+  protected void setAddRemovableOffset(AddRemovable datatype) {
+    if (datatype instanceof AreaLink) {
+      final SectionCount cntAreaLinks = getSectionCount(datatype.getClass());
+      if (cntAreaLinks != null) {
+        final DecNumber idxAreaLinks = (DecNumber)getAttribute(cntAreaLinks.getOffset() - 4);
+        if (idxAreaLinks != null) {
+          final MapEntry mapEntry = (MapEntry)getParent();
+          final int offset = ((IsNumeric)mapEntry.getAttribute(MapEntry.WMP_MAP_OFFSET_AREA_LINKS)).getValue();
+          datatype.setOffset(offset + (idxAreaLinks.getValue() + cntAreaLinks.getValue() - 1) * 216);
+          ((AbstractStruct) datatype).realignStructOffsets();
+        }
+      }
+    }
   }
 
   void readLinks(ByteBuffer buffer, DecNumber linkOffset) throws Exception {
