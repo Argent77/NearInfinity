@@ -16,7 +16,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.ProviderMismatchException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1899,25 +1901,7 @@ public final class Profile {
         addEntry(Key.GET_GAME_INI_FILE, Type.PATH, ini);
       }
       // special: movies are found in biff folders
-      final Path rootPath = getGameRoot();
-      final List<String> folderList = new ArrayList<>(GAME_EXTRA_FOLDERS.get(game));
-      final IniMap iniMap = IniMapCache.get(new FileResourceEntry(rootPath.resolve("icewind2.ini")), true);
-      if (iniMap != null) {
-        final IniMapSection iniSection = iniMap.getSection("Alias");
-        if (iniSection != null) {
-          for (final String key : new String[] {"HD0:", "CD0:", "CD1:", "CD2:", "CD3:"}) {
-            final String pathString = iniSection.getAsString(key, "");
-            if (!pathString.isEmpty()) {
-              final Path path = FileManager.resolveExisting(pathString);
-              if (path != null && !rootPath.equals(path) && path.startsWith(rootPath) && Files.isDirectory(path)) {
-                final Path relPath = rootPath.relativize(path);
-                folderList.add(relPath.getName(0).toString());
-              }
-            }
-          }
-        }
-      }
-      GAME_EXTRA_FOLDERS.put(game, folderList);
+      initIwd2ExtraFolders(game);
     } else if (game == Game.Tutu || FileEx.create(FileManager.query(gameRoots, "bg1tutu.exe")).isFile()
         || FileEx.create(FileManager.query(gameRoots, "bg1mov/MovieCD1.bif")).isFile()) {
       if (game == null) {
@@ -2715,6 +2699,57 @@ public final class Profile {
       return fs.getPath("/");
     } else {
       return null;
+    }
+  }
+
+  // Movies in IWD2 can be found in the biff folders
+  private void initIwd2ExtraFolders(Game game) {
+    if (game != Game.IWD2 && game != Game.IWD2EE) {
+      return;
+    }
+
+    final Path rootPath = getGameRoot();
+    final IniMap iniMap = IniMapCache.get(new FileResourceEntry(rootPath.resolve("icewind2.ini")), true);
+    if (iniMap != null) {
+      final IniMapSection iniSection = iniMap.getSection("Alias");
+      if (iniSection != null) {
+        final List<String> folderList = new ArrayList<>(GAME_EXTRA_FOLDERS.get(game));
+
+        // getting reference path
+        String refPath = iniSection.getAsString("HD0:", "");
+        if (refPath.isEmpty()) {
+          refPath = rootPath.toString();
+        }
+        refPath = refPath.toLowerCase().replace('\\', '/');
+        if (refPath.charAt(refPath.length() - 1) != '/') {
+          refPath += '/';
+        }
+
+        for (final String key : new String[] {"CD0:", "CD1:", "CD2:", "CD3:"}) {
+          String pathString = iniSection.getAsString(key, "");
+          if (!pathString.isEmpty()) {
+            pathString = pathString.replace('\\', '/');
+            if (pathString.toLowerCase().startsWith(refPath)) {
+              pathString = pathString.substring(refPath.length());
+            }
+            Path path;
+            try {
+              path = Paths.get(pathString);
+            } catch (InvalidPathException e) {
+              Logger.warn("Not a valid path: {}", pathString);
+              continue;
+            }
+            if (!path.isAbsolute()) {
+              path = FileManager.resolveExisting(rootPath.resolve(pathString));
+            }
+            if (path != null && Files.isDirectory(path)) {
+              final Path relPath = rootPath.relativize(path);
+              folderList.add(relPath.toString());
+            }
+          }
+        }
+        GAME_EXTRA_FOLDERS.put(game, folderList);
+      }
     }
   }
 
