@@ -17,6 +17,7 @@ import java.util.zip.Inflater;
 
 import org.infinity.NearInfinity;
 import org.infinity.gui.WindowBlocker;
+import org.infinity.util.Logger;
 import org.infinity.util.io.ByteBufferInputStream;
 import org.infinity.util.io.StreamUtils;
 
@@ -159,8 +160,17 @@ public class BIFCReader extends AbstractBIFFReader {
       }
 
       // reading tileset entries
+      int adjust = 0;
       for (int i = 0; i < numTilesets; i++) {
         int locator = StreamUtils.readInt(is) & 0xfffff;
+        if (i == 0) {
+          // workaround for tileset entries with incorrect locator indices
+          adjust = getTilesetIndexAdjust(locator);
+          if (adjust != 0) {
+            Logger.debug("{}: Tileset base index adjusted by {}", getFile().getFileName(), adjust >> 14);
+          }
+        }
+        locator += adjust;
         int offset = StreamUtils.readInt(is);
         int count = StreamUtils.readInt(is);
         int size = StreamUtils.readInt(is);

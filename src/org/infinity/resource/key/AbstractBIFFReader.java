@@ -186,6 +186,17 @@ public abstract class AbstractBIFFReader {  // implements AutoCloseable
     mapEntries.clear();
   }
 
+  /**
+   * Workaround for tileset entries with incorrect locator indices:
+   * Returns an offset value that should be added to the tileset locator to syncronize it with the chitin.key
+   * locator value.
+   */
+  protected static int getTilesetIndexAdjust(int locator) {
+    final int index = (locator >>> 14) & 0x3f;
+    final int retVal = (1 - index) << 14;
+    return retVal;
+  }
+
   private static Type detectBiffType(Path file) throws Exception {
     if (file == null) {
       throw new NullPointerException();
