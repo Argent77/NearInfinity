@@ -138,25 +138,19 @@ public class BIFFReader extends AbstractBIFFReader {
   private void init(ByteBuffer buffer, int numFiles, int numTilesets) {
     // reading file entries
     for (int i = 0; i < numFiles; i++) {
-      int locator = buffer.getInt() & 0xfffff;
+      int locator = i;  // biff locator is ignored by the engine
+      buffer.getInt();  // skipping locator field
       int offset = buffer.getInt();
       int size = buffer.getInt();
       short type = buffer.getShort();
       buffer.getShort(); // unknown data
       addEntry(new Entry(locator, offset, size, type));
     }
+
     // reading tileset entries
-    int adjust = 0;
     for (int i = 0; i < numTilesets; i++) {
-      int locator = buffer.getInt() & 0xfffff;
-      if (i == 0) {
-        // workaround for tileset entries with incorrect locator indices
-        adjust = getTilesetIndexAdjust(locator);
-        if (adjust != 0) {
-          Logger.debug("{}: Tileset base index adjusted by {}", getFile().getFileName(), adjust >> 14);
-        }
-      }
-      locator += adjust;
+      int locator = (i + 1) << 14;  // biff locator is ignored by the engine
+      buffer.getInt();  // skipping locator field
       int offset = buffer.getInt();
       int count = buffer.getInt();
       int size = buffer.getInt();
