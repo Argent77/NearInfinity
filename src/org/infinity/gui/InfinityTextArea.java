@@ -181,6 +181,13 @@ public class InfinityTextArea extends RSyntaxTextArea
   /** Identifies a menu item from the "open strref" menu. */
   private static final String CMD_OPEN_STRREF   = "OpenStrref";
 
+  /** Key for client property to retrieve a resource reference {@code String}. */
+  private static final String PROP_RESREF = "resref";
+  /** Key for client property to retrieve a string reference {@code Integer}. */
+  private static final String PROP_STRREF = "strref";
+  /** Key for client property to retrieve a numeric IDS {@code Integer}. */
+  private static final String PROP_IDS = "ids";
+
   /** Format string for an "open resource" menu item label. */
   private static final String OPEN_RESOURCE_LABEL_FMT     = "Open \"%s\" as resource...";
   /** Default string for "open resource" menu item label. */
@@ -613,8 +620,9 @@ public class InfinityTextArea extends RSyntaxTextArea
   public void actionPerformed(ActionEvent e) {
     if (CMD_OPEN_RESOURCE.equals(e.getActionCommand())) {
       final JMenuItem item = (JMenuItem)e.getSource();
-      final String resref = getResrefFromText();
-      if (!resref.isEmpty()) {
+      final Object o = item.getClientProperty(PROP_RESREF);
+      if (o instanceof String && !((String)o).isEmpty()) {
+        final String resref = (String)o;
         final String resName = resref + '.' + item.getText();
         final ResourceEntry entry = ResourceFactory.getResourceEntry(resName);
         if (entry != null) {
@@ -623,10 +631,11 @@ public class InfinityTextArea extends RSyntaxTextArea
       }
     } else if (CMD_OPEN_IDS.equals(e.getActionCommand())) {
       final JMenuItem item = (JMenuItem)e.getSource();
-      final int ids = getNumberFromText(false);
+      final Object o = item.getClientProperty(PROP_IDS);
       final String idsName = item.getText();
       final ResourceEntry entry = ResourceFactory.getResourceEntry(idsName);
-      if (entry != null) {
+      if (o instanceof Number && entry != null) {
+        final int ids = ((Number)o).intValue();
         final Resource res = ResourceFactory.getResource(entry);
         new ViewFrame(getTopLevelAncestor(), res);
         if (res instanceof TextResource) {
@@ -634,8 +643,10 @@ public class InfinityTextArea extends RSyntaxTextArea
         }
       }
     } else if (CMD_OPEN_STRREF.equals(e.getActionCommand())) {
-      final int strref = getNumberFromText(true);
-      if (strref >= 0) {
+      final JMenuItem item = (JMenuItem)e.getSource();
+      final Object o = item.getClientProperty(PROP_STRREF);
+      if (o instanceof Number && ((Number)o).intValue() >= 0) {
+        final int strref = ((Number)o).intValue();
         final StringLookup lookup = ChildFrame.show(StringLookup.class, StringLookup::new);
         if (lookup != null) {
           lookup.setStrref(strref);
@@ -1161,7 +1172,7 @@ public class InfinityTextArea extends RSyntaxTextArea
    *
    * @return Resource reference string if available, empty string otherwise.
    */
-  private String getResrefFromText() {
+  private String[] getResrefFromText() {
     return getResrefFromText(getTextWord());
   }
 
@@ -1169,18 +1180,36 @@ public class InfinityTextArea extends RSyntaxTextArea
    * Returns the processed string if it contains a valid resource resref string.
    *
    * @param text Text to process.
-   * @return Resource reference string if available, empty string otherwise.
+   * @return Array with one or more variations of the detected resource reference string if available, empty strings
+   *         otherwise.
    */
-  private String getResrefFromText(String text) {
-    String retVal = "";
+  private String[] getResrefFromText(String text) {
+    String resref = "";
+    String resref2 = "";
+
     if (text != null) {
-      retVal = text.trim();
-      if (retVal.isEmpty() || retVal.length() > 8) {
-        retVal = "";
-      } else if (Pattern.compile("\\s+").matcher(retVal).find()) {
-        retVal = "";
+      resref = text.trim();
+      final boolean hasPrefix = resref.toLowerCase().startsWith("ap_") || resref.toLowerCase().startsWith("ga_");
+      final int maxLength = hasPrefix ? 8 + 3 : 8;
+      if (resref.isEmpty() || resref.length() > maxLength) {
+        resref = "";
+      } else if (Pattern.compile("\\s+").matcher(resref).find()) {
+        resref = "";
+      }
+      if (hasPrefix) {
+        resref2 = resref.substring(3);
       }
     }
+
+    final String[] retVal;
+    if (!resref2.isEmpty()) {
+      retVal = new String[] { resref2, resref };
+    } else if (!resref.isEmpty()) {
+      retVal = new String[] { resref };
+    } else {
+      retVal = new String[] {};
+    }
+
     return retVal;
   }
 
@@ -1196,20 +1225,26 @@ public class InfinityTextArea extends RSyntaxTextArea
     clearResrefPopupMenu();
 
     // populating menu with available resource types
-    final String resref = getResrefFromText();
-    if (!resref.isEmpty()) {
+    final String[] resref = getResrefFromText();
+    if (resref.length > 0) {
       int count = 0;
+      int index = 0;
       for (final JMenuItem item : resourceTypeItems) {
-        final boolean exists = ResourceFactory.resourceExists(resref + '.' + item.getText());
-        if (exists) {
-          menuOpenResource.add(item);
-          count++;
+        for (int i = 0; i < resref.length; i++) {
+          boolean exists = !resref[i].isEmpty() && ResourceFactory.resourceExists(resref[i] + '.' + item.getText());
+          if (exists) {
+            index = Math.max(index, i);
+            item.putClientProperty(PROP_RESREF, resref[i]);
+            menuOpenResource.add(item);
+            count++;
+            break;
+          }
         }
       }
 
       if (count > 0) {
         menuOpenResource.setEnabled(true);
-        menuOpenResource.setText(String.format(OPEN_RESOURCE_LABEL_FMT, resref));
+        menuOpenResource.setText(String.format(OPEN_RESOURCE_LABEL_FMT, resref[index]));
       }
     }
   }
@@ -1219,6 +1254,7 @@ public class InfinityTextArea extends RSyntaxTextArea
     final int strref = getNumberFromText(true);
     if (strref >= 0) {
       menuOpenStrref.setEnabled(true);
+      menuOpenStrref.putClientProperty(PROP_STRREF, strref);
       menuOpenStrref.setText(String.format(OPEN_STRREF_LABEL_FMT, strref));
     } else {
       menuOpenStrref.setEnabled(false);
@@ -1245,6 +1281,7 @@ public class InfinityTextArea extends RSyntaxTextArea
       if (idsMap != null) {
         final boolean available = idsMap.get(ids) != null;
         if (available) {
+          item.putClientProperty(PROP_IDS, ids);
           menuOpenIds.add(item);
           count++;
         }
