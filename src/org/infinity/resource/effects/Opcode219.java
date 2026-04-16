@@ -19,9 +19,9 @@ import org.infinity.resource.StructEntry;
  * Implementation of opcode 219.
  */
 public class Opcode219 extends BaseOpcode {
-  private final String[] idsList   = { "", "", "EA.IDS", "GENERAL.IDS", "RACE.IDS", "CLASS.IDS", "", "GENDER.IDS",
-      Profile.getProperty(Profile.Key.GET_IDS_ALIGNMENT) };
-  private final String[] idsListEE = Arrays.copyOf(idsList, idsList.length + 1);
+  private final String[] idsListEE = { "", "", "EA.IDS", "GENERAL.IDS", "RACE.IDS", "CLASS.IDS", "SPECIFIC.IDS",
+      "GENDER.IDS", Profile.getProperty(Profile.Key.GET_IDS_ALIGNMENT), "KIT.IDS" };
+  private final String[] idsList   = Arrays.copyOfRange(idsListEE, 0, idsListEE.length - 1);
 
   /** Returns the opcode name for the current game variant. */
   private static String getOpcodeName() {
@@ -39,7 +39,6 @@ public class Opcode219 extends BaseOpcode {
 
   public Opcode219() {
     super(219, getOpcodeName());
-    idsListEE[idsListEE.length - 1] = "KIT.IDS";
   }
 
   @Override
