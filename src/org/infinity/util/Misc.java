@@ -17,6 +17,7 @@ import java.awt.Insets;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.Rectangle2D;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
@@ -1064,6 +1065,38 @@ public class Misc {
         }
       }
     }
+  }
+
+  /**
+   * Helper function that ensures that the file name in the given path ends with the specified file extension.
+   *
+   * @param path {@link File} path to validate.
+   * @param ext  File extension to add (with or without leading dot).
+   * @return {@link File} path with the specified file extension.
+   * @throws NullPointerException if {@code path} is {@code null}.
+   */
+  public static File ensureFileExtension(File path, String ext) {
+    if (path == null) {
+      throw new NullPointerException("path is null");
+    }
+
+    if (ext == null || ext.isEmpty()) {
+      ext = "";
+    } else if (ext.charAt(0) != '.') {
+      ext = '.' + ext;
+    }
+
+    final String curName = path.getName();
+    final int curExtPos = curName.lastIndexOf('.');
+    final String curNameBase = (curExtPos > 0) ? curName.substring(0, curExtPos) : curName;
+    final String curExt = (curExtPos > 0) ? curName.substring(curExtPos) : "";
+    if (curExt.equalsIgnoreCase(ext)) {
+      return path;
+    }
+
+    String outPath = (path.getParent() != null) ? path.getParent() + File.separatorChar : "";
+    outPath += curNameBase + ext;
+    return new File(outPath);
   }
 
   /**

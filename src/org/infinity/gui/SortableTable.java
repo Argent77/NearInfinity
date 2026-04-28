@@ -10,7 +10,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -27,6 +26,7 @@ import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableModel;
@@ -36,6 +36,7 @@ import org.infinity.resource.Profile;
 import org.infinity.resource.ResourceFactory;
 import org.infinity.util.ArrayUtil;
 import org.infinity.util.Logger;
+import org.infinity.util.Misc;
 import org.infinity.util.io.FileEx;
 
 public final class SortableTable extends JTable implements MouseListener {
@@ -104,32 +105,126 @@ public final class SortableTable extends JTable implements MouseListener {
   }
 
   private void saveResult(Component parent, String dialogTitle, String header) {
+    final FileNameExtensionFilter filterTxt = new FileNameExtensionFilter("Text files (*.txt)", "txt");
+    final FileNameExtensionFilter filterCsv = new FileNameExtensionFilter("CSV files (*.csv)", "csv");
     final JFileChooser chooser = new JFileChooser(Profile.getGameRoot().toFile());
     chooser.setDialogTitle(dialogTitle);
-    chooser.setSelectedFile(new File(chooser.getCurrentDirectory(), "result.txt"));
+    chooser.setAcceptAllFileFilterUsed(false);
+    chooser.addChoosableFileFilter(filterTxt);
+    chooser.addChoosableFileFilter(filterCsv);
+    chooser.setFileFilter(filterTxt);
+    chooser.setSelectedFile(new File(chooser.getCurrentDirectory(), "result"));
     if (chooser.showSaveDialog(parent) == JFileChooser.APPROVE_OPTION) {
-      final Path output = chooser.getSelectedFile().toPath();
+      final FileNameExtensionFilter curFilter = (FileNameExtensionFilter)chooser.getFileFilter();
+      final Path output = Misc.ensureFileExtension(chooser.getSelectedFile(), curFilter.getExtensions()[0]).toPath();
       if (FileEx.create(output).exists()) {
         if (ResourceFactory.confirmOverwrite(output, true, parent, dialogTitle) != 0) {
           return;
         }
       }
-      try (final BufferedWriter bw = Files.newBufferedWriter(output)) {
-        bw.write(header);
-        bw.newLine();
-        bw.write("Number of hits: " + getRowCount());
-        bw.newLine();
-        for (int i = 0; i < getRowCount(); i++) {
-          bw.write(getTableItemAt(i).toString());
-          bw.newLine();
+
+      try {
+        if (chooser.getFileFilter() == filterCsv) {
+          saveResultAsCsv(output);
+        } else {
+          saveResultAsText(output, header, "Number of hits: " + getRowCount());
         }
         JOptionPane.showMessageDialog(parent, "Result saved to " + output, "Save complete",
             JOptionPane.INFORMATION_MESSAGE);
-      } catch (IOException ex) {
+      } catch (Exception e) {
         JOptionPane.showMessageDialog(parent, "Error while saving " + output + " (details in the trace)", "Error",
             JOptionPane.ERROR_MESSAGE);
-        Logger.error(ex);
+        Logger.error(e);
       }
+    }
+  }
+
+  /**
+   * Saves the result as a text file.
+   *
+   * @param outFile Path of the output file.
+   * @param header  Custom header string
+   * @param extra   Optional information to print. Specify {@code null} to omit.
+   * @throws Exception thrown if an error occurred.
+   */
+  private void saveResultAsText(Path outFile, String header, String extra) throws Exception {
+    if (outFile == null) {
+      throw new NullPointerException("outFile is null");
+    }
+
+    try (final BufferedWriter bw = Files.newBufferedWriter(outFile)) {
+      bw.write(header);
+      bw.newLine();
+      if (extra != null) {
+        bw.write(extra);
+        bw.newLine();
+      }
+      for (int i = 0; i < getRowCount(); i++) {
+        bw.write(getTableItemAt(i).toString());
+        bw.newLine();
+      }
+    }
+  }
+
+  /**
+   * Saves the result in machine-readable CSV format.
+   *
+   * @param outFile Path of the output file.
+   * @throws Exception thrown if an error occurred.
+   */
+  private void saveResultAsCsv(Path outFile) throws Exception {
+    if (outFile == null) {
+      throw new NullPointerException("outFile is null");
+    }
+
+    final String nl = "\r\n";
+    try (final BufferedWriter bw = Files.newBufferedWriter(outFile)) {
+
+      // table header
+      {
+        final StringBuilder sb = new StringBuilder();
+        for (int col = 0, colCount = getColumnCount(); col < colCount; col++) {
+          if (col > 0) {
+            sb.append(',');
+          }
+          final String fieldValue = getCsvEntry(Objects.toString(getTableHeader().getColumnModel().getColumn(col).getHeaderValue(), ""));
+          sb.append(fieldValue);
+        }
+        sb.append(nl);
+        bw.write(sb.toString());
+      }
+
+      // table content
+      for (int row = 0, rowCount = getRowCount(); row < rowCount; row++) {
+        final StringBuilder sb = new StringBuilder();
+        for (int col = 0, colCount = getColumnCount(); col < colCount; col++) {
+          if (col > 0) {
+            sb.append(',');
+          }
+          final String fieldValue = getCsvEntry(Objects.toString(tableModel.getValueAt(row, col), ""));
+          sb.append(fieldValue);
+        }
+        sb.append(nl);
+        bw.write(sb.toString());
+      }
+    }
+  }
+
+  /** Returns a field string that conforms to the CSV requirements. */
+  private String getCsvEntry(String text) {
+    if (text == null) {
+      text = "";
+    }
+
+    final boolean quote = text.indexOf('"') >= 0 || text.indexOf(',') >= 0 || text.indexOf('\r') >= 0 || text.indexOf('\n') >= 0;
+    if (quote) {
+      text = text.replaceAll("\"", "\"\"");
+    }
+
+    if (quote) {
+      return '"' + text + '"';
+    } else {
+      return text;
     }
   }
 
