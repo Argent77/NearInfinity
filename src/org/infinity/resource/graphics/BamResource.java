@@ -7,8 +7,11 @@ package org.infinity.resource.graphics;
 import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Point;
@@ -48,6 +51,7 @@ import javax.swing.JTabbedPane;
 import javax.swing.JToggleButton;
 import javax.swing.RootPaneContainer;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.Timer;
 import javax.swing.event.ChangeEvent;
@@ -125,6 +129,7 @@ public class BamResource implements Resource, Closeable, Writeable, Referenceabl
   private static final ButtonPanel.Control CTRL_LAST_FRAME  = ButtonPanel.Control.CUSTOM_13;
 
   private static boolean transparencyEnabled = true;
+  private static boolean zoom = false;
 
   private final ResourceEntry entry;
   private final ButtonPanel buttonPanel = new ButtonPanel();
@@ -140,6 +145,7 @@ public class BamResource implements Resource, Closeable, Writeable, Referenceabl
   private JMenuItem miExportFramesPNG;
   private RenderCanvas rcDisplay;
   private JCheckBox cbTransparency;
+  private JCheckBox cbZoom;
   private JPanel panelMain;
   private JPanel panelRaw;
   private int curCycle;
@@ -259,6 +265,14 @@ public class BamResource implements Resource, Closeable, Writeable, Referenceabl
       showFrame();
     } else if (event.getSource() == cbTransparency) {
       setTransparencyEnabled(cbTransparency.isSelected());
+    } else if (event.getSource() == cbZoom) {
+      try {
+        WindowBlocker.blockWindow(true);
+        setZoomEnabled(cbZoom.isSelected());
+        updateCanvasSize();
+      } finally {
+        WindowBlocker.blockWindow(false);
+      }
     } else if (event.getSource() == miExport) {
       ResourceFactory.exportResource(entry, panelMain.getTopLevelAncestor());
     } else if (event.getSource() == miExportBAM) {
@@ -454,46 +468,48 @@ public class BamResource implements Resource, Closeable, Writeable, Referenceabl
     }
 
     // creating "View" tab
-    Dimension dim = (decoder != null) ? bamControl.getSharedDimension() : new Dimension(1, 1);
+    final Dimension dim = (decoder != null) ? bamControl.getSharedDimension() : new Dimension(1, 1);
     rcDisplay = new RenderCanvas(new BufferedImage(dim.width, dim.height, BufferedImage.TYPE_INT_ARGB));
     rcDisplay.setHorizontalAlignment(SwingConstants.CENTER);
     rcDisplay.setVerticalAlignment(SwingConstants.CENTER);
-    JScrollPane scroll = new JScrollPane(rcDisplay);
+    rcDisplay.setInterpolationType(RenderCanvas.TYPE_NEAREST_NEIGHBOR);
+    rcDisplay.setScalingEnabled(true);
+    final JScrollPane scroll = new JScrollPane(rcDisplay);
     scroll.setBorder(BorderFactory.createEmptyBorder());
     scroll.getVerticalScrollBar().setUnitIncrement(16);
     scroll.getHorizontalScrollBar().setUnitIncrement(16);
 
-    JButton bFind = (JButton) ButtonPanel.createControl(ButtonPanel.Control.FIND_REFERENCES);
+    final JButton bFind = (JButton) ButtonPanel.createControl(ButtonPanel.Control.FIND_REFERENCES);
     bFind.addActionListener(this);
 
-    JToggleButton bPlay = new JToggleButton("Play", Icons.ICON_PLAY_16.getIcon());
+    final JToggleButton bPlay = new JToggleButton("Play", Icons.ICON_PLAY_16.getIcon());
     bPlay.addActionListener(this);
 
-    JLabel lCycle = new JLabel("", SwingConstants.CENTER);
-    JButton bFirstCycle = new JButton(Icons.ICON_FIRST_16.getIcon());
+    final JLabel lCycle = new JLabel("", SwingConstants.CENTER);
+    final JButton bFirstCycle = new JButton(Icons.ICON_FIRST_16.getIcon());
     bFirstCycle.setMargin(new Insets(bFirstCycle.getMargin().top, 2, bFirstCycle.getMargin().bottom, 2));
     bFirstCycle.addActionListener(this);
-    JButton bPrevCycle = new JButton(Icons.ICON_BACK_16.getIcon());
+    final JButton bPrevCycle = new JButton(Icons.ICON_BACK_16.getIcon());
     bPrevCycle.setMargin(new Insets(bPrevCycle.getMargin().top, 2, bPrevCycle.getMargin().bottom, 2));
     bPrevCycle.addActionListener(this);
-    JButton bNextCycle = new JButton(Icons.ICON_FORWARD_16.getIcon());
+    final JButton bNextCycle = new JButton(Icons.ICON_FORWARD_16.getIcon());
     bNextCycle.setMargin(bPrevCycle.getMargin());
     bNextCycle.addActionListener(this);
-    JButton bLastCycle = new JButton(Icons.ICON_LAST_16.getIcon());
+    final JButton bLastCycle = new JButton(Icons.ICON_LAST_16.getIcon());
     bLastCycle.setMargin(new Insets(bLastCycle.getMargin().top, 2, bLastCycle.getMargin().bottom, 2));
     bLastCycle.addActionListener(this);
 
-    JLabel lFrame = new JLabel("", SwingConstants.CENTER);
-    JButton bFirstFrame = new JButton(Icons.ICON_FIRST_16.getIcon());
+    final JLabel lFrame = new JLabel("", SwingConstants.CENTER);
+    final JButton bFirstFrame = new JButton(Icons.ICON_FIRST_16.getIcon());
     bFirstFrame.setMargin(bPrevCycle.getMargin());
     bFirstFrame.addActionListener(this);
-    JButton bPrevFrame = new JButton(Icons.ICON_BACK_16.getIcon());
+    final JButton bPrevFrame = new JButton(Icons.ICON_BACK_16.getIcon());
     bPrevFrame.setMargin(bPrevCycle.getMargin());
     bPrevFrame.addActionListener(this);
-    JButton bNextFrame = new JButton(Icons.ICON_FORWARD_16.getIcon());
+    final JButton bNextFrame = new JButton(Icons.ICON_FORWARD_16.getIcon());
     bNextFrame.setMargin(bPrevCycle.getMargin());
     bNextFrame.addActionListener(this);
-    JButton bLastFrame = new JButton(Icons.ICON_LAST_16.getIcon());
+    final JButton bLastFrame = new JButton(Icons.ICON_LAST_16.getIcon());
     bLastFrame.setMargin(bPrevCycle.getMargin());
     bLastFrame.addActionListener(this);
 
@@ -503,10 +519,15 @@ public class BamResource implements Resource, Closeable, Writeable, Referenceabl
     }
     cbTransparency.setToolTipText("Affects only legacy BAM resources (BAM v1)");
     cbTransparency.addActionListener(this);
-    JPanel optionsPanel = new JPanel();
-    BoxLayout bl = new BoxLayout(optionsPanel, BoxLayout.Y_AXIS);
+
+    cbZoom = new JCheckBox("Zoom", isZoomEnabled());
+    cbZoom.addActionListener(this);
+
+    final JPanel optionsPanel = new JPanel();
+    final BoxLayout bl = new BoxLayout(optionsPanel, BoxLayout.X_AXIS);
     optionsPanel.setLayout(bl);
     optionsPanel.add(cbTransparency);
+    optionsPanel.add(cbZoom);
 
     buttonControlPanel.addControl(lCycle, CTRL_CYCLE_LABEL);
     buttonControlPanel.addControl(bFirstCycle, CTRL_FIRST_CYCLE);
@@ -524,9 +545,14 @@ public class BamResource implements Resource, Closeable, Writeable, Referenceabl
     buttonControlPanel.add(optionsPanel);
     buttonControlPanel.setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 0));
 
-    JPanel pView = new JPanel(new BorderLayout());
-    pView.add(scroll, BorderLayout.CENTER);
-    pView.add(buttonControlPanel, BorderLayout.SOUTH);
+    final GridBagConstraints c = new GridBagConstraints();
+    final JPanel pView = new JPanel(new GridBagLayout());
+    ViewerUtil.setGBC(c, 0, 0, 1, 1, 1.0, 1.0, GridBagConstraints.CENTER, GridBagConstraints.NONE,
+        new Insets(0, 0, 0, 0), 0, 0);
+    pView.add(scroll, c);
+    ViewerUtil.setGBC(c, 0, 1, 1, 1, 1.0, 0.0, GridBagConstraints.SOUTH, GridBagConstraints.HORIZONTAL,
+        new Insets(0, 0, 0, 0), 0, 0);
+    pView.add(buttonControlPanel, c);
 
     // creating "Raw" tab (stub)
     panelRaw = new JPanel(new BorderLayout());
@@ -568,17 +594,17 @@ public class BamResource implements Resource, Closeable, Writeable, Referenceabl
     if (miExport != null) {
       list.add(miExport);
     }
-    JMenuItem[] mi = new JMenuItem[list.size()];
+    final JMenuItem[] mi = new JMenuItem[list.size()];
     for (int i = 0; i < mi.length; i++) {
       mi[i] = list.get(i);
     }
-    ButtonPopupMenu bpmExport = (ButtonPopupMenu) ButtonPanel.createControl(ButtonPanel.Control.EXPORT_MENU);
+    final ButtonPopupMenu bpmExport = (ButtonPopupMenu) ButtonPanel.createControl(ButtonPanel.Control.EXPORT_MENU);
     bpmExport.setMenuItems(mi, false);
 
-    JButton bProperties = new JButton("Properties...", Icons.ICON_EDIT_16.getIcon());
+    final JButton bProperties = new JButton("Properties...", Icons.ICON_EDIT_16.getIcon());
     bProperties.addActionListener(this);
 
-    JButton bEdit = new JButton("Edit BAM", Icons.ICON_APPLICATION_16.getIcon());
+    final JButton bEdit = new JButton("Edit BAM", Icons.ICON_APPLICATION_16.getIcon());
     bEdit.setToolTipText("Opens resource in BAM Converter.");
     bEdit.addActionListener(this);
 
@@ -605,6 +631,7 @@ public class BamResource implements Resource, Closeable, Writeable, Referenceabl
 
     buttonPanel.addControl(0, ViewerUtil.createViewerSyncButton(panelMain, getResourceEntry()), ButtonPanel.Control.SYNC_VIEW);
 
+    updateCanvasSize();
     showFrame();
     return panelMain;
   }
@@ -625,6 +652,14 @@ public class BamResource implements Resource, Closeable, Writeable, Referenceabl
       ((BamV1Decoder.BamV1Control) bamControl).setTransparencyEnabled(transparencyEnabled);
       showFrame();
     }
+  }
+
+  public boolean isZoomEnabled() {
+    return zoom;
+  }
+
+  public void setZoomEnabled(boolean enable) {
+    zoom = enable;
   }
 
   public int getFrameCount() {
@@ -692,8 +727,17 @@ public class BamResource implements Resource, Closeable, Writeable, Referenceabl
 
   public void updateCanvasSize() {
     if (decoder != null && viewerInitialized()) {
+      final int zoomFactor = isZoomEnabled() ? 2 : 1;
       Dimension dim = bamControl.getSharedDimension();
+      Dimension dimDisplay = new Dimension(dim.width * zoomFactor, dim.height * zoomFactor);
       rcDisplay.setImage(new BufferedImage(dim.width, dim.height, BufferedImage.TYPE_INT_ARGB));
+      rcDisplay.setPreferredSize(dimDisplay);
+      final Container c = SwingUtilities.getAncestorOfClass(JScrollPane.class, rcDisplay);
+      if (c != null) {
+        c.setMinimumSize(rcDisplay.getPreferredSize());
+        c.invalidate();
+        c.getParent().validate();
+      }
       updateCanvas();
     }
   }
