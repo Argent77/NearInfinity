@@ -65,6 +65,12 @@ final class ViewerSpells extends JPanel implements ActionListener {
         }
       }
     });
+    table.getSelectionModel().addListSelectionListener(e -> {
+      final boolean selected = !table.getSelectionModel().isSelectionEmpty();
+      final ResourceRef ref = selected ? (ResourceRef)tableModel.getValueAt(table.getSelectedRow(), 3) : null;
+      final boolean enabled = selected && ResourceFactory.resourceExists(ref.getResourceName());
+      bOpen.setEnabled(enabled);
+    });
     table.getSelectionModel().setSelectionInterval(0, 0);
     add(new JLabel("Memorized spells"), BorderLayout.NORTH);
     add(new JScrollPane(table), BorderLayout.CENTER);
