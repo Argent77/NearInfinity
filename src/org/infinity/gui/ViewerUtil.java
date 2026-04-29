@@ -841,7 +841,8 @@ public final class ViewerUtil {
     @Override
     public void valueChanged(ListSelectionEvent e) {
       if (e.getSource() == list) {
-        bOpen.setEnabled(!list.isSelectionEmpty());
+        final boolean enabled = !list.isSelectionEmpty() && list.getSelectedValue() instanceof Viewable;
+        bOpen.setEnabled(enabled);
       }
     }
   }
