@@ -714,7 +714,8 @@ public final class ViewerUtil {
   public interface AttributeEntry extends Function<StructEntry, StructEntry> {
   }
 
-  public static final class StructListPanel extends JPanel implements TableModelListener, ActionListener {
+  public static final class StructListPanel extends JPanel
+      implements TableModelListener, ActionListener, ListSelectionListener {
     private final AbstractStruct struct;
     private final Class<? extends StructEntry> listClass;
     private final JList<StructEntry> list;
@@ -728,6 +729,7 @@ public final class ViewerUtil {
       this.listClass = listClass;
       struct.addTableModelListener(this);
       list = new JList<>(listModel);
+      list.addListSelectionListener(this);
       if (listener != null) {
         list.addListSelectionListener(listener);
       }
@@ -833,6 +835,13 @@ public final class ViewerUtil {
             }
           }
         }
+      }
+    }
+
+    @Override
+    public void valueChanged(ListSelectionEvent e) {
+      if (e.getSource() == list) {
+        bOpen.setEnabled(!list.isSelectionEmpty());
       }
     }
   }
