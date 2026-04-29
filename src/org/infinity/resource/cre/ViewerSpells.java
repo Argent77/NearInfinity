@@ -58,7 +58,7 @@ final class ViewerSpells extends JPanel implements ActionListener {
       public void mouseClicked(MouseEvent e) {
         if (e.getClickCount() == 2 && table.getSelectedRowCount() == 1) {
           ResourceRef ref = (ResourceRef) tableModel.getValueAt(table.getSelectedRow(), 3);
-          if (ref != null) {
+          if (ref != null && ResourceFactory.resourceExists(ref.getResourceName())) {
             Resource res = ResourceFactory.getResource(ResourceFactory.getResourceEntry(ref.getResourceName()));
             new ViewFrame(getTopLevelAncestor(), res);
           }
