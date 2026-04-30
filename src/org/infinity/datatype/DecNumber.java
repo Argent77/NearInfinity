@@ -91,6 +91,13 @@ public class DecNumber extends Datatype implements InlineEditable, IsNumeric {
           number = buffer.getShort() & 0xffff;
         }
         break;
+      case 3:
+        number = buffer.getShort() & 0xffff;
+        number |= (buffer.get() & 0xff) << 16;
+        if (signed && (number & 0x800000) != 0) {
+          number = ~0xffffffL | number;
+        }
+        break;
       case 4:
         if (signed) {
           number = buffer.getInt();

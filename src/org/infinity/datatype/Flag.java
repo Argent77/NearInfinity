@@ -181,6 +181,10 @@ public class Flag extends Datatype implements Editable, IsNumeric, ActionListene
       case 2:
         value = buffer.getShort() & 0xffff;
         break;
+      case 3:
+        value = buffer.getShort() & 0xffff;
+        value |= (buffer.get() & 0xff) << 16;
+        break;
       case 4:
         value = buffer.getInt() & 0xffffffffL;
         break;
