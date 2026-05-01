@@ -32,6 +32,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Locale;
 
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
@@ -419,6 +420,9 @@ public class ViewerMap extends JPanel {
             }
             if (wai.getCurrentArea() != null) {
               mapCode = wai.getCurrentArea().getResourceName();
+              if (mapCode != null) {
+                mapCode = mapCode.toUpperCase(Locale.ROOT);
+              }
             }
             p = getAreaEntryPosition(wai);
           }
