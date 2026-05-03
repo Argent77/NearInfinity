@@ -19,6 +19,8 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
@@ -35,7 +37,7 @@ import org.infinity.resource.ResourceFactory;
 import org.infinity.resource.StructEntry;
 import org.infinity.util.Misc;
 
-final class ViewerSpells extends JPanel implements ActionListener {
+final class ViewerSpells extends JPanel implements ActionListener, ListSelectionListener {
   private final JButton bOpen = new JButton("View/Edit", Icons.ICON_ZOOM_16.getIcon());
   private final JTable table;
   private final MemSpellTableModel tableModel;
@@ -48,7 +50,6 @@ final class ViewerSpells extends JPanel implements ActionListener {
         new ToolTipTableCellRenderer(BrowserMenuBar.getInstance().getOptions().showResourceListIcons()));
     ((DefaultTableCellRenderer) table.getTableHeader().getDefaultRenderer())
         .setHorizontalAlignment(SwingConstants.LEFT);
-    table.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
     table.getColumnModel().getColumn(0).setMaxWidth(60);
     table.getColumnModel().getColumn(1).setMaxWidth(40);
     table.getColumnModel().getColumn(2).setMaxWidth(20);
@@ -65,12 +66,8 @@ final class ViewerSpells extends JPanel implements ActionListener {
         }
       }
     });
-    table.getSelectionModel().addListSelectionListener(e -> {
-      final boolean selected = !table.getSelectionModel().isSelectionEmpty();
-      final ResourceRef ref = selected ? (ResourceRef)tableModel.getValueAt(table.getSelectedRow(), 3) : null;
-      final boolean enabled = selected && ResourceFactory.resourceExists(ref.getResourceName());
-      bOpen.setEnabled(enabled);
-    });
+    table.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+    table.getSelectionModel().addListSelectionListener(this);
     table.getSelectionModel().setSelectionInterval(0, 0);
     add(new JLabel("Memorized spells"), BorderLayout.NORTH);
     add(new JScrollPane(table), BorderLayout.CENTER);
@@ -93,6 +90,22 @@ final class ViewerSpells extends JPanel implements ActionListener {
   }
 
   // --------------------- End Interface ActionListener ---------------------
+
+  //--------------------- Begin Interface ListSelectionListener ---------------------
+
+  @Override
+  public void valueChanged(ListSelectionEvent e) {
+    if (e.getSource() == table.getSelectionModel()) {
+      if (table.getRowCount() > 0) {
+        final boolean selected = !table.getSelectionModel().isSelectionEmpty();
+        final ResourceRef ref = selected ? (ResourceRef)tableModel.getValueAt(table.getSelectedRow(), 3) : null;
+        final boolean enabled = selected && ResourceFactory.resourceExists(ref.getResourceName());
+        bOpen.setEnabled(enabled);
+      }
+    }
+  }
+
+  //--------------------- End Interface ListSelectionListener ---------------------
 
   // -------------------------- INNER CLASSES --------------------------
 
