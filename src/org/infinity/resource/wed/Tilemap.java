@@ -9,7 +9,6 @@ import java.nio.ByteBuffer;
 import org.infinity.datatype.DecNumber;
 import org.infinity.datatype.Flag;
 import org.infinity.datatype.IsNumeric;
-import org.infinity.datatype.Unknown;
 import org.infinity.resource.AbstractStruct;
 import org.infinity.resource.AddRemovable;
 import org.infinity.util.io.StreamUtils;
@@ -21,9 +20,13 @@ public final class Tilemap extends AbstractStruct implements AddRemovable {
   public static final String WED_TILEMAP_TILE_COUNT_PRI   = "Tilemap count (primary)";
   public static final String WED_TILEMAP_TILE_INDEX_SEC   = "Tile index (secondary)";
   public static final String WED_TILEMAP_DRAW_OVERLAYS    = "Draw Overlays";
+  public static final String WED_TILEMAP_ANIM_SPEED       = "Animation speed";
+  public static final String WED_TILEMAP_RENDERING_FLAGS  = "Rendering flags";
 
-  private static final String[] FLAGS_ARRAY = { "Primary overlay only", "Unused", "Overlay 1", "Overlay 2", "Overlay 3",
-      "Overlay 4", "Overlay 5", "Overlay 6", "Overlay 7" };
+  private static final String[] OVERLAY_FLAGS_ARRAY = { "Primary overlay only", "Unused", "Overlay 1", "Overlay 2",
+      "Overlay 3", "Overlay 4", "Overlay 5", "Overlay 6", "Overlay 7" };
+
+  private static final String[] RENDERING_FLAGS_ARRAY = { "Default", null, "Render secondary state" };
 
   protected Tilemap() throws Exception {
     super(null, WED_TILEMAP, createEmptyBuffer(true), 0);
@@ -49,20 +52,21 @@ public final class Tilemap extends AbstractStruct implements AddRemovable {
   @Override
   public int read(ByteBuffer buffer, int offset) throws Exception {
     // Primary tile index is stored as unsigned 16-bit in WED. Read with public constructor then fix value.
-    addField(new DecNumber(buffer, offset, 2, WED_TILEMAP_TILE_INDEX_PRI));
+    final DecNumber pri = new DecNumber(buffer, offset, 2, WED_TILEMAP_TILE_INDEX_PRI);
+    addField(pri);
     addField(new DecNumber(buffer, offset + 2, 2, WED_TILEMAP_TILE_COUNT_PRI));
     // Read secondary tile index as unsigned 16-bit where 0xFFFF means 'no secondary index' (-1).
-    addField(new DecNumber(buffer, offset + 4, 2, WED_TILEMAP_TILE_INDEX_SEC));
+    final DecNumber sec = new DecNumber(buffer, offset + 4, 2, WED_TILEMAP_TILE_INDEX_SEC);
+    addField(sec);
+
     // Post-process primary and secondary values to interpret as unsigned (with 0xFFFF => -1 for secondary).
     try {
-      DecNumber pri = (DecNumber) getAttribute(WED_TILEMAP_TILE_INDEX_PRI);
       int rawPri = buffer.getShort(offset) & 0xffff;
       pri.setValue(rawPri);
     } catch (Exception e) {
       // ignore
     }
     try {
-      DecNumber sec = (DecNumber) getAttribute(WED_TILEMAP_TILE_INDEX_SEC);
       int rawSec = buffer.getShort(offset + 4) & 0xffff;
       if (rawSec == 0xffff) {
         sec.setValue(-1);
@@ -72,8 +76,10 @@ public final class Tilemap extends AbstractStruct implements AddRemovable {
     } catch (Exception e) {
       // ignore
     }
-    addField(new Flag(buffer, offset + 6, 1, WED_TILEMAP_DRAW_OVERLAYS, FLAGS_ARRAY));
-    addField(new Unknown(buffer, offset + 7, 3));
+
+    addField(new Flag(buffer, offset + 6, 1, WED_TILEMAP_DRAW_OVERLAYS, OVERLAY_FLAGS_ARRAY));
+    addField(new DecNumber(buffer, offset + 7, 1, WED_TILEMAP_ANIM_SPEED));
+    addField(new Flag(buffer, offset + 8, 2, WED_TILEMAP_RENDERING_FLAGS, RENDERING_FLAGS_ARRAY));
     return offset + 10;
   }
 
