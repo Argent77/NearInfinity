@@ -48,7 +48,7 @@ public class SearchMenu extends JMenu implements BrowserSubMenu, ActionListener 
     searchString = BrowserMenuBar.makeMenuItem("StringRef...", KeyEvent.VK_S, Icons.ICON_FIND_16.getIcon(),
         KeyEvent.VK_L, this);
     add(searchString);
-    searchFile = BrowserMenuBar.makeMenuItem("CRE/ITM/SPL/STO...", KeyEvent.VK_C, Icons.ICON_FIND_16.getIcon(),
+    searchFile = BrowserMenuBar.makeMenuItem("CRE/ITM/SPL/STO/ARE...", KeyEvent.VK_C, Icons.ICON_FIND_16.getIcon(),
         KeyEvent.VK_F, this);
     add(searchFile);
 

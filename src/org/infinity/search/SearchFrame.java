@@ -72,6 +72,7 @@ public final class SearchFrame extends ChildFrame
   private final JRadioButton rbitm = new JRadioButton("Items");
   private final JRadioButton rbspl = new JRadioButton("Spells");
   private final JRadioButton rbsto = new JRadioButton("Stores");
+  private final JRadioButton rbare = new JRadioButton("Areas");
   private final JTextField tfield = new JTextField(10);
   private final JCheckBox cbCaseSensitive = new JCheckBox("Match case");
   private final JCheckBox cbRegex = new JCheckBox("Use regular expressions");
@@ -84,18 +85,21 @@ public final class SearchFrame extends ChildFrame
     setIconImage(Icons.ICON_FIND_16.getIcon().getImage());
     getRootPane().setDefaultButton(bsearch);
     bopen.setMnemonic('o');
-    bopennew.setMnemonic('n');
+    bopennew.setMnemonic('w');
     binsert.setMnemonic('r');
     rbcre.setMnemonic('c');
     rbitm.setMnemonic('i');
     rbspl.setMnemonic('s');
     rbspl.addItemListener(this);
     rbsto.setMnemonic('t');
+    rbare.setMnemonic('a');
+    rbare.setToolTipText("Only areas with descriptive names are considered by the search.");
     ButtonGroup bg = new ButtonGroup();
     bg.add(rbcre);
     bg.add(rbitm);
     bg.add(rbspl);
     bg.add(rbsto);
+    bg.add(rbare);
     rbcre.setSelected(true);
 
     list.setBorder(BorderFactory.createEmptyBorder(3, 3, 3, 3));
@@ -149,6 +153,7 @@ public final class SearchFrame extends ChildFrame
     rbpanel.add(rbitm);
     rbpanel.add(rbspl);
     rbpanel.add(rbsto);
+    rbpanel.add(rbare);
     rbpanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createTitledBorder("Find:"),
         BorderFactory.createEmptyBorder(3, 6, 3, 3)));
 
@@ -318,6 +323,8 @@ public final class SearchFrame extends ChildFrame
         selectedtype = "SPL";
       } else if (rbsto.isSelected()) {
         selectedtype = "STO";
+      } else if (rbare.isSelected()) {
+        selectedtype = "ARE";
       }
 
       final boolean isCase = cbCaseSensitive.isSelected();
