@@ -1207,7 +1207,8 @@ public final class CreResource extends AbstractStruct
     addField(uniqueIdsFlag(new IdsFlag(buffer, offset + 24, 4, CRE_STATUS, "STATE.IDS"), "STATE.IDS", '_'));
     addField(new DecNumber(buffer, offset + 28, 2, CRE_HP_CURRENT));
     addField(new DecNumber(buffer, offset + 30, 2, CRE_HP_MAX));
-    addField(new AnimateBitmap(buffer, offset + 32, 4, CRE_ANIMATION));
+    addField(new AnimateBitmap(buffer, offset + 32, 2, CRE_ANIMATION));
+    addField(new Unknown(buffer, offset + 34, 2, COMMON_UNUSED));
     addField(new ColorValue(buffer, offset + 36, 1, CRE_COLOR_METAL, false));
     addField(new ColorValue(buffer, offset + 37, 1, CRE_COLOR_MINOR, false));
     addField(new ColorValue(buffer, offset + 38, 1, CRE_COLOR_MAJOR, false));
@@ -1620,12 +1621,13 @@ public final class CreResource extends AbstractStruct
     addField(status);
     addField(new DecNumber(buffer, offset + 28, 2, CRE_HP_CURRENT));
     addField(new DecNumber(buffer, offset + 30, 2, CRE_HP_MAX));
-    final AnimateBitmap animate = new AnimateBitmap(buffer, offset + 32, 4, CRE_ANIMATION);
+    final AnimateBitmap animate = new AnimateBitmap(buffer, offset + 32, 2, CRE_ANIMATION);
     if (Profile.getGame() == Profile.Game.PSTEE && version.equals("V1.0")) {
       // TODO: resolve issues with Listener queue filled with duplicate entries on each "Update" button click
       // animate.addUpdateListener(this);
     }
     addField(animate);
+    addField(new Unknown(buffer, offset + 34, 2, COMMON_UNUSED));
     if (Profile.getGame() == Profile.Game.PSTEE && version.equals("V1.0")) {
       setColorFieldsPSTEE(animate.getValue(), buffer, offset + 36, false);
     } else {
