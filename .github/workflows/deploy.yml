@@ -8,7 +8,6 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-    branches: [ "master", "devel" ]
 
 permissions:
   contents: write
@@ -61,7 +60,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ windows-latest, macos-15-intel, macos-latest, ubuntu-latest ]
+        os: [ windows-latest, macos-15-intel, macos-latest, ubuntu-latest, ubuntu-24.04-arm ]
         java: [ '21' ]
     runs-on: ${{ matrix.os }}
     name: Create installer for ${{ matrix.os }}, JDK ${{ matrix.java }}
@@ -181,11 +180,18 @@ jobs:
           name: installer-macos-arm64
           path: NearInfinity-*.pkg
 
-      - name: Upload appimage artifact (linux)
-        if: startsWith(matrix.os, 'ubuntu-') && github.event_name == 'workflow_dispatch'
+      - name: Upload appimage artifact (linux-x86_64)
+        if: (matrix.os == 'ubuntu-latest') && github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v6
         with:
           name: installer-linux
+          path: NearInfinity-*.AppImage
+
+      - name: Upload appimage artifact (linux-aarch64)
+        if: (matrix.os == 'ubuntu-24.04-arm') && github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v6
+        with:
+          name: installer-linux-aarch64
           path: NearInfinity-*.AppImage
 
       # Uploading assets (release)
@@ -229,8 +235,18 @@ jobs:
           tag: ${{ github.ref || github.event.release.tag_name }}
           overwrite: true
 
-      - name: Upload appimage asset to release (linux)
-        if: startsWith(matrix.os, 'ubuntu-') && github.event_name == 'release'
+      - name: Upload appimage asset to release (linux-x86_64)
+        if: (matrix.os == 'ubuntu-latest') && github.event_name == 'release'
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file_glob: true
+          file: NearInfinity-*.AppImage
+          tag: ${{ github.ref || github.event.release.tag_name }}
+          overwrite: true
+
+      - name: Upload appimage asset to release (linux-aarch64)
+        if: (matrix.os == 'ubuntu-24.04-arm') && github.event_name == 'release'
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
