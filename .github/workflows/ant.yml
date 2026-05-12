@@ -6,10 +6,7 @@ on:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        os: [ ubuntu-latest, ubuntu-24.04-arm ]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - name: Set up JDK 1.8
