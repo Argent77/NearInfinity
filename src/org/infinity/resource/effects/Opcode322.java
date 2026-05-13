@@ -21,7 +21,7 @@ public class Opcode322 extends BaseOpcode {
   private static String getOpcodeName() {
     switch (Profile.getEngine()) {
       case EE:
-        return "AoE evade check (deprecated)";
+        return "Evade Area of Effect";
       default:
         return null;
     }

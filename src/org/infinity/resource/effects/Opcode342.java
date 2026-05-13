@@ -28,10 +28,16 @@ public class Opcode342 extends BaseOpcode {
 
   private static final TreeMap<Long, String> FIELDS = new TreeMap<>();
 
+  private static final String RES_TYPE = "BMP";
+
   static {
     FIELDS.put(1L, "Body heat");
     FIELDS.put(2L, "Blood color");
     FIELDS.put(4L, "Personal space");
+    //
+    if (Profile.isEnhancedEdition() && isEEEx()) {
+      FIELDS.put(5L, "Combat round");
+    }
   }
 
   /** Returns the opcode name for the current game variant. */
@@ -65,6 +71,9 @@ public class Opcode342 extends BaseOpcode {
     list.add(bmp);
     if (parent instanceof UpdateListener) {
       bmp.addUpdateListener((UpdateListener)parent);
+    }
+    if (Profile.isEnhancedEdition() && isEEEx() && bmp.getValue() == 5L) {
+      return RES_TYPE;
     }
     return null;
   }

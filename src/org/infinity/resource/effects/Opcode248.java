@@ -29,6 +29,8 @@ public class Opcode248 extends BaseOpcode {
 
   private static final TreeMap<Long, String> TYPE_MAP = new TreeMap<>();
 
+  private static final String EFFECT_BYPASS_OP120    = "EEex: Bypass opcode 120?";
+
   static {
     TYPE_MAP.put(0L, "Default");
     TYPE_MAP.put(4L, "Fists only");
@@ -80,5 +82,16 @@ public class Opcode248 extends BaseOpcode {
   protected String makeEffectParamsIWD2(Datatype parent, ByteBuffer buffer, int offset, List<StructEntry> list,
       boolean isVersion1) {
     return makeEffectParamsIWD(parent, buffer, offset, list, isVersion1);
+  }
+
+  @Override
+  protected int makeEffectSpecial(Datatype parent, ByteBuffer buffer, int offset, List<StructEntry> list,
+      String resType, int param1, int param2) {
+    if (Profile.isEnhancedEdition() && isEEEx()) {
+      list.add(new Bitmap(buffer, offset, 4, EFFECT_BYPASS_OP120, AbstractStruct.OPTION_NOYES));
+      return offset + 4;
+    } else {
+      return super.makeEffectSpecial(parent, buffer, offset, list, resType, param1, param2);
+    }
   }
 }
