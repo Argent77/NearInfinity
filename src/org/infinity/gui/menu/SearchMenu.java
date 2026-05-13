@@ -63,11 +63,11 @@ public class SearchMenu extends JMenu implements BrowserSubMenu, ActionListener 
         .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, BrowserMenuBar.getCtrlMask() | ActionEvent.ALT_MASK));
     advancedSearch.setToolTipText("A powerful and highly flexible search for structured resources of all kinds.");
     menuAdvanced.add(advancedSearch);
-    searchResource = BrowserMenuBar.makeMenuItem("Legacy extended search...", KeyEvent.VK_X,
+    searchResource = BrowserMenuBar.makeMenuItem("<html><s>Legacy extended search (deprecated)...</s></html>", KeyEvent.VK_X,
         Icons.ICON_FIND_16.getIcon(), -1, this);
     searchResource
         .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, BrowserMenuBar.getCtrlMask() | ActionEvent.ALT_MASK));
-    searchResource.setToolTipText("The original \"Extended Search\".");
+    searchResource.setToolTipText("The original \"Extended Search\". Marked for removal in a future release.");
     menuAdvanced.add(searchResource);
 
     textSearchMenu = new JMenu("Text Search");
