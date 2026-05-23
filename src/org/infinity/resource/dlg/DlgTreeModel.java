@@ -704,10 +704,12 @@ public class DlgTreeModel implements TreeModel, TreeNode, TableModelListener, Pr
     result.add(state);
     queue.add(state);
     do {
-      dlg.findUsages(queue.pop(), t -> dlg.findUsages(t, queue::add));
-      // Stop when no changes was made in result. If result changed, `queue`
-      // contains at least one value, so `pop()` on next iteration will not throw
-    } while (result.addAll(queue));
+      dlg.findUsages(queue.pop(), t -> dlg.findUsages(t, discoveredUpstreamState -> {
+        if (result.add(discoveredUpstreamState)) {
+          queue.add(discoveredUpstreamState);
+        }
+      }));
+    } while (!queue.isEmpty());
 
     return result;
   }
