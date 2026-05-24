@@ -89,11 +89,12 @@ public final class Effect2 extends AbstractStruct implements AddRemovable {
       list.add(new Bitmap(buffer, offset + 16, 4, EFFECT_DISPEL_TYPE, DISPEL_ARRAY));
     }
     if (Profile.isEnhancedEdition() && isEEEx()) {
-      switch (buffer.getInt(offset - 60)) {
-        case 0xDB: // Attack and Saving Throw roll penalty
+      final int opcode = buffer.getInt(offset - 60);
+      switch (opcode) {
+        case 219: // Attack and Saving Throw roll penalty
           list.add(new DecNumber(buffer, offset + 20, 4, "EEex: Override hardcoded +2 bonus"));
           break;
-        case 0x14D: // Static charge
+        case 333: // Static charge
           list.add(new Bitmap(buffer, offset + 20, 4, "EEex: Only check saving throw once?", AbstractStruct.OPTION_NOYES));
           break;
         default:
