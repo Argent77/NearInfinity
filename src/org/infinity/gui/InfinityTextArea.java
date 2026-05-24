@@ -1086,7 +1086,7 @@ public class InfinityTextArea extends RSyntaxTextArea
         final String line = getText(startOfs, endOfs - startOfs);
 
         int curStartOfs = getCaretPosition() - startOfs;
-        while (curStartOfs >= 0) {
+        while (curStartOfs >= 0 && curStartOfs < line.length()) {
           final char ch = line.charAt(curStartOfs);
           if (Character.isWhitespace(ch) || invalid.indexOf(ch) >= 0) {
             curStartOfs++;
@@ -1097,7 +1097,7 @@ public class InfinityTextArea extends RSyntaxTextArea
         curStartOfs = Math.max(0, curStartOfs);
 
         int curEndOfs = getCaretPosition() - startOfs;
-        while (curEndOfs < endOfs) {
+        while (curEndOfs < endOfs && curEndOfs < line.length()) {
           final char ch = line.charAt(curEndOfs);
           if (Character.isWhitespace(ch) || invalid.indexOf(ch) >= 0) {
             break;
