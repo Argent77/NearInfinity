@@ -26,6 +26,9 @@ public class Opcode214 extends BaseOpcode {
   private static final String[] SHOW_TYPES_EE = { SHOW_TYPES[0], SHOW_TYPES[1],
       "Known spells with unset spell flags bit 15 (Ignore wild surge)" };
 
+  private static final String[] SHOW_TYPES_EEEX = { SHOW_TYPES_EE[0], SHOW_TYPES_EE[1], SHOW_TYPES_EE[2],
+      "EEex: Invoke Lua" };
+
   /** Returns the opcode name for the current game variant. */
   private static String getOpcodeName() {
     switch (Profile.getEngine()) {
@@ -56,7 +59,14 @@ public class Opcode214 extends BaseOpcode {
   protected String makeEffectParamsEE(Datatype parent, ByteBuffer buffer, int offset, List<StructEntry> list,
       boolean isVersion1) {
     list.add(new DecNumber(buffer, offset, 4, AbstractStruct.COMMON_UNUSED));
-    list.add(new Bitmap(buffer, offset + 4, 4, EFFECT_SHOW, SHOW_TYPES_EE));
+    if (isEEEx()) {
+      list.add(new Bitmap(buffer, offset + 4, 4, EFFECT_SHOW, SHOW_TYPES_EEEX));
+      if (buffer.getInt(offset + 4) == 3) {
+        return null;
+      }
+    } else {
+      list.add(new Bitmap(buffer, offset + 4, 4, EFFECT_SHOW, SHOW_TYPES_EE));
+    }
     return RES_TYPE;
   }
 
