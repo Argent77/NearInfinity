@@ -104,6 +104,7 @@ import org.infinity.gui.ViewerUtil;
 import org.infinity.gui.WindowBlocker;
 import org.infinity.icon.Icons;
 import org.infinity.resource.Profile;
+import org.infinity.resource.ResourceFactory;
 import org.infinity.resource.graphics.BamDecoder;
 import org.infinity.resource.graphics.BamV1Decoder;
 import org.infinity.resource.graphics.ColorConvert;
@@ -2874,7 +2875,7 @@ public class ConvertToBam extends ChildFrame implements ActionListener, Property
       if (!cancelled) {
         if (replace) {
           clear();
-          setBamOutput(FileManager.query(Profile.getGameRoot(), entry.getResourceName()));
+          setBamOutput(FileManager.query(Profile.getGameRoot(), ResourceFactory.getResourceName(entry)));
         }
         int frameBase = modelFrames.getSize();
         BamDecoder decoder = framesAddBam(frameBase, entry);

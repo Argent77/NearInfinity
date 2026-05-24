@@ -169,6 +169,7 @@ public class OptionsMenuItem extends JMenuItem {
   public static final String OPTION_HIGHLIGHT_OVERRIDDEN      = "HighlightOverridden";
   public static final String OPTION_OVERRIDE_SORT_BY_TYPE     = "OverrideSortByType";
   public static final String OPTION_CACHEOVERRIDE             = "CacheOverride";
+  public static final String OPTION_LOWERCASED_EXPORT         = "LowerCasedExport";
   public static final String OPTION_IDS_SYMBOL_DISPLAY        = "IdsSymbolDisplay";
   public static final String OPTION_OPEN_RESOURCE_TEXT_MENU   = "OpenResourceTextMenu";
   public static final String OPTION_OPEN_IDS_TEXT_MENU        = "OpenIdsTextMenu";
@@ -608,6 +609,11 @@ public class OptionsMenuItem extends JMenuItem {
   /** Returns whether the "Autocheck for Overrides" option is enabled. */
   public boolean cacheOverride() {
     return AppOption.CACHE_OVERRIDE.getBoolValue();
+  }
+
+  /** Returns whether the "Use Lowercased Filenames on Export" option is enabled. */
+  public boolean useLowerCasedExport() {
+    return AppOption.LOWERCASED_EXPORT.getBoolValue();
   }
 
   /**

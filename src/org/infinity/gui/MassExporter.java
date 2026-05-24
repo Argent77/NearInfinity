@@ -531,6 +531,16 @@ public final class MassExporter extends ChildFrame implements ActionListener, Li
         .toArray(String[]::new);
   }
 
+  /**
+   * Returns the given file extension as-is or to-lowered, depending on current preferences.
+   */
+  private static String getExtension(String ext) {
+    if (ext != null && BrowserMenuBar.getInstance().getOptions().useLowerCasedExport()) {
+      return ext.toLowerCase(Locale.ROOT);
+    }
+    return ext;
+  }
+
   private int getResourceCount() {
     return (selectedFiles != null) ? selectedFiles.size() : 0;
   }
@@ -660,7 +670,7 @@ public final class MassExporter extends ChildFrame implements ActionListener, Li
 
     if (resourceType.isAssignableFrom(BcsResource.class) && cbDecompile.isSelected()) {
       bb = decompileScript(entry, bb);
-      output = output.getParent().resolve(StreamUtils.replaceFileExtension(output.getFileName().toString(), "BAF"));
+      output = output.getParent().resolve(StreamUtils.replaceFileExtension(output.getFileName().toString(), getExtension("BAF")));
     } else {
       if (cbTrimText.isSelected()) {
         bb = trimText(entry, bb);
@@ -678,7 +688,7 @@ public final class MassExporter extends ChildFrame implements ActionListener, Li
   }
 
   private void decompileDialog(ResourceEntry entry, Path output) throws Exception {
-    output = output.getParent().resolve(StreamUtils.replaceFileExtension(output.getFileName().toString(), "D"));
+    output = output.getParent().resolve(StreamUtils.replaceFileExtension(output.getFileName().toString(), getExtension("D")));
     final DlgResource dlg = new DlgResource(entry);
     try (PrintWriter writer = new PrintWriter(output.toFile(), BrowserMenuBar.getInstance().getOptions().getSelectedCharset())) {
       if (!dlg.exportDlgAsText(writer)) {
@@ -713,7 +723,7 @@ public final class MassExporter extends ChildFrame implements ActionListener, Li
 
   private void mosToPng(ResourceEntry entry, Path output) throws Exception {
     if (entry != null && entry.getExtension().equalsIgnoreCase("MOS")) {
-      output = outputPath.resolve(StreamUtils.replaceFileExtension(entry.getResourceName(), "PNG"));
+      output = outputPath.resolve(StreamUtils.replaceFileExtension(ResourceFactory.getResourceName(entry), getExtension("PNG")));
       if (FileEx.create(output).exists() && !cbOverwrite.isSelected()) {
         return;
       }
@@ -737,7 +747,7 @@ public final class MassExporter extends ChildFrame implements ActionListener, Li
 
   private void pvrzToPng(ResourceEntry entry, Path output) throws Exception {
     if (entry != null && entry.getExtension().equalsIgnoreCase("PVRZ")) {
-      output = outputPath.resolve(StreamUtils.replaceFileExtension(entry.getResourceName(), "PNG"));
+      output = outputPath.resolve(StreamUtils.replaceFileExtension(ResourceFactory.getResourceName(entry), getExtension("PNG")));
       if (FileEx.create(output).exists() && !cbOverwrite.isSelected()) {
         return;
       }
@@ -758,7 +768,7 @@ public final class MassExporter extends ChildFrame implements ActionListener, Li
 
   private void tisToPng(ResourceEntry entry, Path output) throws Exception {
     if (entry != null && entry.getExtension().equalsIgnoreCase("TIS")) {
-      output = outputPath.resolve(StreamUtils.replaceFileExtension(entry.getResourceName(), "PNG"));
+      output = outputPath.resolve(StreamUtils.replaceFileExtension(ResourceFactory.getResourceName(entry), getExtension("PNG")));
       if (FileEx.create(output).exists() && !cbOverwrite.isSelected()) {
         return;
       }
@@ -830,7 +840,7 @@ public final class MassExporter extends ChildFrame implements ActionListener, Li
   }
 
   private void chrToCre(ResourceEntry entry, Path output) throws Exception {
-    output = outputPath.resolve(StreamUtils.replaceFileExtension(entry.getResourceName(), "CRE"));
+    output = outputPath.resolve(StreamUtils.replaceFileExtension(ResourceFactory.getResourceName(entry), getExtension("CRE")));
     if (FileEx.create(output).exists() && !cbOverwrite.isSelected()) {
       return;
     }
@@ -911,7 +921,7 @@ public final class MassExporter extends ChildFrame implements ActionListener, Li
 
   private void export(ResourceEntry entry) {
     try {
-      Path output = outputPath.resolve(entry.getResourceName());
+      Path output = outputPath.resolve(ResourceFactory.getResourceName(entry));
       if (FileEx.create(output).exists() && !cbOverwrite.isSelected()) {
         return;
       }
@@ -939,7 +949,7 @@ public final class MassExporter extends ChildFrame implements ActionListener, Li
       } else if (entry.getExtension().equalsIgnoreCase("WAV") && cbConvertWAV.isSelected()) {
         decompressWav(entry, output);
       } else if (entry.getExtension().equalsIgnoreCase("MVE") && cbExportMVEasAVI.isSelected()) {
-        output = outputPath.resolve(StreamUtils.replaceFileExtension(entry.getResourceName(), "avi"));
+        output = outputPath.resolve(StreamUtils.replaceFileExtension(ResourceFactory.getResourceName(entry), getExtension("AVI")));
         if (FileEx.create(output).exists() && !cbOverwrite.isSelected()) {
           return;
         }

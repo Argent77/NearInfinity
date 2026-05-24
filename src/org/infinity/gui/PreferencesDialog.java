@@ -189,6 +189,10 @@ public class PreferencesDialog extends JDialog {
                       + "<p>If this option is disabled then Near Infinity will only check for the existence of overridden "
                       + "resources after opening a new game or using the command \"Refresh Tree\" (Shortcut: <code>F5</code>).</p>",
                       AppOption.CACHE_OVERRIDE),
+                  OptionCheckBox.create(AppOption.LOWERCASED_EXPORT.getName(), AppOption.LOWERCASED_EXPORT.getLabel(),
+                      "With this option enabled biffed resources will use lowercased filenames for export or save operations."
+                      + "<p>This option is mostly useful on Linux where filenames are generally in lower case.</p>",
+                      AppOption.LOWERCASED_EXPORT),
                   OptionCheckBox.create(AppOption.IDS_SYMBOL_DISPLAY.getName(), AppOption.IDS_SYMBOL_DISPLAY.getLabel(),
                       "With this option enabled IDS entries with multiple symbolic names will display the last available "
                       + "symbol in scripts, effects, and other resources."

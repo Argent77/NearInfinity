@@ -29,6 +29,7 @@ import org.infinity.resource.Profile;
 import org.infinity.resource.are.viewer.AreaViewer;
 import org.infinity.updater.UpdaterSettings;
 import org.infinity.util.Misc;
+import org.infinity.util.Platform;
 import org.infinity.util.Weidu;
 
 /** This enum class manages a predefined set of options. */
@@ -113,7 +114,7 @@ public class AppOption {
       "Display Memory Usage in Status Bar", true);
   /** Menu Options: OpenBookmarksPrompt (Boolean, Default: true) */
   public static final AppOption OPEN_BOOKMARKS_PROMPT = new AppOption(OptionsMenuItem.OPTION_OPENBOOKMARKSPROMPT,
-      "Confirm Opening Bookmarked Gamed", true);
+      "Confirm Opening Bookmarked Games", true);
   public static final AppOption OPEN_STRINGTABLE_WARNING = new AppOption(OptionsMenuItem.OPTION_OPENSTRINGTABLEWARNING,
       "Show Backup Warning When Opening String Table Editor", true);
   /** Menu Options: RememberChildFrameRect (Boolean, Default: false) */
@@ -154,6 +155,9 @@ public class AppOption {
   /** Menu Options > Resources: CacheOverride (Boolean, Default: true) */
   public static final AppOption CACHE_OVERRIDE = new AppOption(OptionsMenuItem.OPTION_CACHEOVERRIDE,
       "Autocheck for Overrides", true);
+  /** Menu Options > Resources: LowerCasedExt (Boolean, Default: {@code true} on Linux, {@code false} otherwise) */
+  public static final AppOption LOWERCASED_EXPORT = new AppOption(OptionsMenuItem.OPTION_LOWERCASED_EXPORT,
+      "Use Lowercased Filenames on Export", Platform.IS_UNIX);
   /** Menu Options > Resources: ShowLastIdsSymbol (Boolean, Default: true) */
   public static final AppOption IDS_SYMBOL_DISPLAY = new AppOption(OptionsMenuItem.OPTION_IDS_SYMBOL_DISPLAY,
       "Use Last Available IDS Symbol for Display", true);

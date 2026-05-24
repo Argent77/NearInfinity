@@ -158,7 +158,7 @@ public final class ResourceFactory {
         retVal = Profile.getGameRoot().resolve(retVal.subpath(0, retVal.getNameCount()));
       }
     } else if (entry != null) {
-      retVal = FileManager.query(Profile.getGameRoot(), Profile.getOverrideFolderName(), entry.getResourceName());
+      retVal = FileManager.query(Profile.getGameRoot(), Profile.getOverrideFolderName(), getResourceName(entry));
     } else {
       retVal = Profile.getGameRoot().resolve(Profile.getOverrideFolderName());
     }
@@ -166,6 +166,24 @@ public final class ResourceFactory {
     return retVal;
   }
 
+  /**
+   * Returns the filename of the given resource entry in the case as specified by the preferences.
+   *
+   * @param entry {@link ResourceEntry} to retrieve filename from. Returns {@code null} if filename is not available.
+   * @return Filename in the expected case.
+   */
+  public static String getResourceName(ResourceEntry entry) {
+    if (entry != null) {
+      String name = entry.getResourceName();
+      if (name != null &&
+          BrowserMenuBar.getInstance().getOptions().useLowerCasedExport() &&
+          entry instanceof BIFFResourceEntry) {
+        name = name.toLowerCase(Locale.ROOT);
+      }
+      return name;
+    }
+    return null;
+  }
 
   public static Class<? extends Resource> getResourceType(ResourceEntry entry) {
     return getResourceType(entry, null);
@@ -1175,14 +1193,14 @@ public final class ResourceFactory {
           || (Profile.isEnhancedEdition()
               && (ext.equalsIgnoreCase("GUI") || ext.equalsIgnoreCase("SQL") || ext.equalsIgnoreCase("GLSL")))) {
         if (buffer.getShort(0) == -1) {
-          exportResourceInternal(entry, StaticSimpleXorDecryptor.decrypt(buffer, 2), entry.getResourceName(), parent,
+          exportResourceInternal(entry, StaticSimpleXorDecryptor.decrypt(buffer, 2), getResourceName(entry), parent,
               output);
         } else {
           buffer.position(0);
-          exportResourceInternal(entry, buffer, entry.getResourceName(), parent, output);
+          exportResourceInternal(entry, buffer, getResourceName(entry), parent, output);
         }
       } else {
-        exportResourceInternal(entry, buffer, entry.getResourceName(), parent, output);
+        exportResourceInternal(entry, buffer, getResourceName(entry), parent, output);
       }
     } catch (Exception e) {
       throw new Exception("Can't read " + entry);
@@ -1635,7 +1653,7 @@ public final class ResourceFactory {
     String fileName;
     do {
       fileName = (String) JOptionPane.showInputDialog(NearInfinity.getInstance(), "Enter new filename",
-          "Add copy of " + entry.getResourceName(), JOptionPane.QUESTION_MESSAGE, null, null, entry.getResourceName());
+          "Add copy of " + getResourceName(entry), JOptionPane.QUESTION_MESSAGE, null, null, getResourceName(entry));
       if (fileName != null) {
         if (!fileName.contains(".")) {
           fileName += '.' + entry.getExtension();
@@ -1700,7 +1718,7 @@ public final class ResourceFactory {
   }
 
   private TriState saveResourceAsInternal(Resource resource, Component parent, boolean overwrite) {
-    final Path outFile = getExportFileDialogInternal(parent, resource.getResourceEntry().getResourceName(), true);
+    final Path outFile = getExportFileDialogInternal(parent, getResourceName(resource.getResourceEntry()), true);
     if (outFile != null) {
       return saveResourceInternal(resource, parent, outFile, overwrite);
     } else {
@@ -1738,7 +1756,7 @@ public final class ResourceFactory {
             return TriState.FALSE;
           }
         }
-        outPath = FileManager.query(overridePath, entry.getResourceName());
+        outPath = FileManager.query(overridePath, getResourceName(entry));
         ((BIFFResourceEntry) entry).setOverride(true);
       } else {
         outPath = entry.getActualPath();
