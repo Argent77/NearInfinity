@@ -115,7 +115,7 @@ public final class ItmResource extends AbstractStruct implements Resource, HasCh
 
   public static final String[] FLAGS_ARRAY = { "None", "Critical item", "Two-handed", "Droppable", "Displayable",
       "Cursed", "Not copyable", "Magical", "Left-handed", "Silver", "Cold iron", "Off-handed", "Conversable",
-      "EE: Fake two-handed", "EE: Forbid off-hand weapon", "", "EE: Adamantine", null, null, null, null, null, null,
+      "EE: Fake two-handed", "EE: Forbid off-hand weapon", "", "EE: Adamantine", null, null, "EEex: Ignore Weapon Styles", null, null, null,
       null, null, "EE/Ex: Undispellable", "EE/Ex: Toggle critical hits" };
 
   public static final String[] FLAGS11_ARRAY = { "None", "Unsellable", "Two-handed", "Droppable", "Displayable",

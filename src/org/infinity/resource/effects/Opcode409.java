@@ -22,11 +22,17 @@ public class Opcode409 extends BaseOpcode {
 
   private static final String[] AFFECTED_TYPES_IWD2 = { "Allies", "Allies and same alignment" };
 
+  private static final String EFFECT_ENABLED_STRING    = "EEex: Enable Action Listener?";
+
   /** Returns the opcode name for the current game variant. */
   private static String getOpcodeName() {
     switch (Profile.getEngine()) {
       case IWD2:
         return "Righteous wrath of the faithful";
+      case EE:
+        if (isEEEx()) {
+          return "EEex: Enable Action Listener";
+        }
       default:
         return null;
     }
@@ -42,5 +48,17 @@ public class Opcode409 extends BaseOpcode {
     list.add(new DecNumber(buffer, offset, 4, AbstractStruct.COMMON_UNUSED));
     list.add(new Bitmap(buffer, offset + 4, 4, EFFECT_AFFECT, AFFECTED_TYPES_IWD2));
     return null;
+  }
+
+  @Override
+  protected String makeEffectParamsEE(Datatype parent, ByteBuffer buffer, int offset, List<StructEntry> list,
+      boolean isVersion1) {
+    if (isEEEx()) {
+      list.add(new Bitmap(buffer, offset, 4, EFFECT_ENABLED_STRING, AbstractStruct.OPTION_NOYES));
+      list.add(new DecNumber(buffer, offset + 4, 4, AbstractStruct.COMMON_UNUSED));
+      return null;
+    } else {
+      return super.makeEffectParamsEE(parent, buffer, offset, list, isVersion1);
+    }
   }
 }

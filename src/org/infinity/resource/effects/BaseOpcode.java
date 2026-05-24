@@ -349,10 +349,11 @@ public class BaseOpcode {
 
   public static final String[] SAVE_TYPES = {
       "No save", "Spell", "Breath weapon", "Paralyze/Poison/Death", "Rod/Staff/Wand", "Petrify/Polymorph",
-      null, null, null, null, null,
+      "EE: Spell*;For use with opcode 322", "EE: Breath weapon*;For use with opcode 322", "EE: Paralyze/Poison/Death*;For use with opcode 322",
+      "EE: Rod/Staff/Wand*;For use with opcode 322", "EE: Petrify/Polymorph*;For use with opcode 322",
       "EE: Ignore primary target*;Line AoE projectile doesn't affect end target",
       "EE: Ignore secondary target*;Line AoE projectile doesn't affect bystanders",
-      null, null, null, null, null, null, null, null, null, null, null, null,
+      null, null, null, null, null, null, null, null, null, null, null, "EEex: Bypass opcode 101",
       "EE/Ex: Bypass mirror image*;Affects only opcodes 12 and 25", "EE: Ignore difficulty*;Affects only opcode 12"
   };
 

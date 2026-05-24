@@ -69,6 +69,11 @@ public final class Effect2 extends AbstractStruct implements AddRemovable {
       null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
       "Effect applied by item" };
 
+  /** Returns whether the current game is enhanced by EEEx. */
+  protected static boolean isEEEx() {
+    return Profile.getProperty(Profile.Key.IS_GAME_EEEX);
+  }
+
   public static int readCommon(List<StructEntry> list, ByteBuffer buffer, int offset) {
     list.add(new PriTypeBitmap(buffer, offset, 4, EFFECT_PRIMARY_TYPE));
     if (Profile.isEnhancedEdition()) {
@@ -83,7 +88,20 @@ public final class Effect2 extends AbstractStruct implements AddRemovable {
     } else {
       list.add(new Bitmap(buffer, offset + 16, 4, EFFECT_DISPEL_TYPE, DISPEL_ARRAY));
     }
-    list.add(new DecNumber(buffer, offset + 20, 4, EFFECT_PARAMETER_3));
+    if (Profile.isEnhancedEdition() && isEEEx()) {
+      switch (buffer.getInt(offset - 60)) {
+        case 0xDB: // Attack and Saving Throw roll penalty
+          list.add(new DecNumber(buffer, offset + 20, 4, "EEex: Override hardcoded +2 bonus"));
+          break;
+        case 0x14D: // Static charge
+          list.add(new Bitmap(buffer, offset + 20, 4, "EEex: Only check saving throw once?", AbstractStruct.OPTION_NOYES));
+          break;
+        default:
+          list.add(new DecNumber(buffer, offset + 20, 4, EFFECT_PARAMETER_3));
+      }
+    } else {
+      list.add(new DecNumber(buffer, offset + 20, 4, EFFECT_PARAMETER_3));
+    }
     list.add(new DecNumber(buffer, offset + 24, 4, EFFECT_PARAMETER_4));
     list.add(new DecNumber(buffer, offset + 28, 4, EFFECT_PARAMETER_5));
     if (Profile.isEnhancedEdition()) {
