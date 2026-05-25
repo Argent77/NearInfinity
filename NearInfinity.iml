@@ -148,5 +148,16 @@
       </library>
     </orderEntry>
     <orderEntry type="inheritedJdk" />
+    <orderEntry type="library" name="tinylog-impl-2.7.0" level="project" />
+    <orderEntry type="library" name="tinylog-impl-2.7.1" level="project" />
+    <orderEntry type="library" name="jorbis" level="project" />
+    <orderEntry type="library" name="rsyntaxtextarea" level="project" />
+    <orderEntry type="library" name="jhexview" level="project" />
+    <orderEntry type="library" name="montemedia" level="project" />
+    <orderEntry type="library" name="apng-writer-core" level="project" />
+    <orderEntry type="library" name="json-20250517" level="project" />
+    <orderEntry type="library" name="commonmark-0.21.0" level="project" />
+    <orderEntry type="library" name="flatlaf-3.6" level="project" />
+    <orderEntry type="library" name="flatlaf-intellij-themes-3.6" level="project" />
   </component>
 </module>
