@@ -130,11 +130,12 @@ public final class SplResource extends AbstractStruct
       "Hostile", "No LOS required", "Allow spotting", "Outdoors only", "Simplified duration", "Trigger/Contingency", "",
       "", "Non-combat ability (?)", "", "", "", "", "", "", "" };
 
-  public static final String[] EXCLUDE_ARRAY = { "None", "Berserker", "Wizard slayer", "Kensai", "Cavalier",
-      "Inquisitor", "Undead hunter", "Abjurer", "Conjurer", "Diviner", "Enchanter", "Illusionist", "Invoker",
-      "Necromancer", "Transmuter", "Generalist;Includes trueclass mages, sorcerers and bards", "Archer", "Stalker",
-      "Beastmaster", "Assasin", "Bounty hunter", "Swashbuckler", "Blade", "Jester", "Skald", "Cleric of Talos",
-      "Cleric of Helm", "Cleric of Lathander", "Totemic druid", "Shapeshifter", "Avenger", "Barbarian", "Wild mage" };
+  public static final String[] EXCLUDE_ARRAY = { "None" };
+
+  public static final String[] EXCLUDE_WIZARD_ARRAY = { "None", "", "", "", "", "", "", "Abjurer", "Conjurer",
+      "Diviner", "Enchanter", "Illusionist", "Invoker", "Necromancer", "Transmuter",
+      "Generalist;Includes trueclass mages, sorcerers and bards", "", "", "", "", "", "", "", "", "", "", "", "", "",
+      "", "", "", "" };
 
   public static final String[] EXCLUDE_PRIEST_ARRAY = { "None",
       "Chaotic;Includes Chaotic Good, Chaotic Neutral and Chaotic Evil",
@@ -142,10 +143,8 @@ public final class SplResource extends AbstractStruct
       "Good;Includes Lawful Good, Neutral Good and Chaotic Good",
       "... Neutral;Includes Lawful Neutral, True Neutral and Chaotic Neutral",
       "Lawful;Includes Lawful Good, Lawful Neutral and Lawful Evil",
-      "Neutral ...;Includes Neutral Good, True Neutral and Neutral Evil", "Unused", "Unused", "Unused", "Unused",
-      "Unused", "Unused", "Unused", "Unused", "Unused", "Unused", "Unused", "Unused", "Unused", "Unused", "Unused",
-      "Unused", "Unused", "Unused", "Unused", "Unused", "Unused", "Unused", "Unused", "Unused", "Cleric/Paladin",
-      "Druid/Ranger/Shaman" };
+      "Neutral ...;Includes Neutral Good, True Neutral and Neutral Evil", "", "", "", "", "", "", "", "", "", "", "",
+      "", "", "", "", "", "", "", "", "", "", "", "", "", "Cleric/Paladin", "Druid/Ranger/Shaman" };
 
   public static final String[] EXCLUDE_COMBINED_ARRAY = { "None", "Chaotic/Berserker", "Evil/Wizard slayer",
       "Good/Kensai", "... Neutral/Cavalier", "Lawful/Inquisitor", "Neutral .../Undead hunter", "Abjurer", "Conjurer",
@@ -238,7 +237,7 @@ public final class SplResource extends AbstractStruct
         int size = curFlags.getSize();
         int offset = curFlags.getOffset();
         ByteBuffer b = ByteBuffer.allocate(size).order(ByteOrder.LITTLE_ENDIAN).putInt(curFlags.getValue());
-        Flag newFlags = new Flag(b, 0, size, SPL_EXCLUSION_FLAGS, (type == 2) ? EXCLUDE_PRIEST_ARRAY : EXCLUDE_ARRAY);
+        Flag newFlags = new Flag(b, 0, size, SPL_EXCLUSION_FLAGS, getExclusionArray(type));
         newFlags.setOffset(offset);
         replaceField(newFlags);
         return true;
@@ -355,8 +354,7 @@ public final class SplResource extends AbstractStruct
     final Bitmap spellType = new Bitmap(buffer, offset + 28, 2, SPL_TYPE, SPELL_TYPE_ARRAY); // 0x1c
     spellType.addUpdateListener(this);
     addField(spellType);
-    addField(new Flag(buffer, offset + 30, 4, SPL_EXCLUSION_FLAGS,
-        (spellType.getValue() == 2) ? EXCLUDE_PRIEST_ARRAY : EXCLUDE_ARRAY)); // 0x1e
+    addField(new Flag(buffer, offset + 30, 4, SPL_EXCLUSION_FLAGS, getExclusionArray(spellType.getValue()))); // 0x1e
     if (Profile.getGame() == Profile.Game.PST || Profile.getGame() == Profile.Game.PSTEE) {
       addField(new Bitmap(buffer, offset + 34, 2, SPL_CASTING_ANIMATION, ANIM_PST_ARRAY)); // 0x22
     } else {
@@ -671,6 +669,18 @@ public final class SplResource extends AbstractStruct
       for (final AddRemovable child : childList) {
         abil.addDatatype(child);
       }
+    }
+  }
+
+  /** Returns the exclusion array for the specified spell type. */
+  private static String[] getExclusionArray(int spellType) {
+    switch (spellType) {
+      case 1:
+        return EXCLUDE_WIZARD_ARRAY;
+      case 2:
+        return EXCLUDE_PRIEST_ARRAY;
+      default:
+        return EXCLUDE_ARRAY;
     }
   }
 
