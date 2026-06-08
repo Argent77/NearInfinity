@@ -8,6 +8,7 @@ import java.awt.Image;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
+import org.infinity.resource.key.BIFFResourceEntry;
 import org.infinity.resource.key.ResourceEntry;
 import org.infinity.util.Logger;
 import org.infinity.util.io.StreamUtils;
@@ -40,7 +41,8 @@ public abstract class MosDecoder {
   public static Type getType(ResourceEntry mosEntry) {
     Type retVal = Type.INVALID;
     if (mosEntry != null) {
-      try (final InputStream is = mosEntry.getResourceDataAsStream()) {
+      final boolean ignoreOverride = mosEntry instanceof BIFFResourceEntry;
+      try (final InputStream is = mosEntry.getResourceDataAsStream(ignoreOverride)) {
         String signature = StreamUtils.readString(is, 4);
         String version = StreamUtils.readString(is, 4);
         if ("MOSC".equals(signature)) {

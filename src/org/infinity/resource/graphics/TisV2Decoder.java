@@ -14,6 +14,7 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 
 import org.infinity.resource.ResourceFactory;
+import org.infinity.resource.key.BIFFResourceEntry;
 import org.infinity.resource.key.ResourceEntry;
 import org.infinity.util.Logger;
 
@@ -141,7 +142,8 @@ public class TisV2Decoder extends TisDecoder {
 
     if (getResourceEntry() != null) {
       try {
-        int[] info = getResourceEntry().getResourceInfo();
+        final boolean ignoreOverride = getResourceEntry() instanceof BIFFResourceEntry;
+        int[] info = getResourceEntry().getResourceInfo(ignoreOverride);
         if (info == null || info.length < 2) {
           throw new Exception("Error reading TIS header");
         }

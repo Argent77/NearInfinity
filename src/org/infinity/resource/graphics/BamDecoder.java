@@ -15,6 +15,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
+import org.infinity.resource.key.BIFFResourceEntry;
 import org.infinity.resource.key.ResourceEntry;
 import org.infinity.util.Logger;
 import org.infinity.util.io.StreamUtils;
@@ -48,7 +49,8 @@ public abstract class BamDecoder {
   public static Type getType(ResourceEntry bamEntry) {
     Type retVal = Type.INVALID;
     if (bamEntry != null) {
-      try (InputStream is = bamEntry.getResourceDataAsStream()) {
+      final boolean ignoreOverride = bamEntry instanceof BIFFResourceEntry;
+      try (InputStream is = bamEntry.getResourceDataAsStream(ignoreOverride)) {
         String signature = StreamUtils.readString(is, 4);
         String version = StreamUtils.readString(is, 4);
         if ("BAMC".equals(signature)) {

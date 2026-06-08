@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
+import org.infinity.resource.key.BIFFResourceEntry;
 import org.infinity.resource.key.ResourceEntry;
 import org.infinity.util.Logger;
 import org.infinity.util.io.StreamUtils;
@@ -44,7 +45,8 @@ public abstract class TisDecoder {
     Type retVal = Type.INVALID;
     if (tisEntry != null) {
       try {
-        int[] info = tisEntry.getResourceInfo();
+        final boolean ignoreOverride = tisEntry instanceof BIFFResourceEntry;
+        int[] info = tisEntry.getResourceInfo(ignoreOverride);
         if (info != null && info.length > 1) {
           if (info[0] > 0 && info[1] > 0) {
             int sizeV1 = 1024 + TILE_DIMENSION * TILE_DIMENSION;
@@ -73,7 +75,8 @@ public abstract class TisDecoder {
     TisInfo retVal = null;
 
     if (tisEntry != null) {
-      try (InputStream is = tisEntry.getResourceDataAsStream()) {
+      final boolean ignoreOverride = tisEntry instanceof BIFFResourceEntry;
+      try (InputStream is = tisEntry.getResourceDataAsStream(ignoreOverride)) {
         String signature = StreamUtils.readString(is, 4);
         String version = StreamUtils.readString(is, 4);
 

@@ -47,6 +47,7 @@ import org.infinity.gui.converter.tis.TileEntry;
 import org.infinity.resource.Profile;
 import org.infinity.resource.ResourceFactory;
 import org.infinity.resource.StructEntry;
+import org.infinity.resource.key.BIFFResourceEntry;
 import org.infinity.resource.key.ResourceEntry;
 import org.infinity.resource.wed.Door;
 import org.infinity.resource.wed.Overlay;
@@ -357,7 +358,8 @@ public class TisConvert {
     final Predicate<ResourceEntry> wedCheck = wedEntry -> {
       if (wedEntry != null) {
         try {
-          final int[] resInfo = tisEntry.getResourceInfo();
+          final boolean ignoreOverride = tisEntry instanceof BIFFResourceEntry;
+          final int[] resInfo = tisEntry.getResourceInfo(ignoreOverride);
           int numTiles = (resInfo != null && resInfo.length > 1) ? resInfo[0] : 0;
           if (numTiles > 0) {
             final ByteBuffer buf = wedEntry.getResourceBuffer().order(ByteOrder.LITTLE_ENDIAN);
