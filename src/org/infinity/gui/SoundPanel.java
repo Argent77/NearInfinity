@@ -86,6 +86,11 @@ public class SoundPanel extends JPanel implements Closeable {
      */
     LOOP_CHECKBOX,
     /**
+     * Specifies a checkbox for enabling autoplay on load. The control is shown on the right side behind the loop
+     * checkbox.
+     */
+    AUTOPLAY_CHECKBOX,
+    /**
      * Specifies a slider that shows the playback current progress and allows the user to jump to specific positions
      * within the audio clip. The control is shown directly below the playback controls.
      */
@@ -179,12 +184,14 @@ public class SoundPanel extends JPanel implements Closeable {
   private static final String CMD_PAUSE     = "pause";
   private static final String CMD_STOP      = "stop";
   private static final String CMD_LOOP      = "loop";
+  private static final String CMD_AUTOPLAY  = "autoplay";
 
   private static final ImageIcon ICON_PLAY  = Icons.ICON_PLAY_16.getIcon();
   private static final ImageIcon ICON_PAUSE = Icons.ICON_PAUSE_16.getIcon();
   private static final ImageIcon ICON_STOP  = Icons.ICON_STOP_16.getIcon();
 
   private static boolean looped = false;
+  private static boolean autoplay = false;
 
   private final List<AudioStateListener> stateListeners = new ArrayList<>();
 
@@ -196,6 +203,7 @@ public class SoundPanel extends JPanel implements Closeable {
   private JButton stopButton;
   private JLabel displayLabel;
   private JCheckBox loopCheckBox;
+  private JCheckBox autoplayCheckBox;
   private FixedSlider progressSlider;
 
   private ResourceEntry soundEntry;
@@ -207,6 +215,14 @@ public class SoundPanel extends JPanel implements Closeable {
   private boolean progressAdjusting;
   private boolean combinedPlayPause;
   private boolean showProgressLabels;
+
+  public static boolean isLoopEnabled() {
+    return looped;
+  }
+
+  public static boolean isAutoplayEnabled() {
+    return autoplay;
+  }
 
   /**
    * Creates a new sound panel. Initializes it with {@link DisplayFormat#ELAPSED_TOTAL} to display time but does not
@@ -424,6 +440,8 @@ public class SoundPanel extends JPanel implements Closeable {
         return combinedPlayPause;
       case LOOP_CHECKBOX:
         return loopCheckBox.isVisible();
+      case AUTOPLAY_CHECKBOX:
+        return autoplayCheckBox.isVisible();
       case PROGRESS_BAR:
         return progressSlider.isVisible();
       case PROGRESS_BAR_LABELS:
@@ -461,6 +479,22 @@ public class SoundPanel extends JPanel implements Closeable {
     }
     looped = loop;
     runner.setLooped(loop);
+  }
+
+  /** Returns whether autoplay mode is enabled. */
+  public boolean isAutoplay() {
+    return autoplayCheckBox.isSelected();
+  }
+
+  public void setAutoplay(boolean autoplay) {
+    if (isClosed()) {
+      return;
+    }
+
+    if (autoplayCheckBox.isSelected() != autoplay) {
+      autoplayCheckBox.setSelected(autoplay);
+    }
+    SoundPanel.autoplay = autoplay;
   }
 
   /**
@@ -557,6 +591,7 @@ public class SoundPanel extends JPanel implements Closeable {
     }
     displayLabel.setEnabled(enabled);
     loopCheckBox.setEnabled(enabled);
+    autoplayCheckBox.setEnabled(enabled);
     super.setEnabled(enabled);
   }
 
@@ -777,6 +812,11 @@ public class SoundPanel extends JPanel implements Closeable {
     loopCheckBox.addActionListener(listener);
     loopCheckBox.setVisible(isOption(options, Option.LOOP_CHECKBOX));
 
+    autoplayCheckBox = new JCheckBox("Autoplay", autoplay);
+    autoplayCheckBox.setActionCommand(CMD_AUTOPLAY);
+    autoplayCheckBox.addActionListener(listener);
+    autoplayCheckBox.setVisible(isOption(options, Option.AUTOPLAY_CHECKBOX));
+
     displayLabel = new JLabel(DisplayFormat.ELAPSED_TOTAL.toString(0L, 0L), SwingConstants.LEADING);
     displayLabel.setVisible(isOption(options, Option.TIME_LABEL));
 
@@ -804,19 +844,31 @@ public class SoundPanel extends JPanel implements Closeable {
     ViewerUtil.setGBC(gbc, idx++, 0, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.HORIZONTAL,
         new Insets(0, 8, 0, 0), 0, 0);
     playbackPanel.add(stopButton, gbc);
-    ViewerUtil.setGBC(gbc, idx++, 0, 1, 1, 0.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
-        new Insets(0, 8, 0, 0), 0, 0);
-    playbackPanel.add(loopCheckBox, gbc);
 
-    ViewerUtil.setGBC(gbc, 0, 0, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.HORIZONTAL,
+    final JPanel optionsPanel = new JPanel(new GridBagLayout());
+    idx = 0;
+    ViewerUtil.setGBC(gbc, idx++, 1, 1, 1, 0.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
+        new Insets(0, 0, 0, 0), 0, 0);
+    optionsPanel.add(loopCheckBox, gbc);
+    final int left = loopCheckBox.isVisible() ? 8 : 0;
+    ViewerUtil.setGBC(gbc, idx++, 1, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.HORIZONTAL,
+        new Insets(0, left, 0, 0), 0, 0);
+    optionsPanel.add(autoplayCheckBox, gbc);
+
+    idx = 0;
+    ViewerUtil.setGBC(gbc, 0, idx++, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.HORIZONTAL,
         new Insets(0, 0, 0, 0), 0, 0);
     add(playbackPanel, gbc);
 
-    ViewerUtil.setGBC(gbc, 0, 1, 1, 1, 1.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL,
+    ViewerUtil.setGBC(gbc, 0, idx++, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.HORIZONTAL,
+        new Insets(8, 0, 0, 0), 0, 0);
+    add(optionsPanel, gbc);
+
+    ViewerUtil.setGBC(gbc, 0, idx++, 1, 1, 1.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL,
         new Insets(8, 0, 0, 0), 0, 0);
     add(progressSlider, gbc);
 
-    ViewerUtil.setGBC(gbc, 0, 2, 1, 1, 0.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.HORIZONTAL,
+    ViewerUtil.setGBC(gbc, 0, idx++, 1, 1, 0.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.HORIZONTAL,
         new Insets(8, 0, 0, 0), 0, 0);
     add(displayLabel, gbc);
 
@@ -882,6 +934,9 @@ public class SoundPanel extends JPanel implements Closeable {
           break;
         case CMD_LOOP:
           setLooped(loopCheckBox.isSelected());
+          break;
+        case CMD_AUTOPLAY:
+          setAutoplay(autoplayCheckBox.isSelected());
           break;
       }
     }

@@ -49,7 +49,7 @@ public class SoundResource implements Resource, ActionListener, ItemListener, Cl
   private final ResourceEntry entry;
   private final ButtonPanel buttonPanel = new ButtonPanel();
   private final SoundPanel soundPanel = new SoundPanel(SoundPanel.Option.TIME_LABEL, SoundPanel.Option.PROGRESS_BAR,
-      SoundPanel.Option.PROGRESS_BAR_LABELS, SoundPanel.Option.LOOP_CHECKBOX);
+      SoundPanel.Option.PROGRESS_BAR_LABELS, SoundPanel.Option.LOOP_CHECKBOX, SoundPanel.Option.AUTOPLAY_CHECKBOX);
 
   private JMenuItem miExport;
   private JMenuItem miConvert;
@@ -182,10 +182,14 @@ public class SoundResource implements Resource, ActionListener, ItemListener, Cl
     }
   }
 
-  private synchronized void setLoaded(boolean b) {
+  private synchronized void setLoaded(boolean success) {
     if (miConvert != null) {
-      miConvert.setEnabled(b);
+      miConvert.setEnabled(success);
       buttonPanel.getControlByType(PROPERTIES).setEnabled(true);
+    }
+
+    if (success && SoundPanel.isAutoplayEnabled()) {
+      soundPanel.setPlaying(true);
     }
   }
 

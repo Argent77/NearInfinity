@@ -198,7 +198,7 @@ public class ResourceRef extends Datatype
     bView.addActionListener(this);
 
     soundPanel = new SoundPanel(SoundPanel.Option.COMPACT_CONTROLS, SoundPanel.Option.TIME_LABEL,
-        SoundPanel.Option.PROGRESS_BAR);
+        SoundPanel.Option.PROGRESS_BAR, SoundPanel.Option.AUTOPLAY_CHECKBOX);
     soundPanel.setDisplayFormat(SoundPanel.DisplayFormat.ELAPSED_TOTAL_PRECISE);
     soundPanel.setVisible(ResourceEntry.isSound(types));
 
@@ -430,7 +430,7 @@ public class ResourceRef extends Datatype
       bView.setEnabled(isEditable(entry));
       if (soundPanel != null && soundPanel.isVisible()) {
         try {
-          soundPanel.loadSound(entry.getEntry());
+          soundPanel.loadSound(entry.getEntry(), this::setResourceLoaded);
           soundPanel.setEnabled(isSound(entry));
         } catch (NullPointerException e) {
           // expected
@@ -445,6 +445,12 @@ public class ResourceRef extends Datatype
       if (soundPanel != null && soundPanel.isVisible()) {
         soundPanel.setEnabled(false);
       }
+    }
+  }
+
+  private synchronized void setResourceLoaded(boolean success) {
+    if (success && SoundPanel.isAutoplayEnabled()) {
+      soundPanel.setPlaying(true);
     }
   }
 
