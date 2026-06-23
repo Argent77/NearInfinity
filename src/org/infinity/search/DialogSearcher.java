@@ -188,20 +188,22 @@ public final class DialogSearcher extends AbstractSearcher implements Runnable, 
         final Map<StructEntry, StructEntry> searchMap = makeSearchMap((AbstractStruct) resource);
         for (final Map.Entry<StructEntry, StructEntry> e : searchMap.entrySet()) {
           final StructEntry searchEntry = e.getKey();
-          String s = "";
+          String stringRaw = "";
+          String stringNormalized = "";
           if (searchEntry instanceof StringRef) {
-            s = searchEntry.toString();
+            stringRaw = searchEntry.toString();
           } else if (searchEntry instanceof AbstractCode) {
             try {
               final AbstractCode code = (AbstractCode) searchEntry;
               final ScriptType type = searchEntry instanceof Action ? ScriptType.ACTION : ScriptType.TRIGGER;
               final Compiler compiler = new Compiler(code.getText(), type);
+              stringRaw = code.getText();
 
               if (compiler.getErrors().isEmpty()) {
                 final Decompiler decompiler = new Decompiler(compiler.getCode(), type, false);
                 decompiler.setGenerateComments(false);
                 decompiler.setGenerateResourcesUsed(false);
-                s = decompiler.getSource();
+                stringNormalized = decompiler.getSource();
               } else {
                 synchronized (System.err) {
                   Logger.error("Error(s) compiling {} - {}", entry.toString(), searchEntry.getName());
@@ -210,13 +212,24 @@ public final class DialogSearcher extends AbstractSearcher implements Runnable, 
             } catch (Exception ex) {
               Logger.error(ex, "Exception (de)compiling {} - {}", entry.toString(), searchEntry.getName());
             }
-            if (s == null) {
-              s = "";
+            if (stringRaw == null) {
+              stringRaw = "";
+            }
+            if (stringNormalized == null) {
+              stringNormalized = "";
             }
           }
-          final Matcher matcher = regPattern.matcher(s);
-          if (matcher.find()) {
-            addResult(entry, e.getValue().getName(), searchEntry);
+
+          if (!stringRaw.isEmpty()) {
+            Matcher matcher = regPattern.matcher(stringRaw);
+            if (matcher.find()) {
+              addResult(entry, e.getValue().getName(), searchEntry);
+            } else if (!stringNormalized.isEmpty()) {
+              matcher = regPattern.matcher(stringNormalized);
+              if (matcher.find()) {
+                addResult(entry, e.getValue().getName(), searchEntry);
+              }
+            }
           }
         }
       }
