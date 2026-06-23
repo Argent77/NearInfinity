@@ -1651,6 +1651,7 @@ public final class Profile {
     list = new ArrayList<>();
     list.add("InfinityLoader.exe");
     list.add("Baldur.exe");
+    list.add("BaldurII.exe");
     list.add("BG2EE.exe");
     osMap.put(Platform.OS.WINDOWS, list);
     DEFAULT_GAME_BINARIES.put(Game.BG2EE, osMap);
