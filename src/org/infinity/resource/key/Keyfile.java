@@ -25,6 +25,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
+import org.infinity.gui.menu.BrowserMenuBar;
 import org.infinity.icon.Icons;
 import org.infinity.resource.ResourceFactory;
 import org.infinity.util.IntegerHashMap;
@@ -561,7 +562,11 @@ public class Keyfile {
 
         // processing resource entries
         for (int i = 0, ofs = ofsRes; i < numRes; i++, ofs += 14) {
-          addResourceEntry(new BIFFResourceEntry(file, buffer, ofs));
+          final BIFFResourceEntry entry = new BIFFResourceEntry(file, buffer, ofs);
+          final boolean showResource = BrowserMenuBar.getInstance().getOptions().showNonExistingResources();
+          if (entry != null && (showResource || entry.getBIFFEntry().exists())) {
+            addResourceEntry(entry);
+          }
         }
       }
     }

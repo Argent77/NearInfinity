@@ -163,6 +163,7 @@ public class OptionsMenuItem extends JMenuItem {
   public static final String OPTION_IGNOREREADERRORS          = "IgnoreReadErrors";
   public static final String OPTION_LAUNCHGAMEALLOWED         = "LaunchGameAllowed";
   public static final String OPTION_SHOWUNKNOWNRESOURCES      = "ShowUnknownResources";
+  public static final String OPTION_SHOWNONEXISTINGRESOURCES  = "ShowNonExistingResources";
   public static final String OPTION_SHOWTREESEARCHNAMES       = "ShowTreeSearchNames";
   public static final String OPTION_SHOW_RESOURCE_LIST_ICONS  = "ShowResourceListIcons";
   public static final String OPTION_SHOW_RESOURCE_TREE_ICONS  = "ShowResourceTreeIcons";
@@ -579,6 +580,11 @@ public class OptionsMenuItem extends JMenuItem {
   /** Returns whether unknown or unrecognized resources are displayed in the resource tree. */
   public boolean showUnknownResourceTypes() {
     return AppOption.SHOW_UNKNOWN_RESOURCES.getBoolValue();
+  }
+
+  /** Returns whether resources that are listed in CHITIN.KEY but don't exist in referenced BIFF archives are hidden. */
+  public boolean showNonExistingResources() {
+    return AppOption.SHOW_NONEXISTING_RESOURCES.getBoolValue();
   }
 
   /** Returns whether search names are displayed alongside resource names in the resource tree. */

@@ -153,6 +153,10 @@ public class PreferencesDialog extends JDialog {
                       "With this option enabled Near Infinity shows unknown or unsupported resources in their own type "
                           + "folder in the resource tree.",
                       AppOption.SHOW_UNKNOWN_RESOURCES),
+                  OptionCheckBox.create(AppOption.SHOW_NONEXISTING_RESOURCES.getName(), AppOption.SHOW_NONEXISTING_RESOURCES.getLabel(),
+                      "With this option enabled Near Infinity shows resources in the resource tree that are listed in "
+                          + "CHITIN.KEY, even if they don't exist in the referenced BIFF archives.",
+                      AppOption.SHOW_NONEXISTING_RESOURCES),
                   OptionCheckBox.create(AppOption.SHOW_TREE_SEARCH_NAMES.getName(), AppOption.SHOW_TREE_SEARCH_NAMES.getLabel(),
                       "With this option enabled Near Infinity shows the search name of resources in the resource tree "
                           + "in parentheses if available, such as creature, item or spell names.",

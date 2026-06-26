@@ -137,6 +137,9 @@ public class AppOption {
   /** Menu Options > Resources: ShowUnknownResources (Boolean, Default: true) */
   public static final AppOption SHOW_UNKNOWN_RESOURCES = new AppOption(OptionsMenuItem.OPTION_SHOWUNKNOWNRESOURCES,
       "Show Unknown Resource Types", true);
+  /** Menu Options > Resources: ShowNonExistingResources (Boolean, Default: false) */
+  public static final AppOption SHOW_NONEXISTING_RESOURCES = new AppOption(OptionsMenuItem.OPTION_SHOWNONEXISTINGRESOURCES,
+      "Show Non-Existing Resources", false);
   /** Menu Options > Resources: ShowTreeSearchNames (Boolean, Default: true) */
   public static final AppOption SHOW_TREE_SEARCH_NAMES = new AppOption(OptionsMenuItem.OPTION_SHOWTREESEARCHNAMES,
       "Show Search Names in Resource Tree", true);
