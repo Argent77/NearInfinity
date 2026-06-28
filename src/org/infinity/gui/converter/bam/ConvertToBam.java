@@ -252,6 +252,8 @@ public class ConvertToBam extends ChildFrame implements ActionListener, Property
   private JButton bMacroDuplicateCycle;
   private JButton bMacroDuplicateFrames;
   private JButton bMacroReverseFrames;
+  private JButton bMacroCompactSelection;
+  private JButton bMacroInterleaveSelection;
   private JButton bMacroRemoveAll;
   private JButton bMacroReverseCycles;
   private JButton bPreviewCycleFirst;
@@ -731,6 +733,10 @@ public class ConvertToBam extends ChildFrame implements ActionListener, Property
       macroReverseFramesOrder();
     } else if (event.getSource() == bMacroSortFramesAsc) {
       macroSortFrames();
+    } else if (event.getSource() == bMacroCompactSelection) {
+      macroCompactCycles();
+    } else if (event.getSource() == bMacroInterleaveSelection) {
+      macroInterleaveCycles();
     } else if (event.getSource() == bCurCycleAdd) {
       currentCycleAdd();
     } else if (event.getSource() == bCurCycleRemove) {
@@ -1502,43 +1508,68 @@ public class ConvertToBam extends ChildFrame implements ActionListener, Property
     bMacroDuplicateCycle.addActionListener(this);
     bMacroReverseFrames = new JButton("Reverse frames order");
     bMacroReverseFrames.addActionListener(this);
+    bMacroCompactSelection = new JButton("Compact cycles");
+    bMacroCompactSelection.setToolTipText("Removes gaps between selected cycles.");
+    bMacroCompactSelection.addActionListener(this);
+    bMacroInterleaveSelection = new JButton("Interleave cycles");
+    bMacroInterleaveSelection.setToolTipText("Inserts gaps between selected cycles.");
+    bMacroInterleaveSelection.addActionListener(this);
+
     JLabel lMacroAllCycles = new JLabel("All cycles:");
     bMacroRemoveAll = new JButton("Remove all frames");
     bMacroRemoveAll.addActionListener(this);
     bMacroReverseCycles = new JButton("Reverse cycles order");
     bMacroReverseCycles.addActionListener(this);
+
     JPanel pMacroPanel = new JPanel(new GridBagLayout());
-    c = ViewerUtil.setGBC(c, 0, 0, 2, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
+    int row = 0;
+    c = ViewerUtil.setGBC(c, 0, row, 2, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
         new Insets(0, 0, 0, 0), 0, 0);
     pMacroPanel.add(lMacroCurCycle, c);
-    c = ViewerUtil.setGBC(c, 0, 1, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
+    row++;
+    c = ViewerUtil.setGBC(c, 0, row, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
         new Insets(4, 0, 0, 0), 0, 0);
     pMacroPanel.add(bMacroAssignFrames, c);
-    c = ViewerUtil.setGBC(c, 1, 1, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
+    c = ViewerUtil.setGBC(c, 1, row, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
         new Insets(4, 4, 0, 0), 0, 0);
     pMacroPanel.add(bMacroRemoveFrames, c);
-    c = ViewerUtil.setGBC(c, 0, 2, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
+    row++;
+    c = ViewerUtil.setGBC(c, 0, row, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
         new Insets(4, 0, 0, 0), 0, 0);
     pMacroPanel.add(bMacroDuplicateFrames, c);
-    c = ViewerUtil.setGBC(c, 1, 2, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
+    c = ViewerUtil.setGBC(c, 1, row, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
         new Insets(4, 4, 0, 0), 0, 0);
     pMacroPanel.add(bMacroDuplicateCycle, c);
-    c = ViewerUtil.setGBC(c, 0, 3, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
+    row++;
+    c = ViewerUtil.setGBC(c, 0, row, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
         new Insets(4, 0, 0, 0), 0, 0);
     pMacroPanel.add(bMacroSortFramesAsc, c);
-    c = ViewerUtil.setGBC(c, 1, 3, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
+    c = ViewerUtil.setGBC(c, 1, row, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
         new Insets(4, 4, 0, 0), 0, 0);
     pMacroPanel.add(bMacroReverseFrames, c);
-    c = ViewerUtil.setGBC(c, 0, 4, 2, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
+    row++;
+
+    c = ViewerUtil.setGBC(c, 0, row, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
+        new Insets(4, 0, 0, 0), 0, 0);
+    pMacroPanel.add(bMacroCompactSelection, c);
+    c = ViewerUtil.setGBC(c, 1, row, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
+        new Insets(4, 4, 0, 0), 0, 0);
+    pMacroPanel.add(bMacroInterleaveSelection, c);
+    row++;
+
+    c = ViewerUtil.setGBC(c, 0, row, 2, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
         new Insets(16, 0, 0, 0), 0, 0);
+    row++;
+
     pMacroPanel.add(lMacroAllCycles, c);
-    c = ViewerUtil.setGBC(c, 0, 5, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
+    c = ViewerUtil.setGBC(c, 0, row, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
         new Insets(4, 0, 0, 0), 0, 0);
     pMacroPanel.add(bMacroRemoveAll, c);
-    c = ViewerUtil.setGBC(c, 1, 5, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
+    c = ViewerUtil.setGBC(c, 1, row, 1, 1, 0.0, 0.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.HORIZONTAL,
         new Insets(4, 4, 0, 0), 0, 0);
     pMacroPanel.add(bMacroReverseCycles, c);
-    c = ViewerUtil.setGBC(c, 0, 6, 2, 1, 1.0, 1.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.BOTH,
+    row++;
+    c = ViewerUtil.setGBC(c, 0, row, 2, 1, 1.0, 1.0, GridBagConstraints.FIRST_LINE_START, GridBagConstraints.BOTH,
         new Insets(0, 0, 0, 0), 0, 0);
     pMacroPanel.add(new JPanel(), c);
 
@@ -2074,6 +2105,8 @@ public class ConvertToBam extends ChildFrame implements ActionListener, Property
     bMacroDuplicateFrames.setEnabled(!listCycles.isSelectionEmpty());
     bMacroSortFramesAsc.setEnabled(!listCycles.isSelectionEmpty());
     bMacroReverseFrames.setEnabled(!listCycles.isSelectionEmpty());
+    bMacroCompactSelection.setEnabled(listCycles.getSelectedIndices().length > 1);
+    bMacroInterleaveSelection.setEnabled(listCycles.getSelectedIndices().length > 1);
     bMacroRemoveAll.setEnabled(!modelCycles.isEmpty());
     bMacroReverseCycles.setEnabled(!modelCycles.isEmpty());
 
@@ -3270,6 +3303,55 @@ public class ConvertToBam extends ChildFrame implements ActionListener, Property
       }
     }
     updateCyclesList();
+  }
+
+  /** Action for macro "Selected cycles" -> "Compact cycles": Removes gaps between selected cycle entries. */
+  private void macroCompactCycles() {
+    final int[] indices = listCycles.getSelectedIndices();
+    if (indices.length <= 1) {
+      return;
+    }
+
+    for (int i = 1; i < indices.length; i++) {
+      int prevIndex = indices[i - 1];
+      int index = indices[i];
+      if (index > prevIndex + 1) {
+        final int offset = prevIndex - index + 1;
+        modelCycles.move(index, offset);
+        indices[i] += offset;
+      }
+    }
+    listCycles.setSelectedIndices(indices);
+    updateCyclesList();
+    listCycles.requestFocusInWindow();
+  }
+
+  /** Action for macro "Selected cycles" -> "Interleave cycles": Inserts gaps between selected cycle entries. */
+  private void macroInterleaveCycles() {
+    final int[] indices = listCycles.getSelectedIndices();
+    if (indices.length <= 1) {
+      return;
+    }
+
+    for (int i = 1; i < indices.length; i++) {
+      // depending on available space, gaps are either inserted into trailing or leading selections
+      if (indices[indices.length - 1] < modelCycles.getSize() - 1) {
+        // expanding trailing selections
+        for (int j = indices.length - 1; j >= i; j--) {
+          modelCycles.move(indices[j], 1);
+          indices[j]++;
+        }
+      } else if (indices[0] > 0) {
+        // expanding leading selections
+        for (int j = 0; j < i; j++) {
+          modelCycles.move(indices[j], -1);
+          indices[j]--;
+        }
+      }
+    }
+    listCycles.setSelectedIndices(indices);
+    updateCyclesList();
+    listCycles.requestFocusInWindow();
   }
 
   /** Action for macro "All cycles"->"Remove all frames": Removes all frame indices. */
