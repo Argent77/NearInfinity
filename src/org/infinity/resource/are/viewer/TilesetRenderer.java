@@ -1180,13 +1180,31 @@ public class TilesetRenderer extends RenderCanvas {
           try {
             TisDecoder decoder = TisDecoder.loadTis(tisEntry);
             isTisPalette = decoder.getType() == TisDecoder.Type.PALETTE;
-            BufferedImage tileImage = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
+            final int tileWidth = decoder.getTileWidth();
+            final int tileHeight = decoder.getTileHeight();
+            BufferedImage tileImage = new BufferedImage(tileWidth, tileHeight, BufferedImage.TYPE_INT_ARGB);
+            BufferedImage scaledTileImage = null;
+            Graphics2D scaledTileGraphics = null;
+            if (tileWidth != 64 || tileHeight != 64) {
+              scaledTileImage = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
+              scaledTileGraphics = scaledTileImage.createGraphics();
+              scaledTileGraphics.setComposite(AlphaComposite.Src);
+            }
             for (int i = 0, tCount = decoder.getTileCount(); i < tCount; i++) {
               decoder.getTile(i, tileImage);
-              int[] srcData = ((DataBufferInt) tileImage.getRaster().getDataBuffer()).getData();
+              BufferedImage sourceImage = tileImage;
+              if (scaledTileGraphics != null) {
+                scaledTileGraphics.drawImage(tileImage, 0, 0, 64, 64, null);
+                sourceImage = scaledTileImage;
+              }
+              int[] srcData = ((DataBufferInt) sourceImage.getRaster().getDataBuffer()).getData();
               int[] dstData = new int[64 * 64];
               System.arraycopy(srcData, 0, dstData, 0, 64 * 64);
               listTileData.add(dstData);
+            }
+            if (scaledTileGraphics != null) {
+              scaledTileGraphics.dispose();
+              scaledTileImage.flush();
             }
             tileImage.flush();
             tileImage = null;

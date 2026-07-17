@@ -1367,7 +1367,8 @@ public class TisResource implements Resource, Closeable, Referenceable, ActionLi
       lBorderSizeLabel.addMouseMotionListener(listeners.mouseMotion);
       helpMap.put(lBorderSizeLabel, helpBorderSize);
 
-      sBorderSize = new JSlider(0, TisConvert.Config.TILE_SIZE, TisConvert.Config.DEFAULT_BORDER_SIZE);
+      final int tileSize = tis.getDecoder().getTileWidth();
+      sBorderSize = new JSlider(0, tileSize, Math.min(tileSize, TisConvert.Config.DEFAULT_BORDER_SIZE));
       sBorderSize.addMouseMotionListener(listeners.mouseMotion);
       sBorderSize.addChangeListener(listeners.changeBorderSize);
       helpMap.put(sBorderSize, helpBorderSize);

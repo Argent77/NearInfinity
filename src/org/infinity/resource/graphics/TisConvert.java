@@ -98,10 +98,11 @@ public class TisConvert {
      */
     static Couple<BufferedImage, BufferedImage> init(int tileIndex, BufferedImage tileImage, TisDecoder decoder,
         TileInfo tileInfo) throws Exception {
-      final int tileSize = 64;
+      final int tileWidth = decoder.getTileWidth();
+      final int tileHeight = decoder.getTileHeight();
       final boolean isPrimary = (tileInfo.getPrimaryTileFrame(tileIndex) >= 0);
 
-      final BufferedImage tileImage2 = ColorConvert.createCompatibleImage(tileSize, tileSize, true);
+      final BufferedImage tileImage2 = ColorConvert.createCompatibleImage(tileWidth, tileHeight, true);
       final Couple<BufferedImage, BufferedImage> retVal = new Couple<>(null, null);
       if (isPrimary) {
         decoder.getTile(tileInfo.tileSecondary, tileImage2);
@@ -552,6 +553,8 @@ public class TisConvert {
 
     final List<Image> tiles = config.getTileList();
     final TisV2Decoder decoder = (TisV2Decoder) config.getDecoder();
+    final int tileWidth = decoder.getTileWidth();
+    final int tileHeight = decoder.getTileHeight();
     final WedInfo wedInfo = config.getWedInfo();
     final OverlayConversion conversionMode = config.getOverlayConversion();
 
@@ -567,17 +570,17 @@ public class TisConvert {
       System.arraycopy("TIS V1  ".getBytes(), 0, header, 0, 8);
       // TODO: use different tile count source when implementing overlay conversion modes that change tileset layout
       DynamicArray.putInt(header, 0x08, decoder.getTileCount());
-      DynamicArray.putInt(header, 0x0c, 0x1400);
+      DynamicArray.putInt(header, 0x0c, 0x400 + tileWidth * tileHeight);
       DynamicArray.putInt(header, 0x10, 0x18);
-      DynamicArray.putInt(header, 0x14, 0x40);
+      DynamicArray.putInt(header, 0x14, tileWidth);
       bos.write(header);
 
       // processing TIS data
       final int[] palette = new int[255];
       final byte[] tilePalette = new byte[256 * 4];
-      final byte[] tileData = new byte[Config.TILE_SIZE * Config.TILE_SIZE];
+      final byte[] tileData = new byte[tileWidth * tileHeight];
       BufferedImage tileImageOut =
-          ColorConvert.createCompatibleImage(Config.TILE_SIZE, Config.TILE_SIZE, Transparency.BITMASK);
+          ColorConvert.createCompatibleImage(tileWidth, tileHeight, Transparency.BITMASK);
       final IntegerHashMap<Byte> colorCache = new IntegerHashMap<>(1800); // caching RGB -> index
       for (int tileIdx = 0, tileCount = decoder.getTileCount(); tileIdx < tileCount; tileIdx++) {
         colorCache.clear();
@@ -701,6 +704,7 @@ public class TisConvert {
 
     try {
       final TisV1Decoder decoder = (TisV1Decoder) config.getDecoder();
+      final int tileSize = decoder.getTileWidth();
       final WedInfo wedInfo = config.getWedInfo();
       final int width = wedInfo.getWidth();
       final int height = wedInfo.getHeight();
@@ -718,7 +722,7 @@ public class TisConvert {
       final BitSet markedTiles = new BitSet(decoder.getTileCount());
 
       // processing primary tiles
-      final TileMap tmBase = new TileMap(wedInfo);
+      final TileMap tmBase = new TileMap(wedInfo, tileSize);
       final int numTiles = decoder.getTileCount();
       for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
@@ -757,7 +761,7 @@ public class TisConvert {
           for (int j = 1; j < ti.tilesPrimary.length; j++) {
             if (!markedTiles.get(ti.tilesPrimary[j])) {
               if (!detectBlack || !isTileBlack(decoder, ti.tilesPrimary[j])) {
-                final TileMap tm = new TileMap(wedInfo);
+                final TileMap tm = new TileMap(wedInfo, tileSize);
                 tm.setTile(x, y, ti.tilesPrimary[j], TileMapItem.FLAG_ALL);
                 markedTiles.set(ti.tilesPrimary[j]);
                 final List<TileMap> list = createTileRegions(config, tm);
@@ -772,7 +776,7 @@ public class TisConvert {
       for (int i = 0, count = wedInfo.getDoorCount(); i < count; i++) {
         if (wedInfo.getDoorTileCount(i) > 0) {
           // adding door tiles
-          final TileMap tm = new TileMap(wedInfo);
+          final TileMap tm = new TileMap(wedInfo, tileSize);
           final int[] indices = wedInfo.getDoorTileIndices(i);
           for (final int idx : indices) {
             if (idx < 0 || idx >= wedInfo.getWidth() * wedInfo.getHeight()) {
@@ -797,7 +801,7 @@ public class TisConvert {
       }
 
       // processing secondary tiles not covered by previous operations
-      final TileMap mapAll = new TileMap(wedInfo);
+      final TileMap mapAll = new TileMap(wedInfo, tileSize);
       for (int i = 0, count = wedInfo.getTileCount(); i < count; i++) {
         final TileInfo ti = wedInfo.getTile(i);
         if (ti.tileSecondary >= 0 && !markedTiles.get(ti.tileSecondary)) {
@@ -957,7 +961,7 @@ public class TisConvert {
     decoder2.getTilePalette(tileIndex, pal, true);
 
     // loading raw tile data
-    final byte[] tileData = new byte[Config.TILE_SIZE * Config.TILE_SIZE];
+    final byte[] tileData = new byte[decoder.getTileWidth() * decoder.getTileHeight()];
     decoder2.getRawTileData(tileIndex, tileData);
 
     // checking whether tile consists of solid color
@@ -1003,6 +1007,7 @@ public class TisConvert {
     final int height = wedInfo.getHeight();
     final int textureSize = config.getTextureSize();
     final int borderSize = config.getBorderSize();
+    final int tileSize = config.getTileSize();
     final Set<Point> locations = new HashSet<>(tileMap.getAllTilePositions(false));
     final Rectangle tileBounds = tileMap.getTileBounds(true);
 
@@ -1010,27 +1015,27 @@ public class TisConvert {
     int y0 = 0;
     final Rectangle regionBounds = new Rectangle(tileBounds.x + x0, tileBounds.y + y0, 0, 0);
     while (x0 < tileBounds.width && y0 < tileBounds.height) {
-      final TileMap tm = new TileMap(wedInfo);
+      final TileMap tm = new TileMap(wedInfo, tileSize);
 
       // calculating horizontal tile map size
       int borderLeft = (tileBounds.x + x0 > 0) ? borderSize : 0;
-      int numTilesX = Math.min(textureSize / Config.TILE_SIZE, tileBounds.width - x0);
-      while (numTilesX * Config.TILE_SIZE + borderLeft > textureSize) {
+      int numTilesX = Math.min(textureSize / tileSize, tileBounds.width - x0);
+      while (numTilesX * tileSize + borderLeft > textureSize) {
         numTilesX--;
       }
       int borderRight = (tileBounds.x + x0 + numTilesX < width) ? borderSize : 0;
-      while (numTilesX * Config.TILE_SIZE + borderLeft + borderRight > textureSize) {
+      while (numTilesX * tileSize + borderLeft + borderRight > textureSize) {
         numTilesX--;
       }
 
       // calculating vertical tile map size
       int borderTop = (tileBounds.y + y0 > 0) ? borderSize : 0;
-      int numTilesY = Math.min(textureSize / Config.TILE_SIZE, tileBounds.height - y0);
-      while (numTilesY * Config.TILE_SIZE + borderTop > textureSize) {
+      int numTilesY = Math.min(textureSize / tileSize, tileBounds.height - y0);
+      while (numTilesY * tileSize + borderTop > textureSize) {
         numTilesY--;
       }
       int borderBottom = (tileBounds.y + y0 + numTilesY < height) ? borderSize : 0;
-      while (numTilesY * Config.TILE_SIZE + borderTop + borderBottom > textureSize) {
+      while (numTilesY * tileSize + borderTop + borderBottom > textureSize) {
         numTilesY--;
       }
 
@@ -1235,7 +1240,8 @@ public class TisConvert {
     Objects.requireNonNull(config, "Configuration instance is null");
     Objects.requireNonNull(pvrzFile, "PVRZ file path is null");
     Objects.requireNonNull(tileMaps, "Tile map list is null");
-    if (width < 64 || height < 64 || width > 1024 || height > 1024) {
+    if (width < config.getTileSize() || height < config.getTileSize() ||
+        width > config.getMaxTextureSize() || height > config.getMaxTextureSize()) {
       throw new IllegalArgumentException("Unsupported texture size (width=" + width + ", height=" + height + ")");
     }
     if (tileMaps.isEmpty()) {
@@ -1310,7 +1316,8 @@ public class TisConvert {
       conversionMode = OverlayConversion.NONE;
     }
 
-    BufferedImage tileImg = ColorConvert.createCompatibleImage(Config.TILE_SIZE, Config.TILE_SIZE, true);
+    final int tileSize = config.getTileSize();
+    BufferedImage tileImg = ColorConvert.createCompatibleImage(tileSize, tileSize, true);
     final List<Point> locations = tileMap.getAllTilePositions(false);
     for (final Point p : locations) {
       final TileMapItem tmi = tileMap.getTile(p);
@@ -1339,32 +1346,32 @@ public class TisConvert {
           final int x1, y1, x2, y2;
           switch (flag) {
             case TileMapItem.FLAG_TOP:          // rendering only top rows of pixels
-              x1 = 0; y1 = 0; x2 = Config.TILE_SIZE; y2 = borderSize;
+              x1 = 0; y1 = 0; x2 = tileSize; y2 = borderSize;
               break;
             case TileMapItem.FLAG_BOTTOM:       // rendering only bottom rows of pixels
-              x1 = 0; y1 = Config.TILE_SIZE - borderSize; x2 = Config.TILE_SIZE; y2 = Config.TILE_SIZE;
+              x1 = 0; y1 = tileSize - borderSize; x2 = tileSize; y2 = tileSize;
               break;
             case TileMapItem.FLAG_LEFT:         // rendering only left columns of pixels
-              x1 = 0; y1 = 0; x2 = borderSize; y2 = Config.TILE_SIZE;
+              x1 = 0; y1 = 0; x2 = borderSize; y2 = tileSize;
               break;
             case TileMapItem.FLAG_RIGHT:        // rendering only right columns of pixels
-              x1 = Config.TILE_SIZE - borderSize; y1 = 0; x2 = Config.TILE_SIZE; y2 = Config.TILE_SIZE;
+              x1 = tileSize - borderSize; y1 = 0; x2 = tileSize; y2 = tileSize;
               break;
             case TileMapItem.FLAG_TOP_LEFT:     // rendering only top left rectangle of pixels
               x1 = 0; y1 = 0; x2 = borderSize; y2 = borderSize;
               break;
             case TileMapItem.FLAG_TOP_RIGHT:    // rendering only top right rectangle of pixels
-              x1 = Config.TILE_SIZE - borderSize; y1 = 0; x2 = Config.TILE_SIZE; y2 = borderSize;
+              x1 = tileSize - borderSize; y1 = 0; x2 = tileSize; y2 = borderSize;
               break;
             case TileMapItem.FLAG_BOTTOM_LEFT:  // rendering only bottom left rectangle of pixels
-              x1 = 0; y1 = Config.TILE_SIZE - borderSize; x2 = borderSize; y2 = Config.TILE_SIZE;
+              x1 = 0; y1 = tileSize - borderSize; x2 = borderSize; y2 = tileSize;
               break;
             case TileMapItem.FLAG_BOTTOM_RIGHT: // rendering only bottom right rectangle of pixels
-              x1 = Config.TILE_SIZE - borderSize; y1 = Config.TILE_SIZE - borderSize;
-              x2 = Config.TILE_SIZE; y2 = Config.TILE_SIZE;
+              x1 = tileSize - borderSize; y1 = tileSize - borderSize;
+              x2 = tileSize; y2 = tileSize;
               break;
             case TileMapItem.FLAG_ALL:          // rendering full tile
-              x1 = 0; y1 = 0; x2 = Config.TILE_SIZE; y2 = Config.TILE_SIZE;
+              x1 = 0; y1 = 0; x2 = tileSize; y2 = tileSize;
               break;
             default:                            // just added for completeness
               x1 = y1 = x2 = y2 = 0;
@@ -1397,7 +1404,7 @@ public class TisConvert {
       DynamicArray.putInt(header, 0x08, config.getDecoder().getTileCount());
       DynamicArray.putInt(header, 0x0c, 0x0c);
       DynamicArray.putInt(header, 0x10, 0x18);
-      DynamicArray.putInt(header, 0x14, 0x40);
+      DynamicArray.putInt(header, 0x14, config.getTileSize());
       bos.write(header);
 
       final TileEntry defEntry = new TileEntry(-1, -1, 0, 0);
@@ -1488,7 +1495,7 @@ public class TisConvert {
     // performing overlay conversion
     if (isPrimary) {
       // removing all pixels on primary tile that are transparent on secondary tile
-      for (int idx = 0, size = Config.TILE_SIZE * Config.TILE_SIZE; idx < size; idx++) {
+      for (int idx = 0, size = decoder.getTileWidth() * decoder.getTileHeight(); idx < size; idx++) {
         if ((secData[idx] & ColorConvert.ALPHA_MASK) == 0) {
           priData[idx] = 0;
         }
@@ -1496,7 +1503,7 @@ public class TisConvert {
     } else {
       // replacing transparent pixels on secondary tile with pixels from primary tile
       // removing all opaque pixels on secondary tile
-      for (int idx = 0, size = Config.TILE_SIZE * Config.TILE_SIZE; idx < size; idx++) {
+      for (int idx = 0, size = decoder.getTileWidth() * decoder.getTileHeight(); idx < size; idx++) {
         secData[idx] = ((secData[idx] & ColorConvert.ALPHA_MASK) == 0) ? priData[idx] : 0;
       }
     }
@@ -1534,7 +1541,7 @@ public class TisConvert {
     // performing overlay conversion
     if (isPrimary) {
       // replacing transparent pixels on primary tile with pixels from secondary tile
-      for (int idx = 0, size = Config.TILE_SIZE * Config.TILE_SIZE; idx < size; idx++) {
+      for (int idx = 0, size = decoder.getTileWidth() * decoder.getTileHeight(); idx < size; idx++) {
         if ((priData[idx] & ColorConvert.ALPHA_MASK) == 0) {
           priData[idx] = secData[idx];
         }
@@ -1542,7 +1549,7 @@ public class TisConvert {
     } else {
       // replacing transparent pixels on secondary tile with pixels from primary tile
       // removing all opaque pixels on secondary tile;
-      for (int idx = 0, size = Config.TILE_SIZE * Config.TILE_SIZE; idx < size; idx++) {
+      for (int idx = 0, size = decoder.getTileWidth() * decoder.getTileHeight(); idx < size; idx++) {
         secData[idx] = ((secData[idx] & ColorConvert.ALPHA_MASK) == 0) ? priData[idx] : 0;
       }
     }
@@ -1624,9 +1631,6 @@ public class TisConvert {
    * This class stores global parameters for the tileset conversion operation.
    */
   public static class Config {
-    /** Size of a single tile, in pixels. */
-    public static final int TILE_SIZE = 64;
-
     /** Max. supported texture size, in pixels. */
     public static final int MAX_TEXTURE_SIZE = 1024;
 
@@ -1741,9 +1745,9 @@ public class TisConvert {
       }
       this.defaultTilesPerRow = Math.max(1, Math.min(this.decoder.getTileCount(), defaultTilesPerRow));
       setDefaultRowCount(defaultRowCount);
-      this.textureSize = ensureBinarySize(Math.max(TILE_SIZE, Math.min(MAX_TEXTURE_SIZE, textureSize)));
+      this.textureSize = ensureBinarySize(Math.max(getTileSize(), Math.min(MAX_TEXTURE_SIZE, textureSize)));
       setPvrzBaseIndex(pvrzBaseIndex);
-      this.borderSize = Math.max(0, Math.min(TILE_SIZE, borderSize));
+      this.borderSize = Math.max(0, Math.min(getTileSize(), borderSize));
       setSegmentSize(segmentSize);
       this.detectBlack = detectBlack;
       this.multithreaded = multithreaded;
@@ -1787,6 +1791,11 @@ public class TisConvert {
     /** Returns the assigned {@link TisDecoder} instance. */
     public TisDecoder getDecoder() {
       return decoder;
+    }
+
+    /** Returns the tile dimension obtained from the input TIS header. */
+    public int getTileSize() {
+      return decoder.getTileWidth();
     }
 
     /**
@@ -1847,7 +1856,7 @@ public class TisConvert {
      * conversion.
      */
     public Config setTextureSize(int textureSize) {
-      this.textureSize = ensureBinarySize(Math.max(TILE_SIZE, Math.min(MAX_TEXTURE_SIZE, textureSize)));
+      this.textureSize = ensureBinarySize(Math.max(getTileSize(), Math.min(getMaxTextureSize(), textureSize)));
       return this;
     }
 
@@ -1877,7 +1886,7 @@ public class TisConvert {
      * Palette->PVRZ conversion.
      */
     public Config setBorderSize(int borderSize) {
-      this.borderSize = Math.max(0, Math.min(TILE_SIZE, borderSize));
+      this.borderSize = Math.max(0, Math.min(getTileSize(), borderSize));
       setSegmentSize(getSegmentSize()); // segment size may change
       return this;
     }
@@ -1889,8 +1898,8 @@ public class TisConvert {
 
     /** Sets the max. size of contiguous tile segments, in pixels. */
     public Config setSegmentSize(int segmentSize) {
-      final int minSize = TILE_SIZE + getBorderSize() * 2;
-      this.segmentSize = Math.max(minSize, Math.min(MAX_TEXTURE_SIZE, segmentSize));
+      final int minSize = getTileSize() + getBorderSize() * 2;
+      this.segmentSize = Math.max(minSize, Math.min(getMaxTextureSize(), segmentSize));
       return this;
     }
 
@@ -2789,14 +2798,16 @@ public class TisConvert {
 //        new TreeMap<>((p1, p2) -> (p1.y < p2.y) ? -1 : ((p1.y > p2.y) ? 1 : (p1.x - p2.x)));
     private final Rectangle pageRect = new Rectangle();
     private final WedInfo wedInfo;
+    private final int tileSize;
 
     private int pageIndex;
 
     private Rectangle bounds;
     private int boundsHash;
 
-    public TileMap(WedInfo wedInfo) {
+    public TileMap(WedInfo wedInfo, int tileSize) {
       this.wedInfo = wedInfo;
+      this.tileSize = Math.max(1, tileSize);
       this.pageIndex = -1;
     }
 
@@ -2903,7 +2914,6 @@ public class TisConvert {
      * @return Bounding {@link Rectangle} of the tile map, in pixels.
      */
     public Rectangle getPixelBounds(int borderSize) {
-      final int tileSize = 64;
       borderSize = Math.min(tileSize, Math.max(0, borderSize));
 
       final Rectangle retVal = new Rectangle();
@@ -3091,7 +3101,6 @@ public class TisConvert {
       this.pageRect.width = pageRect.width;
       this.pageRect.height = pageRect.height;
 
-      final int tileSize = 64;
       final Rectangle tileRect = getTileBounds(false);
       final int xOfs = hasLeftBorder() ? borderSize - tileSize : 0;
       final int yOfs = hasTopBorder() ? borderSize - tileSize : 0;
@@ -3203,7 +3212,7 @@ public class TisConvert {
       }
 
       if (tileMap == null) {
-        tileMap = new TileMap(getWedInfo());
+        tileMap = new TileMap(getWedInfo(), tileSize);
       }
 
       if (locations.contains(p)) {
