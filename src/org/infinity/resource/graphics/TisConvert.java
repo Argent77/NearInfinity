@@ -230,13 +230,27 @@ public class TisConvert {
         progress.setProgress(0);
       }
 
-      image = ColorConvert.createCompatibleImage(tileCols * 64, tileRows * 64, Transparency.BITMASK);
+      final Image referenceTile = tiles.stream().filter(Objects::nonNull).findFirst().orElse(null);
+      if (referenceTile == null) {
+        return retVal;
+      }
+      final int tileWidth = referenceTile.getWidth(null);
+      final int tileHeight = referenceTile.getHeight(null);
+      if (tileWidth <= 0 || tileHeight <= 0) {
+        return retVal;
+      }
+      final boolean dimensionsValid = tiles.stream().filter(Objects::nonNull)
+          .allMatch(tile -> tile.getWidth(null) == tileWidth && tile.getHeight(null) == tileHeight);
+      if (!dimensionsValid) {
+        return retVal;
+      }
+      image = ColorConvert.createCompatibleImage(tileCols * tileWidth, tileRows * tileHeight, Transparency.BITMASK);
       Graphics2D g = image.createGraphics();
       for (int idx = 0; idx < tiles.size(); idx++) {
         if (tiles.get(idx) != null) {
           int tx = idx % tileCols;
           int ty = idx / tileCols;
-          g.drawImage(tiles.get(idx), tx * 64, ty * 64, null);
+          g.drawImage(tiles.get(idx), tx * tileWidth, ty * tileHeight, null);
         }
       }
       g.dispose();

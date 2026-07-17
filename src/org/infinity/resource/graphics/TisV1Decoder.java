@@ -13,7 +13,6 @@ import java.awt.image.DataBufferInt;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
-import org.infinity.resource.key.BIFFResourceEntry;
 import org.infinity.resource.key.ResourceEntry;
 import org.infinity.util.Logger;
 
@@ -26,6 +25,7 @@ public class TisV1Decoder extends TisDecoder {
   private ByteBuffer tisBuffer;
   private int tileCount;
   private int tileSize;
+  private int tileDimension;
   private int[] workingPalette;
   private BufferedImage workingCanvas;
 
@@ -88,7 +88,7 @@ public class TisV1Decoder extends TisDecoder {
    */
   public byte[] getRawTileData(int tileIdx) {
     if (tileIdx >= 0 && tileIdx < getTileCount()) {
-      byte[] buffer = new byte[TILE_DIMENSION * TILE_DIMENSION];
+      byte[] buffer = new byte[tileDimension * tileDimension];
       getRawTileData(tileIdx, buffer);
       return buffer;
     } else {
@@ -106,7 +106,7 @@ public class TisV1Decoder extends TisDecoder {
     if (buffer != null) {
       int ofs = getTileOffset(tileIdx);
       if (ofs > 0) {
-        int maxSize = Math.min(buffer.length, TILE_DIMENSION * TILE_DIMENSION);
+        int maxSize = Math.min(buffer.length, tileDimension * tileDimension);
         ofs += 4 * 256; // skipping palette data
         tisBuffer.position(ofs);
         tisBuffer.get(buffer, 0, maxSize);
@@ -119,6 +119,7 @@ public class TisV1Decoder extends TisDecoder {
     tisBuffer = null;
     tileCount = 0;
     tileSize = 0;
+    tileDimension = 0;
     workingPalette = null;
     if (workingCanvas != null) {
       workingCanvas.flush();
@@ -138,12 +139,12 @@ public class TisV1Decoder extends TisDecoder {
 
   @Override
   public int getTileWidth() {
-    return TILE_DIMENSION;
+    return tileDimension;
   }
 
   @Override
   public int getTileHeight() {
-    return TILE_DIMENSION;
+    return tileDimension;
   }
 
   @Override
@@ -153,7 +154,7 @@ public class TisV1Decoder extends TisDecoder {
 
   @Override
   public Image getTile(int tileIdx) {
-    BufferedImage image = ColorConvert.createCompatibleImage(TILE_DIMENSION, TILE_DIMENSION, true);
+    BufferedImage image = ColorConvert.createCompatibleImage(tileDimension, tileDimension, true);
     renderTile(tileIdx, image);
     return image;
   }
@@ -165,7 +166,7 @@ public class TisV1Decoder extends TisDecoder {
 
   @Override
   public int[] getTileData(int tileIdx) {
-    int[] buffer = new int[TILE_DIMENSION * TILE_DIMENSION];
+    int[] buffer = new int[tileDimension * tileDimension];
     renderTile(tileIdx, buffer);
     return buffer;
   }
@@ -180,26 +181,20 @@ public class TisV1Decoder extends TisDecoder {
 
     if (getResourceEntry() != null) {
       try {
-        final boolean ignoreOverride = getResourceEntry() instanceof BIFFResourceEntry;
-        int[] info = getResourceEntry().getResourceInfo(ignoreOverride);
-        if (info == null || info.length < 2) {
+        final TisInfo info = TisDecoder.getInfo(getResourceEntry());
+        if (info == null || info.type != Type.PALETTE) {
           throw new Exception("Error reading TIS header");
         }
 
-        tileCount = info[0];
-        if (tileCount <= 0) {
-          throw new Exception("Invalid tile count: " + tileCount);
-        }
-        tileSize = info[1];
-        if (tileSize != 1024 + TILE_DIMENSION * TILE_DIMENSION) {
-          throw new Exception("Invalid tile size: " + tileSize);
-        }
+        tileCount = info.numTiles;
+        tileSize = info.tileSize;
+        tileDimension = info.tileDimension;
         tisBuffer = getResourceEntry().getResourceBuffer();
 
         setType(Type.PALETTE);
 
         workingPalette = new int[256];
-        workingCanvas = new BufferedImage(TILE_DIMENSION, TILE_DIMENSION, Transparency.BITMASK);
+        workingCanvas = new BufferedImage(tileDimension, tileDimension, Transparency.BITMASK);
       } catch (Exception e) {
         Logger.error(e);
         close();
@@ -218,7 +213,7 @@ public class TisV1Decoder extends TisDecoder {
 
   // Paints the specified tile onto the canvas
   private boolean renderTile(int tileIdx, Image canvas) {
-    if (canvas != null && canvas.getWidth(null) >= TILE_DIMENSION && canvas.getHeight(null) >= TILE_DIMENSION) {
+    if (canvas != null && canvas.getWidth(null) >= tileDimension && canvas.getHeight(null) >= tileDimension) {
       int[] buffer = ((DataBufferInt) workingCanvas.getRaster().getDataBuffer()).getData();
       if (renderTile(tileIdx, buffer)) {
         buffer = null;
@@ -226,7 +221,7 @@ public class TisV1Decoder extends TisDecoder {
         try {
           g.setComposite(AlphaComposite.Src);
           g.setColor(ColorConvert.TRANSPARENT_COLOR);
-          g.fillRect(0, 0, TILE_DIMENSION, TILE_DIMENSION);
+          g.fillRect(0, 0, tileDimension, tileDimension);
           g.drawImage(workingCanvas, 0, 0, null);
         } finally {
           g.dispose();
@@ -241,7 +236,7 @@ public class TisV1Decoder extends TisDecoder {
 
   // Writes the specified tile data into the buffer
   private boolean renderTile(int tileIdx, int[] buffer) {
-    int size = TILE_DIMENSION * TILE_DIMENSION;
+    int size = tileDimension * tileDimension;
     if (buffer != null && buffer.length >= size) {
       int ofs = getTileOffset(tileIdx);
       if (ofs > 0) {
@@ -260,7 +255,7 @@ public class TisV1Decoder extends TisDecoder {
   public int hashCode() {
     final int prime = 31;
     int result = super.hashCode();
-    result = prime * result + Objects.hash(tileCount, tileSize, tisBuffer);
+    result = prime * result + Objects.hash(tileCount, tileSize, tileDimension, tisBuffer);
     return result;
   }
 
@@ -276,12 +271,13 @@ public class TisV1Decoder extends TisDecoder {
       return false;
     }
     TisV1Decoder other = (TisV1Decoder)obj;
-    return tileCount == other.tileCount && tileSize == other.tileSize && Objects.equals(tisBuffer, other.tisBuffer);
+    return tileCount == other.tileCount && tileSize == other.tileSize && tileDimension == other.tileDimension
+        && Objects.equals(tisBuffer, other.tisBuffer);
   }
 
   @Override
   public String toString() {
     return "TisV1Decoder [type=" + getType() + ", tisEntry=" + getResourceEntry() + ", tileCount=" + tileCount
-        + ", tileSize=" + tileSize + "]";
+        + ", tileSize=" + tileSize + ", tileDimension=" + tileDimension + "]";
   }
 }

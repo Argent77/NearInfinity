@@ -27,6 +27,8 @@ import javax.swing.event.DocumentListener;
 
 import org.infinity.gui.ViewerUtil;
 import org.infinity.gui.converter.AbstractConvertPanel;
+import org.infinity.gui.converter.PanelUpdateEvent;
+import org.infinity.resource.graphics.TisDecoder;
 import org.infinity.util.Misc;
 
 /** Subpanel with TIS-specific options. */
@@ -57,7 +59,7 @@ class TisOptionsPanel extends AbstractConvertPanel
   private static final String TIS_VERSION_HELP =
         '"' + TisVersion.LEGACY.toString() + "\" is the original tileset format supported by all available\n"
       + "Infinity Engine games. Graphics data is stored in the TIS file directly.\n"
-      + "Each tile (64x64 pixel block) is limited to a 256 color table.\n"
+      + "Each tile is limited to a 256 color table.\n"
       + "Note: This format may produce visual artifacts in Enhanced Edition games.\n\n"
       + '"' + TisVersion.PVRZ.toString() + "\" uses a new tileset format that is only compatible with the\n"
       + "Enhanced Editions. Graphics data is stored separately in PVRZ files and is\n"
@@ -65,6 +67,7 @@ class TisOptionsPanel extends AbstractConvertPanel
 
   private JSlider slTileCount;
   private JTextField tfTileCount;
+  private JComboBox<Integer> cbTileDimension;
   private JComboBox<TisVersion> cbTisVersion;
   private JButton bTisVersionHelp;
 
@@ -108,6 +111,16 @@ class TisOptionsPanel extends AbstractConvertPanel
     slTileCount.setValue(newValue);
   }
 
+  /** Returns the selected width and height of a square tile, in pixels. */
+  public int getTileDimension() {
+    return (Integer)cbTileDimension.getSelectedItem();
+  }
+
+  /** Selects the width and height of a square tile, in pixels. */
+  public void setTileDimension(int tileDimension) {
+    cbTileDimension.setSelectedItem(tileDimension);
+  }
+
   /** Returns whether the legacy (palette-based) TIS version is selected. */
   public boolean isLegacyVersionSelected() {
     return cbTisVersion.getSelectedIndex() == 0;
@@ -123,6 +136,7 @@ class TisOptionsPanel extends AbstractConvertPanel
 
   /** Resets the panel to its initial state. */
   public void reset() {
+    setTileDimension(TisDecoder.DEFAULT_TILE_DIMENSION);
     setLegacyVersionSelected(true);
   }
 
@@ -133,6 +147,8 @@ class TisOptionsPanel extends AbstractConvertPanel
     if (e.getSource() == bTisVersionHelp) {
       JOptionPane.showMessageDialog(ViewerUtil.getWindowAncestor(this), TIS_VERSION_HELP, "About tileset versions",
           JOptionPane.INFORMATION_MESSAGE);
+    } else if (e.getSource() == cbTileDimension) {
+      firePanelUpdate(PanelUpdateEvent.REASON_UNKNOWN);
     }
   }
 
@@ -221,6 +237,11 @@ class TisOptionsPanel extends AbstractConvertPanel
     tfTileCount.getDocument().addDocumentListener(this);
     tfTileCount.addFocusListener(this);
 
+    final JLabel lTileDimension = new JLabel("Tile dimensions:");
+    cbTileDimension = new JComboBox<>(new Integer[] { 64, 128, 256, TisDecoder.MAX_TILE_DIMENSION });
+    cbTileDimension.setSelectedItem(TisDecoder.DEFAULT_TILE_DIMENSION);
+    cbTileDimension.addActionListener(this);
+
     final JLabel lTisVersion = new JLabel("Tileset version:");
     cbTisVersion = new JComboBox<>(TisVersion.values());
     cbTisVersion.setSelectedIndex(0);
@@ -245,6 +266,15 @@ class TisOptionsPanel extends AbstractConvertPanel
         new Insets(0, 8, 0, 0), 0, 0);
     panelTileCount.add(tfTileCount, c);
 
+    // Subpanel for tile dimensions
+    final JPanel panelTileDimension = new JPanel(new GridBagLayout());
+    ViewerUtil.setGBC(c, 0, 0, 1, 1, 0.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
+        new Insets(0, 0, 0, 0), 0, 0);
+    panelTileDimension.add(lTileDimension, c);
+    ViewerUtil.setGBC(c, 1, 0, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
+        new Insets(0, 8, 0, 0), 0, 0);
+    panelTileDimension.add(cbTileDimension, c);
+
     // Subpanel for tileset version
     final JPanel panelTisVersion = new JPanel(new GridBagLayout());
     ViewerUtil.setGBC(c, 0, 0, 1, 1, 0.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
@@ -262,6 +292,9 @@ class TisOptionsPanel extends AbstractConvertPanel
         new Insets(0, 0, 0, 0), 0, 0);
     add(panelTileCount, c);
     ViewerUtil.setGBC(c, 0, 1, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.HORIZONTAL,
+        new Insets(8, 0, 0, 0), 0, 0);
+    add(panelTileDimension, c);
+    ViewerUtil.setGBC(c, 0, 2, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.HORIZONTAL,
         new Insets(8, 0, 0, 0), 0, 0);
     add(panelTisVersion, c);
 

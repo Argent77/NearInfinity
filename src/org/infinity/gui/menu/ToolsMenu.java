@@ -45,6 +45,7 @@ import org.infinity.gui.converter.bmp.ConvertToBmp;
 import org.infinity.gui.converter.mos.ConvertToMos;
 import org.infinity.gui.converter.pvrz.ConvertToPvrz;
 import org.infinity.gui.converter.tis.ConvertToTis;
+import org.infinity.gui.converter.tis.ConvertToTisBatch;
 import org.infinity.icon.Icons;
 import org.infinity.resource.Profile;
 import org.infinity.resource.ResourceFactory;
@@ -90,6 +91,7 @@ public class ToolsMenu extends JMenu implements BrowserSubMenu, ActionListener {
   private final JMenuItem toolConvImageToBmp;
   private final JMenuItem toolConvImageToMos;
   private final JMenuItem toolConvImageToTis;
+  private final JMenuItem toolConvImagesToTis;
   private final JMenuItem toolConvImageToPvrz;
 
   private final JCheckBoxMenuItem toolConsole;
@@ -228,6 +230,10 @@ public class ToolsMenu extends JMenu implements BrowserSubMenu, ActionListener {
     toolConvImageToTis = BrowserMenuBar.makeMenuItem("Image to TIS...", KeyEvent.VK_T,
         Icons.ICON_APPLICATION_16.getIcon(), -1, this);
     convertMenu.add(toolConvImageToTis);
+
+    toolConvImagesToTis = BrowserMenuBar.makeMenuItem("Batch images to TIS...", KeyEvent.VK_I,
+        Icons.ICON_APPLICATION_16.getIcon(), -1, this);
+    convertMenu.add(toolConvImagesToTis);
     // *** End Convert submenu ***
 
     addSeparator();
@@ -397,6 +403,8 @@ public class ToolsMenu extends JMenu implements BrowserSubMenu, ActionListener {
       ChildFrame.show(ConvertToPvrz.class, ConvertToPvrz::new);
     } else if (event.getSource() == toolConvImageToTis) {
       ChildFrame.show(ConvertToTis.class, ConvertToTis::new);
+    } else if (event.getSource() == toolConvImagesToTis) {
+      ChildFrame.show(ConvertToTisBatch.class, ConvertToTisBatch::new);
     } else if (event.getSource() == toolConvImageToMos) {
       ChildFrame.show(ConvertToMos.class, ConvertToMos::new);
     } else if (event.getSource() == toolConvImageToBmp) {

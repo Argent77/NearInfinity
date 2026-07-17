@@ -23,7 +23,10 @@ public abstract class TisDecoder {
     INVALID, PALETTE, PVRZ
   }
 
-  protected static final int TILE_DIMENSION = 64; // default width and height of a tile
+  /** Default width and height of a tile, in pixels. */
+  public static final int DEFAULT_TILE_DIMENSION = 64;
+  /** Maximum supported width and height of a tile, in pixels. */
+  public static final int MAX_TILE_DIMENSION = 512;
 
   private final ResourceEntry tisEntry;
 
@@ -42,26 +45,8 @@ public abstract class TisDecoder {
    * @return One of the TIS {@code Type}s.
    */
   public static Type getType(ResourceEntry tisEntry) {
-    Type retVal = Type.INVALID;
-    if (tisEntry != null) {
-      try {
-        final boolean ignoreOverride = tisEntry instanceof BIFFResourceEntry;
-        int[] info = tisEntry.getResourceInfo(ignoreOverride);
-        if (info != null && info.length > 1) {
-          if (info[0] > 0 && info[1] > 0) {
-            int sizeV1 = 1024 + TILE_DIMENSION * TILE_DIMENSION;
-            if (sizeV1 == info[1]) {
-              retVal = Type.PALETTE;
-            } else if (info[1] == 12) {
-              retVal = Type.PVRZ;
-            }
-          }
-        }
-      } catch (Exception e) {
-        Logger.error(e);
-      }
-    }
-    return retVal;
+    final TisInfo info = getInfo(tisEntry);
+    return (info != null) ? info.type : Type.INVALID;
   }
 
   /**
@@ -85,7 +70,10 @@ public abstract class TisDecoder {
           int tileSize = StreamUtils.readInt(is);
           is.skip(4); // tile data offset
           int tileDim = StreamUtils.readInt(is);
-          retVal = new TisInfo(numTiles, tileSize, tileDim);
+          final TisInfo info = new TisInfo(numTiles, tileSize, tileDim);
+          if (info.isValid()) {
+            retVal = info;
+          }
         }
       } catch (Exception e) {
         Logger.error(e);
@@ -202,18 +190,34 @@ public abstract class TisDecoder {
     public final Type type;
     /** Number of tiles stored in the TIS file. */
     public final int numTiles;
-    /** Dimension of a TIS tile, in pixels (always 64). */
+    /** Size of a TIS tile record, in bytes. */
+    public final int tileSize;
+    /** Dimension of a square TIS tile, in pixels. */
     public final int tileDimension;
 
     public TisInfo(int numTiles, int tileSize, int tileDim) {
-      this.type = tileSize == 0x0c ? Type.PVRZ : Type.PALETTE;
+      final long paletteTileSize = 1024L + (long)tileDim * tileDim;
+      if (tileSize == 0x0c) {
+        this.type = Type.PVRZ;
+      } else if (tileSize == paletteTileSize) {
+        this.type = Type.PALETTE;
+      } else {
+        this.type = Type.INVALID;
+      }
       this.numTiles = numTiles;
+      this.tileSize = tileSize;
       this.tileDimension = tileDim;
+    }
+
+    /** Returns whether all required header values are valid and mutually consistent. */
+    public boolean isValid() {
+      return type != Type.INVALID && numTiles > 0 && tileDimension > 0 && tileDimension <= MAX_TILE_DIMENSION
+          && (tileDimension & (tileDimension - 1)) == 0;
     }
 
     /** Returns the tile size, in bytes, for the current TIS file. */
     public int getTileSize() {
-      return type == Type.PVRZ ? 0x0c : 0x1400;
+      return tileSize;
     }
   }
 }
