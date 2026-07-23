@@ -2,7 +2,7 @@ name: Java CI with Apache Ant
 
 on:
   push:
-    branches: [ fork-nightly ]
+    branches: [ devel ]
 
 jobs:
   build:
@@ -21,7 +21,7 @@ jobs:
           sed -i 's/debug="false"/debug="true"/' build.xml
           ant -noinput -buildfile build.xml
       - name: Upload artifact
-        if: ${{ github.repository == 'TheForgotten69/NearInfinity' }}
+        if: ${{ github.repository == 'Argent77/NearInfinity' }}
         uses: pyTooling/Actions/releaser@r2
         with:
           tag: nightly
