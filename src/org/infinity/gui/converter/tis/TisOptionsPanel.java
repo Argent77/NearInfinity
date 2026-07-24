@@ -56,7 +56,14 @@ class TisOptionsPanel extends AbstractConvertPanel
     }
   }
 
-  private static final String TIS_VERSION_HELP =
+  static final String TILE_DIMENSION_HELP =
+        TisDecoder.DEFAULT_TILE_DIMENSION + "x" + TisDecoder.DEFAULT_TILE_DIMENSION
+      + " pixels is the standard tile dimension supported by unmodified game executables.\n\n"
+      + "Nonstandard tile dimensions require:";
+  private static final String TILE_DIMENSION_HELP_URL =
+      "https://github.com/TheForgotten69/InfinityEngine-Enhancer";
+
+  static final String TIS_VERSION_HELP =
         '"' + TisVersion.LEGACY.toString() + "\" is the original tileset format supported by all available\n"
       + "Infinity Engine games. Graphics data is stored in the TIS file directly.\n"
       + "Each tile is limited to a 256 color table.\n"
@@ -68,6 +75,7 @@ class TisOptionsPanel extends AbstractConvertPanel
   private JSlider slTileCount;
   private JTextField tfTileCount;
   private JComboBox<Integer> cbTileDimension;
+  private JButton bTileDimensionHelp;
   private JComboBox<TisVersion> cbTisVersion;
   private JButton bTisVersionHelp;
 
@@ -144,7 +152,10 @@ class TisOptionsPanel extends AbstractConvertPanel
 
   @Override
   public void actionPerformed(ActionEvent e) {
-    if (e.getSource() == bTisVersionHelp) {
+    if (e.getSource() == bTileDimensionHelp) {
+      JOptionPane.showMessageDialog(ViewerUtil.getWindowAncestor(this), createTileDimensionHelpMessage(),
+          "About tile dimensions", JOptionPane.INFORMATION_MESSAGE);
+    } else if (e.getSource() == bTisVersionHelp) {
       JOptionPane.showMessageDialog(ViewerUtil.getWindowAncestor(this), TIS_VERSION_HELP, "About tileset versions",
           JOptionPane.INFORMATION_MESSAGE);
     } else if (e.getSource() == cbTileDimension) {
@@ -241,16 +252,14 @@ class TisOptionsPanel extends AbstractConvertPanel
     cbTileDimension = new JComboBox<>(new Integer[] { 64, 128, 256, TisDecoder.MAX_TILE_DIMENSION });
     cbTileDimension.setSelectedItem(TisDecoder.DEFAULT_TILE_DIMENSION);
     cbTileDimension.addActionListener(this);
+    bTileDimensionHelp = createHelpButton("About tile dimensions...");
+    bTileDimensionHelp.addActionListener(this);
 
     final JLabel lTisVersion = new JLabel("Tileset version:");
     cbTisVersion = new JComboBox<>(TisVersion.values());
     cbTisVersion.setSelectedIndex(0);
-    bTisVersionHelp = new JButton("?");
-    bTisVersionHelp.setToolTipText("About tileset versions...");
+    bTisVersionHelp = createHelpButton("About tileset versions...");
     bTisVersionHelp.addActionListener(this);
-    final Insets insets = bTisVersionHelp.getMargin();
-    insets.left = insets.right = 4;
-    bTisVersionHelp.setMargin(insets);
 
     final GridBagConstraints c = new GridBagConstraints();
 
@@ -271,9 +280,12 @@ class TisOptionsPanel extends AbstractConvertPanel
     ViewerUtil.setGBC(c, 0, 0, 1, 1, 0.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
         new Insets(0, 0, 0, 0), 0, 0);
     panelTileDimension.add(lTileDimension, c);
-    ViewerUtil.setGBC(c, 1, 0, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
+    ViewerUtil.setGBC(c, 1, 0, 1, 1, 0.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
         new Insets(0, 8, 0, 0), 0, 0);
     panelTileDimension.add(cbTileDimension, c);
+    ViewerUtil.setGBC(c, 2, 0, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
+        new Insets(0, 8, 0, 0), 0, 0);
+    panelTileDimension.add(bTileDimensionHelp, c);
 
     // Subpanel for tileset version
     final JPanel panelTisVersion = new JPanel(new GridBagLayout());
@@ -314,5 +326,21 @@ class TisOptionsPanel extends AbstractConvertPanel
       }
     }
     return retVal;
+  }
+
+  static JButton createHelpButton(String toolTipText) {
+    final JButton button = new JButton("?");
+    button.setToolTipText(toolTipText);
+    final Insets insets = button.getMargin();
+    insets.left = insets.right = 4;
+    button.setMargin(insets);
+    return button;
+  }
+
+  static Object[] createTileDimensionHelpMessage() {
+    return new Object[] {
+        TILE_DIMENSION_HELP,
+        ViewerUtil.createUrlLabel("Infinity Engine Enhancer", TILE_DIMENSION_HELP_URL),
+    };
   }
 }
