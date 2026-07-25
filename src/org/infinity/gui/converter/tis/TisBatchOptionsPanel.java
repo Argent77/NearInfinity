@@ -12,6 +12,7 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 
 import org.infinity.gui.ViewerUtil;
 import org.infinity.gui.converter.AbstractConvertPanel;
@@ -55,24 +56,34 @@ class TisBatchOptionsPanel extends AbstractConvertPanel {
     bTisVersionHelp.addActionListener(e -> JOptionPane.showMessageDialog(ViewerUtil.getWindowAncestor(this),
         TisOptionsPanel.TIS_VERSION_HELP, "About tileset versions", JOptionPane.INFORMATION_MESSAGE));
 
+    final JPanel dimPanel = new JPanel(new GridBagLayout());
+    ViewerUtil.setGBC(c, 0, 0, 1, 1, 0.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
+        new Insets(0, 0, 0, 0), 0, 0);
+    dimPanel.add(cbTileDimension, c);
+    ViewerUtil.setGBC(c, 1, 0, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
+        new Insets(0, 8, 0, 0), 0, 0);
+    dimPanel.add(bTileDimensionHelp, c);
+
+    final JPanel versionPanel = new JPanel(new GridBagLayout());
+    ViewerUtil.setGBC(c, 0, 0, 1, 1, 0.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
+        new Insets(0, 0, 0, 0), 0, 0);
+    versionPanel.add(cbTisVersion, c);
+    ViewerUtil.setGBC(c, 1, 0, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
+        new Insets(0, 8, 0, 0), 0, 0);
+    versionPanel.add(bTisVersionHelp, c);
+
     ViewerUtil.setGBC(c, 0, 0, 1, 1, 0.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
         new Insets(0, 0, 0, 0), 0, 0);
     add(lTileDimension, c);
-    ViewerUtil.setGBC(c, 1, 0, 1, 1, 0.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
+    ViewerUtil.setGBC(c, 1, 0, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.HORIZONTAL,
         new Insets(0, 8, 0, 0), 0, 0);
-    add(cbTileDimension, c);
-    ViewerUtil.setGBC(c, 2, 0, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
-        new Insets(0, 8, 0, 0), 0, 0);
-    add(bTileDimensionHelp, c);
+    add(dimPanel, c);
     ViewerUtil.setGBC(c, 0, 1, 1, 1, 0.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
         new Insets(8, 0, 0, 0), 0, 0);
     add(lTisVersion, c);
-    ViewerUtil.setGBC(c, 1, 1, 1, 1, 0.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
+    ViewerUtil.setGBC(c, 1, 1, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.HORIZONTAL,
         new Insets(8, 8, 0, 0), 0, 0);
-    add(cbTisVersion, c);
-    ViewerUtil.setGBC(c, 2, 1, 1, 1, 1.0, 0.0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
-        new Insets(8, 8, 0, 0), 0, 0);
-    add(bTisVersionHelp, c);
+    add(versionPanel, c);
 
     reset();
   }

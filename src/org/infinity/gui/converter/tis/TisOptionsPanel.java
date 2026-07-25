@@ -58,7 +58,7 @@ class TisOptionsPanel extends AbstractConvertPanel
 
   static final String TILE_DIMENSION_HELP =
         TisDecoder.DEFAULT_TILE_DIMENSION + "x" + TisDecoder.DEFAULT_TILE_DIMENSION
-      + " pixels is the standard tile dimension supported by unmodified game executables.\n\n"
+      + " pixels is the standard tile dimension\nsupported by unmodified game executables.\n\n"
       + "Nonstandard tile dimensions require:";
   private static final String TILE_DIMENSION_HELP_URL =
       "https://github.com/TheForgotten69/InfinityEngine-Enhancer";
@@ -338,9 +338,8 @@ class TisOptionsPanel extends AbstractConvertPanel
   }
 
   static Object[] createTileDimensionHelpMessage() {
-    return new Object[] {
-        TILE_DIMENSION_HELP,
-        ViewerUtil.createUrlLabel("Infinity Engine Enhancer", TILE_DIMENSION_HELP_URL),
-    };
+    final JLabel urlLabel = ViewerUtil.createUrlLabel("Infinity Engine Enhancer", TILE_DIMENSION_HELP_URL);
+    urlLabel.setToolTipText(TILE_DIMENSION_HELP_URL);
+    return new Object[] { TILE_DIMENSION_HELP, urlLabel };
   }
 }
