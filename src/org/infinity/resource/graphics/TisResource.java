@@ -622,7 +622,8 @@ public class TisResource implements Resource, Closeable, Referenceable, ActionLi
         defaultWidth = TisConvert.calcTilesetWidth(wedEntry, false, tileCount);
         tileImages = new ArrayList<>(tileCount);
         for (int tileIdx = 0; tileIdx < tileCount; tileIdx++) {
-          BufferedImage image = ColorConvert.createCompatibleImage(64, 64, Transparency.BITMASK);
+          BufferedImage image = ColorConvert.createCompatibleImage(decoder.getTileWidth(), decoder.getTileHeight(),
+              Transparency.BITMASK);
           decoder.getTile(tileIdx, image);
           tileImages.add(image);
         }
@@ -868,7 +869,7 @@ public class TisResource implements Resource, Closeable, Referenceable, ActionLi
     public TisPreview(TisDecoder decoder, int tileSize, Color splitColor, Object renderingHints)
         throws Exception {
       this.decoder = Objects.requireNonNull(decoder);
-      this.tileSize = Math.max(1, Math.min(64, tileSize));
+      this.tileSize = Math.max(1, Math.min(decoder.getTileWidth(), tileSize));
       this.splitColor = (splitColor != null) ? splitColor : DEF_SPLIT_COLOR;
       this.renderingHints = validateRenderingHints(renderingHints);
       init();
@@ -886,7 +887,7 @@ public class TisResource implements Resource, Closeable, Referenceable, ActionLi
 
     /** Sets the preview tile size, in pixels. Forces the preview tiles to be recreated. */
     public TisPreview setTileSize(int tileSize) throws Exception {
-      tileSize = Math.max(1, Math.min(64, tileSize));
+      tileSize = Math.max(1, Math.min(getDecoder().getTileWidth(), tileSize));
       if (tileSize != this.tileSize) {
         this.tileSize = tileSize;
         init();
@@ -1010,8 +1011,11 @@ public class TisResource implements Resource, Closeable, Referenceable, ActionLi
     private void init() throws Exception {
       tiles.clear();
 
-      final AffineTransform xform = AffineTransform.getScaleInstance(tileSize / 64.0, tileSize / 64.0);
-      final BufferedImage tileImg = ColorConvert.createCompatibleImage(64, 64, true);
+      final int tileWidth = getDecoder().getTileWidth();
+      final int tileHeight = getDecoder().getTileHeight();
+      final AffineTransform xform = AffineTransform.getScaleInstance(tileSize / (double)tileWidth,
+          tileSize / (double)tileHeight);
+      final BufferedImage tileImg = ColorConvert.createCompatibleImage(tileWidth, tileHeight, true);
 
       for (int idx = 0, size = getDecoder().getTileCount(); idx < size; idx++) {
         getDecoder().getTile(idx, tileImg);
@@ -1363,7 +1367,8 @@ public class TisResource implements Resource, Closeable, Referenceable, ActionLi
       lBorderSizeLabel.addMouseMotionListener(listeners.mouseMotion);
       helpMap.put(lBorderSizeLabel, helpBorderSize);
 
-      sBorderSize = new JSlider(0, TisConvert.Config.TILE_SIZE, TisConvert.Config.DEFAULT_BORDER_SIZE);
+      final int tileSize = tis.getDecoder().getTileWidth();
+      sBorderSize = new JSlider(0, tileSize, Math.min(tileSize, TisConvert.Config.DEFAULT_BORDER_SIZE));
       sBorderSize.addMouseMotionListener(listeners.mouseMotion);
       sBorderSize.addChangeListener(listeners.changeBorderSize);
       helpMap.put(sBorderSize, helpBorderSize);

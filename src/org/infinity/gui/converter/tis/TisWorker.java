@@ -23,10 +23,11 @@ class TisWorker extends AbstractConvertWorker<WorkerResult> {
   private final Path inputFile;
   private final Path outputFile;
   private final int tileCount;
+  private final int tileDimension;
   private final boolean isLegacy;
   private final boolean closeOnExit;
 
-  public TisWorker(ConvertToTis parent, Path inFile, Path outFile, int tileCount, boolean isLegacy,
+  public TisWorker(ConvertToTis parent, Path inFile, Path outFile, int tileCount, int tileDimension, boolean isLegacy,
       boolean closeOnExit) {
     super(parent, true, true, 0, 5, "Converting to TIS...", 250, 1000);
     if (tileCount < 1) {
@@ -36,6 +37,7 @@ class TisWorker extends AbstractConvertWorker<WorkerResult> {
     this.inputFile = Objects.requireNonNull(inFile);
     this.outputFile = Objects.requireNonNull(outFile);
     this.tileCount = tileCount;
+    this.tileDimension = tileDimension;
     this.isLegacy = isLegacy;
     this.closeOnExit = closeOnExit;
     setProgressNote("Preparing tileset");
@@ -60,9 +62,9 @@ class TisWorker extends AbstractConvertWorker<WorkerResult> {
     String message = null;
     try {
       if (isLegacy) {
-        success = ConvertToTis.convertV1(srcImage, outputFile, tileCount, 1, this);
+        success = ConvertToTis.convertV1(srcImage, outputFile, tileCount, tileDimension, 1, this);
       } else {
-        success = ConvertToTis.convertV2(srcImage, outputFile, tileCount, 1, this);
+        success = ConvertToTis.convertV2(srcImage, outputFile, tileCount, tileDimension, 1, this);
       }
 
       if (success) {
@@ -91,7 +93,8 @@ class TisWorker extends AbstractConvertWorker<WorkerResult> {
         return false;
       }
       try {
-        final int pageCount = ConvertToTis.generatePageInfo(dim.width, dim.height, tileCount, null, null);
+        final int pageCount = ConvertToTis.generatePageInfo(dim.width, dim.height, tileCount, tileDimension, null,
+            null);
         setMaxProgress(pageCount + 1);  // include preparation stage
       } catch (Exception e) {
         Logger.error(e);

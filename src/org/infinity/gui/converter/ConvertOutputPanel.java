@@ -26,8 +26,7 @@ import org.infinity.util.io.FileEx;
 import org.infinity.util.io.FileManager;
 
 /**
- * A panel that handles output files and related options for conversion operations. (Currently used by the BMP and PVRZ
- * conversion dialogs.)
+ * A panel that handles output files and related options for conversion operations.
  */
 public class ConvertOutputPanel extends AbstractConvertPanel implements ActionListener, DocumentListener {
   /** Available file "Overwrite" modes. */

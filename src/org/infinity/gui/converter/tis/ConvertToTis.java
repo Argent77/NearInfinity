@@ -39,6 +39,7 @@ import org.infinity.resource.Profile;
 import org.infinity.resource.graphics.ColorConvert;
 import org.infinity.resource.graphics.Compressor;
 import org.infinity.resource.graphics.DxtEncoder;
+import org.infinity.resource.graphics.TisDecoder;
 import org.infinity.util.BinPack2D;
 import org.infinity.util.DynamicArray;
 import org.infinity.util.IntegerHashMap;
@@ -91,6 +92,9 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
   public void panelUpdated(PanelUpdateEvent e) {
     if (e.getSource() == ioPanel) {
       handleIOPanel(e);
+    } else if (e.getSource() == tisOptionsPanel) {
+      updateInputStatus(false);
+      updateStatus();
     } else if (e.getSource() == buttonsPanel) {
       handleButtonPanel(e);
     }
@@ -141,15 +145,16 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
       if (inputFile != null) {
         final Dimension dim = ColorConvert.getImageDimension(inputFile);
         if (dim.width > 0 && dim.height > 0) {
-          final boolean isValid = (dim.width & 63) == 0 && (dim.height & 63) == 0;
+          final int tileDimension = tisOptionsPanel.getTileDimension();
+          final boolean isValid = (dim.width % tileDimension) == 0 && (dim.height % tileDimension) == 0;
           if (isValid) {
-            final int tileCount = (dim.width * dim.height) >>> 12;
+            final int tileCount = (dim.width / tileDimension) * (dim.height / tileDimension);
             tisOptionsPanel.setMaxTileCount(tileCount);
             tisOptionsPanel.setTileCount(tisOptionsPanel.getMaxTileCount());
             return;
           } else if (showFeedback) {
-            final String msg = "Image dimensions are not multiples of 64 pixels.\nImage: width=" + dim.width
-                + ", height=" + dim.height;
+            final String msg = "Image dimensions are not multiples of " + tileDimension
+                + " pixels.\nImage: width=" + dim.width + ", height=" + dim.height;
             JOptionPane.showMessageDialog(this, msg, "Error", JOptionPane.ERROR_MESSAGE);
           }
         }
@@ -213,6 +218,7 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
 
     // preparing tile count
     final int tileCount = tisOptionsPanel.getTileCount();
+    final int tileDimension = tisOptionsPanel.getTileDimension();
     if (tileCount < 1) {
       JOptionPane.showMessageDialog(this, "No tiles available for conversion.", "Error", JOptionPane.ERROR_MESSAGE);
       return;
@@ -220,7 +226,7 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
 
     // performing conversion task
     try {
-      final TisWorker worker = new TisWorker(this, inFile, outFile, tileCount, isLegacy, closeOnExit);
+      final TisWorker worker = new TisWorker(this, inFile, outFile, tileCount, tileDimension, isLegacy, closeOnExit);
       worker.execute();
     } catch (Exception e) {
       Logger.error(e);
@@ -238,13 +244,14 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
     setIconImage(Icons.ICON_APPLICATION_16.getIcon().getImage());
 
     final JLabel lInputNote =
-        new JLabel("Note: Width and height of the source image have to be a multiple of 64 pixels.");
+        new JLabel("Note: Width and height of the source image have to be a multiple of the selected tile size.");
 
     ioPanel = new ConvertIOPanel("Input & Output", currentPath, ColorConvert.GRAPHICS_FILTERS_DEFAULT,
         OUTPUT_FILE_FILTER, "TIS", ConvertIOPanel.DEFAULT_SHORT_PATH_GENERATOR, lInputNote);
     ioPanel.addPanelUpdateListener(this);
 
     tisOptionsPanel = new TisOptionsPanel();
+    tisOptionsPanel.addPanelUpdateListener(this);
     optionsPanel = new ConvertOptionsPanel("Options", tisOptionsPanel);
 
     buttonsPanel = new ConvertButtonsPanel();
@@ -289,6 +296,23 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
    */
   public static boolean convertV1(BufferedImage srcImage, Path outputFile, int tileCount, int minProgress,
       TisWorker worker) throws Exception {
+    return convertV1(srcImage, outputFile, tileCount, TisDecoder.DEFAULT_TILE_DIMENSION, minProgress, worker);
+  }
+
+  /**
+   * Converts an image to a palette-based TIS file using the specified square tile dimension.
+   *
+   * @param srcImage     Source {@link Image} to convert.
+   * @param outputFile   {@link Path} of the output TIS file.
+   * @param tileCount    Number of tiles to convert.
+   * @param tileDimension Width and height of a square tile, in pixels.
+   * @param minProgress  Start position for the progress monitor.
+   * @param worker       Optional {@link TisWorker} instance for tracking progress.
+   * @return {@code true} if the conversion finished successfully, {@code false} if the conversion was cancelled.
+   * @throws Exception thrown if an error occurs.
+   */
+  public static boolean convertV1(BufferedImage srcImage, Path outputFile, int tileCount, int tileDimension,
+      int minProgress, TisWorker worker) throws Exception {
     if (srcImage == null) {
       throw new NullPointerException("Source image is null.");
     }
@@ -296,37 +320,37 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
       throw new NullPointerException("Output file is null.");
     }
 
-    if ((srcImage.getWidth() & 63) != 0 || (srcImage.getHeight() & 63) != 0) {
-      throw new IllegalArgumentException("Source image dimensions must be a multiple of 64.\nImage: width="
-          + srcImage.getWidth() + ", height=" + srcImage.getHeight());
-    }
+    validateTileDimension(tileDimension);
+    validateImageDimensions(srcImage.getWidth(), srcImage.getHeight(), tileDimension);
 
     if (tileCount < 1) {
       throw new IllegalArgumentException("Tile count cannot be 0 or negative.");
     }
-    final int maxTileCount = (srcImage.getWidth() * srcImage.getHeight()) >>> 12;
+    final int maxTileCount = (srcImage.getWidth() / tileDimension) * (srcImage.getHeight() / tileDimension);
     if (tileCount > maxTileCount) {
       final String msg = "Tile count exceeds max. number of tiles (" + tileCount + " > " + maxTileCount + ')';
       throw new IllegalArgumentException(msg);
     }
 
     final int[] srcBuffer = ((DataBufferInt)srcImage.getRaster().getDataBuffer()).getData();
-    final byte[] dstBuffer = new byte[24 + tileCount * 5120]; // header + tiles
+    final int tileDataSize = Math.multiplyExact(tileDimension, tileDimension);
+    final int tileRecordSize = Math.addExact(1024, tileDataSize);
+    final byte[] dstBuffer = new byte[Math.addExact(24, Math.multiplyExact(tileCount, tileRecordSize))];
     int dstOfs = 0; // current start offset for write operations
 
     // writing header data
     System.arraycopy("TIS V1  ".getBytes(), 0, dstBuffer, 0, 8);
     DynamicArray.putInt(dstBuffer, 8, tileCount);
-    DynamicArray.putInt(dstBuffer, 12, 0x1400);
+    DynamicArray.putInt(dstBuffer, 12, tileRecordSize);
     DynamicArray.putInt(dstBuffer, 16, 0x18);
-    DynamicArray.putInt(dstBuffer, 20, 0x40);
+    DynamicArray.putInt(dstBuffer, 20, tileDimension);
     dstOfs += 24;
 
-    final int[] srcBlock = new int[64 * 64]; // temp. storage for a single tile
+    final int[] srcBlock = new int[tileDataSize]; // temp. storage for a single tile
     final int[] palette = new int[255]; // temp. storage for generated palette
     final byte[] tilePalette = new byte[1024]; // final palette for output
-    final byte[] tileData = new byte[64 * 64]; // final tile data for output
-    int tw = srcImage.getWidth() / 64; // tiles per row
+    final byte[] tileData = new byte[tileDataSize]; // final tile data for output
+    int tw = srcImage.getWidth() / tileDimension; // tiles per row
 
     final int updateBlock = (tileCount > 300) ? 100 : 10;
     final IntegerHashMap<Byte> colorCache = new IntegerHashMap<>(2048); // caching RGBColor -> index
@@ -347,9 +371,10 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
       colorCache.clear();
 
       // initializing source tile
-      int inOfs = ty * 64 * srcImage.getWidth() + tx * 64;
-      for (int i = 0, outOfs = 0; i < 64; i++, inOfs += srcImage.getWidth(), outOfs += 64) {
-        System.arraycopy(srcBuffer, inOfs, srcBlock, outOfs, 64);
+      int inOfs = ty * tileDimension * srcImage.getWidth() + tx * tileDimension;
+      for (int i = 0, outOfs = 0; i < tileDimension;
+          i++, inOfs += srcImage.getWidth(), outOfs += tileDimension) {
+        System.arraycopy(srcBuffer, inOfs, srcBlock, outOfs, tileDimension);
       }
 
       // reducing colors
@@ -388,8 +413,8 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
       // writing final palette and pixel data to output
       System.arraycopy(tilePalette, 0, dstBuffer, dstOfs, 1024);
       dstOfs += 1024;
-      System.arraycopy(tileData, 0, dstBuffer, dstOfs, 4096);
-      dstOfs += 4096;
+      System.arraycopy(tileData, 0, dstBuffer, dstOfs, tileDataSize);
+      dstOfs += tileDataSize;
     }
 
     // writing TIS file to disk
@@ -417,6 +442,24 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
    */
   public static boolean convertV2(BufferedImage srcImage, Path outputFile, int tileCount, int minProgress,
       TisWorker worker) throws Exception {
+    return convertV2(srcImage, outputFile, tileCount, TisDecoder.DEFAULT_TILE_DIMENSION, minProgress, worker);
+  }
+
+  /**
+   * Converts an image to a PVRZ-based TIS file using the specified square tile dimension.
+   *
+   * @param srcImage     Source {@link Image} to convert.
+   * @param outputFile   {@link Path} of the output TIS file. PVRZ files are placed into the same directory as the
+   *                       output TIS file.
+   * @param tileCount    Number of tiles to convert.
+   * @param tileDimension Width and height of a square tile, in pixels.
+   * @param minProgress  Start position for the progress monitor.
+   * @param worker       Optional {@link TisWorker} instance for tracking progress.
+   * @return {@code true} if the conversion finished successfully, {@code false} if the conversion was cancelled.
+   * @throws Exception thrown if an error occurs.
+   */
+  public static boolean convertV2(BufferedImage srcImage, Path outputFile, int tileCount, int tileDimension,
+      int minProgress, TisWorker worker) throws Exception {
     if (srcImage == null) {
       throw new NullPointerException("Source image is null.");
     }
@@ -424,15 +467,13 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
       throw new NullPointerException("Output file is null.");
     }
 
-    if ((srcImage.getWidth() & 63) != 0 || (srcImage.getHeight() & 63) != 0) {
-      throw new IllegalArgumentException("Source image dimensions must be a multiple of 64.\nImage: width="
-          + srcImage.getWidth() + ", height=" + srcImage.getHeight());
-    }
+    validateTileDimension(tileDimension);
+    validateImageDimensions(srcImage.getWidth(), srcImage.getHeight(), tileDimension);
 
     if (tileCount < 1) {
       throw new IllegalArgumentException("Tile count cannot be 0 or negative.");
     }
-    final int maxTileCount = (srcImage.getWidth() * srcImage.getHeight()) >>> 12;
+    final int maxTileCount = (srcImage.getWidth() / tileDimension) * (srcImage.getHeight() / tileDimension);
     if (tileCount > maxTileCount) {
       final String msg = "Tile count exceeds max. number of tiles (" + tileCount + " > " + maxTileCount + ')';
       throw new IllegalArgumentException(msg);
@@ -449,11 +490,11 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
     DynamicArray.putInt(dstBuffer, 8, tileCount);
     DynamicArray.putInt(dstBuffer, 12, 0x0c);
     DynamicArray.putInt(dstBuffer, 16, 0x18);
-    DynamicArray.putInt(dstBuffer, 20, 0x40);
+    DynamicArray.putInt(dstBuffer, 20, tileDimension);
     dstOfs += 24;
 
     // processing tiles
-    generatePageInfo(srcImage.getWidth(), srcImage.getHeight(), tileCount, pageList, entryList);
+    generatePageInfo(srcImage.getWidth(), srcImage.getHeight(), tileCount, tileDimension, pageList, entryList);
 
     // writing TIS entries
     entryList.sort(TileEntry.COMPARE_BY_INDEX);
@@ -473,7 +514,8 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
     }
 
     // generating PVRZ files
-    return createPvrzPages(outputFile, srcImage, pageList, DxtEncoder.DxtType.DXT1, entryList, minProgress, worker);
+    return createPvrzPages(outputFile, srcImage, pageList, DxtEncoder.DxtType.DXT1, entryList, tileDimension,
+        minProgress, worker);
   }
 
   /**
@@ -489,10 +531,26 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
    */
   public static int generatePageInfo(int imageWidth, int imageHeight, int tileCount, List<BinPack2D> pageList,
       List<TileEntry> entryList) throws Exception {
-    if ((imageWidth & 63) != 0 || (imageHeight & 63) != 0) {
-      throw new IllegalArgumentException("Source image dimensions must be a multiple of 64.\nImage: width="
-          + imageWidth + ", height=" + imageHeight);
-    }
+    return generatePageInfo(imageWidth, imageHeight, tileCount, TisDecoder.DEFAULT_TILE_DIMENSION, pageList,
+        entryList);
+  }
+
+  /**
+   * Generates PVRZ page data using the specified square tile dimension.
+   *
+   * @param imageWidth   Source image width.
+   * @param imageHeight  Source image height.
+   * @param tileCount    Number of tiles to convert.
+   * @param tileDimension Width and height of a square tile, in pixels.
+   * @param pageList     Empty list where {@link BinPack2D} structures are stored by this method.
+   * @param entryList    Empty list where {@link TileEntry} structures are stored by this method.
+   * @return Number of generated PVRZ page entries.
+   * @throws Exception if an error occurs.
+   */
+  public static int generatePageInfo(int imageWidth, int imageHeight, int tileCount, int tileDimension,
+      List<BinPack2D> pageList, List<TileEntry> entryList) throws Exception {
+    validateTileDimension(tileDimension);
+    validateImageDimensions(imageWidth, imageHeight, tileDimension);
 
     if (pageList == null) {
       pageList = new ArrayList<>();
@@ -504,8 +562,7 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
 
     final BinPack2D.HeuristicRules binPackRule = BinPack2D.HeuristicRules.BOTTOM_LEFT_RULE;
     final int pageDim = 1024;
-    final int tileDim = 64;
-    final int tilesPerDim = pageDim / tileDim;
+    final int tilesPerDim = pageDim / tileDimension;
     final int pw = imageWidth / pageDim + (((imageWidth % pageDim) != 0) ? 1 : 0);
     final int ph = imageHeight / pageDim + (((imageHeight % pageDim) != 0) ? 1 : 0);
 
@@ -515,7 +572,7 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
         final int w = Math.min(pageDim, imageWidth - x);
         final int h = Math.min(pageDim, imageHeight - y);
 
-        final Dimension space = new Dimension(w / tileDim, h / tileDim);
+        final Dimension space = new Dimension(w / tileDimension, h / tileDimension);
         int pageIdx = -1;
         Rectangle rectMatch = null;
         for (int i = 0; i < pageList.size(); i++) {
@@ -536,13 +593,13 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
         }
 
         // registering tile entries
-        int tileIdx = (y * imageWidth) / (tileDim * tileDim) + x / tileDim;
-        for (int ty = 0; ty < space.height; ty++, tileIdx += imageWidth / tileDim) {
+        int tileIdx = (y * imageWidth) / (tileDimension * tileDimension) + x / tileDimension;
+        for (int ty = 0; ty < space.height; ty++, tileIdx += imageWidth / tileDimension) {
           for (int tx = 0; tx < space.width; tx++) {
             // marking page index as incomplete
             if (tileIdx + tx < tileCount) {
-              TileEntry entry = new TileEntry(tileIdx + tx, pageIdx, (rectMatch.x + tx) * tileDim,
-                  (rectMatch.y + ty) * tileDim);
+              TileEntry entry = new TileEntry(tileIdx + tx, pageIdx, (rectMatch.x + tx) * tileDimension,
+                  (rectMatch.y + ty) * tileDimension);
               entryList.add(entry);
             }
           }
@@ -567,7 +624,8 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
    * @throws Exception thrown if an error occurs.
    */
   private static boolean createPvrzPages(Path tisFile, BufferedImage srcImage, List<BinPack2D> pageList,
-      DxtEncoder.DxtType dxtType, List<TileEntry> entryList, int minProgress, TisWorker worker) throws Exception {
+      DxtEncoder.DxtType dxtType, List<TileEntry> entryList, int tileDimension, int minProgress, TisWorker worker)
+      throws Exception {
     final int dxtCode = (dxtType == DxtEncoder.DxtType.DXT5) ? 11 : 7;
     final byte[] output = new byte[DxtEncoder.calcImageSize(1024, 1024, dxtType)];
 
@@ -586,20 +644,22 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
       packer.shrinkBin(true);
 
       // generating texture image
-      int w = packer.getBinWidth() * 64;
-      int h = packer.getBinHeight() * 64;
+      int w = packer.getBinWidth() * tileDimension;
+      int h = packer.getBinHeight() * tileDimension;
       final BufferedImage texture = ColorConvert.createCompatibleImage(w, h, true);
       final Graphics2D g = texture.createGraphics();
       g.setComposite(AlphaComposite.Src);
       g.setColor(ColorConvert.TRANSPARENT_COLOR);
       g.fillRect(0, 0, texture.getWidth(), texture.getHeight());
-      int tw = srcImage.getWidth() / 64;
+      int tw = srcImage.getWidth() / tileDimension;
       for (final TileEntry entry : entryList) {
         if (entry.page == pageIdx) {
-          int sx = (entry.tileIndex % tw) * 64, sy = (entry.tileIndex / tw) * 64;
+          int sx = (entry.tileIndex % tw) * tileDimension;
+          int sy = (entry.tileIndex / tw) * tileDimension;
           int dx = entry.x, dy = entry.y;
-          g.fillRect(dx, dy, 64, 64);
-          g.drawImage(srcImage, dx, dy, dx + 64, dy + 64, sx, sy, sx + 64, sy + 64, null);
+          g.fillRect(dx, dy, tileDimension, tileDimension);
+          g.drawImage(srcImage, dx, dy, dx + tileDimension, dy + tileDimension, sx, sy, sx + tileDimension,
+              sy + tileDimension, null);
         }
       }
       g.dispose();
@@ -629,6 +689,21 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
     }
 
     return true;
+  }
+
+  private static void validateTileDimension(int tileDimension) {
+    if (tileDimension < 4 || tileDimension > TisDecoder.MAX_TILE_DIMENSION
+        || (tileDimension & (tileDimension - 1)) != 0) {
+      throw new IllegalArgumentException("Tile dimension must be a power of two between 4 and "
+          + TisDecoder.MAX_TILE_DIMENSION + " pixels: " + tileDimension);
+    }
+  }
+
+  private static void validateImageDimensions(int imageWidth, int imageHeight, int tileDimension) {
+    if ((imageWidth % tileDimension) != 0 || (imageHeight % tileDimension) != 0) {
+      throw new IllegalArgumentException("Source image dimensions must be a multiple of " + tileDimension
+          + ".\nImage: width=" + imageWidth + ", height=" + imageHeight);
+    }
   }
 
   /**
@@ -682,7 +757,7 @@ public class ConvertToTis extends ChildFrame implements PanelUpdateListener {
    * @return A valid TIS file {@link Path}.
    * @throws NullPointerException if {@code tisFile} is {@code null}.
    */
-  private static Path createValidTisPath(Path tisFile, boolean isLegacy) {
+  static Path createValidTisPath(Path tisFile, boolean isLegacy) {
     if (tisFile == null) {
       throw new NullPointerException("tisFile is null");
     }

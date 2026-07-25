@@ -20,12 +20,16 @@ import java.util.zip.DeflaterOutputStream;
 
 import org.infinity.resource.Profile;
 import org.infinity.resource.ResourceFactory;
+import org.infinity.resource.graphics.TisDecoder;
 import org.infinity.util.Logger;
 import org.infinity.util.io.FileEx;
 import org.infinity.util.io.FileManager;
 import org.infinity.util.io.StreamUtils;
 
 public final class BIFFWriter {
+  private static final String TIS_SIGNATURE_VERSION = "TIS V1  ";
+  private static final int TIS_TILE_DIMENSION_OFFSET = 0x14;
+
   private final BIFFEntry bifEntry;
   private final Map<ResourceEntry, Boolean> resources = new HashMap<>();
   private final Map<ResourceEntry, Boolean> tileResources = new HashMap<>();
@@ -107,9 +111,33 @@ public final class BIFFWriter {
 
   public void addResource(ResourceEntry resourceEntry, boolean ignoreoverride) {
     if (resourceEntry.getExtension().equalsIgnoreCase("TIS")) {
+      validateResource(resourceEntry, ignoreoverride);
       tileResources.put(resourceEntry, ignoreoverride);
     } else {
       resources.put(resourceEntry, ignoreoverride);
+    }
+  }
+
+  public static void validateResource(ResourceEntry resourceEntry, boolean ignoreOverride) {
+    if (!resourceEntry.getExtension().equalsIgnoreCase("TIS")) {
+      return;
+    }
+    try (InputStream is = resourceEntry.getResourceDataAsStream(ignoreOverride)) {
+      final int bytesToSkip = TIS_TILE_DIMENSION_OFFSET - TIS_SIGNATURE_VERSION.length();
+      if (TIS_SIGNATURE_VERSION.equals(StreamUtils.readString(is, TIS_SIGNATURE_VERSION.length()))
+          && is.skip(bytesToSkip) == bytesToSkip) {
+        final int tileDimension = StreamUtils.readInt(is);
+        if (tileDimension != TisDecoder.DEFAULT_TILE_DIMENSION) {
+          throw new IllegalArgumentException("Cannot add " + resourceEntry.getResourceName()
+              + " to a BIFF archive: tile dimension " + tileDimension
+              + " is not supported. BIFF archives require " + TisDecoder.DEFAULT_TILE_DIMENSION + "x"
+              + TisDecoder.DEFAULT_TILE_DIMENSION + " pixel TIS tiles.");
+        }
+      }
+    } catch (IllegalArgumentException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Could not validate " + resourceEntry.getResourceName(), e);
     }
   }
 

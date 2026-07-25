@@ -776,20 +776,23 @@ public final class MassExporter extends ChildFrame implements ActionListener, Li
       TisDecoder decoder = TisDecoder.loadTis(entry);
       if (decoder != null) {
         int tileCount = decoder.getTileCount();
+        int tileWidth = decoder.getTileWidth();
+        int tileHeight = decoder.getTileHeight();
         int columns = TisConvert.calcTilesetWidth(entry, true, 1);
         int rows = tileCount / columns;
         if ((tileCount % columns) != 0) {
           rows++;
         }
 
-        BufferedImage tile = ColorConvert.createCompatibleImage(64, 64, Transparency.BITMASK);
-        BufferedImage image = ColorConvert.createCompatibleImage(64 * columns, 64 * rows, Transparency.BITMASK);
+        BufferedImage tile = ColorConvert.createCompatibleImage(tileWidth, tileHeight, Transparency.BITMASK);
+        BufferedImage image = ColorConvert.createCompatibleImage(tileWidth * columns, tileHeight * rows,
+            Transparency.BITMASK);
         try {
           Graphics2D g = image.createGraphics();
           try {
             for (int i = 0; i < tileCount; i++) {
-              int x = 64 * (i % columns);
-              int y = 64 * (i / columns);
+              int x = tileWidth * (i % columns);
+              int y = tileHeight * (i / columns);
               decoder.getTile(i, tile);
               g.drawImage(tile, x, y, null);
             }

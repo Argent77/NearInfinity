@@ -79,6 +79,13 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
     if (event.getSource() == bcancel) {
       editframe.close();
     } else if (event.getSource() == bsave) {
+      try {
+        validateBiffResources();
+      } catch (IllegalArgumentException e) {
+        JOptionPane.showMessageDialog(editframe, e.getMessage(), "Unsupported TIS tile dimension",
+            JOptionPane.ERROR_MESSAGE);
+        return;
+      }
       editframe.close();
       format = (AbstractBIFFReader.Type) cbformat.getSelectedItem();
       new Thread(this).start();
@@ -90,6 +97,18 @@ public final class BIFFEditor implements ActionListener, ListSelectionListener, 
       bsave.setEnabled(!biftable.isEmpty());
     } else if (event.getSource() == cbformat) {
       bsave.setEnabled(!biftable.isEmpty());
+    }
+  }
+
+  private void validateBiffResources() {
+    validateBiffResources(BIFFEditorTable.State.BIF, true);
+    validateBiffResources(BIFFEditorTable.State.NEW, false);
+    validateBiffResources(BIFFEditorTable.State.UPD, false);
+  }
+
+  private void validateBiffResources(BIFFEditorTable.State state, boolean ignoreOverride) {
+    for (final ResourceEntry entry : biftable.getValueList(state)) {
+      BIFFWriter.validateResource(entry, ignoreOverride);
     }
   }
 

@@ -41,7 +41,7 @@ import org.tinylog.Logger;
 
 /**
  * A panel that provides options for adding or removing files or folders of selected file types for conversion
- * operations. (Currently used by the BMP and PVRZ conversion dialogs.)
+ * operations.
  */
 public class ConvertFileListPanel extends AbstractConvertPanel implements ActionListener, ListSelectionListener {
   /** One or more files were added to the file list. */
