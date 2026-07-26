@@ -9,6 +9,7 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.IndexColorModel;
+import java.awt.image.WritableRaster;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -24,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -40,6 +40,9 @@ import java.util.stream.Stream;
 
 import org.infinity.gui.converter.creature.CreatureAnimationModel.AnimationFrame;
 import org.infinity.gui.converter.creature.CreatureAnimationModel.ResolvedFrames;
+import org.infinity.gui.converter.creature.CreatureAnimationFamily.CyclePlan;
+import org.infinity.gui.converter.creature.CreatureAnimationFamily.FamilyLayout;
+import org.infinity.gui.converter.creature.CreatureAnimationFamily.ResourcePlan;
 import org.infinity.gui.converter.creature.MonsterAnimationLayout.BamFormat;
 import org.infinity.gui.converter.creature.MonsterAnimationLayout.Direction;
 import org.infinity.gui.converter.creature.MonsterAnimationLayout.OutputSlot;
@@ -54,10 +57,10 @@ import org.infinity.resource.graphics.PseudoBamDecoder.PseudoBamFrameEntry;
 import org.infinity.resource.key.FileResourceEntry;
 import org.infinity.util.Logger;
 
-/** Validates, encodes and transactionally installs a type 0x7000 animation family. */
+/** Validates, encodes and transactionally installs Enhanced Edition creature animation families. */
 public final class CreatureAnimationExporter {
   private static final Pattern PVRZ_NAME = Pattern.compile("(?i)^MOS(\\d{4,5})\\.PVRZ$");
-  private static final Pattern RESREF = Pattern.compile("(?i)^[A-Z0-9_]{1,4}$");
+  private static final Pattern RESREF = Pattern.compile("(?i)^[A-Z0-9_]{1,8}$");
 
   public enum Severity {
     ERROR,
@@ -114,6 +117,7 @@ public final class CreatureAnimationExporter {
 
   public static final class Config {
     private Profile.Game game = Profile.getGame();
+    private CreatureAnimationFamily family = CreatureAnimationFamily.MONSTER;
     private int animationId = 0x7303;
     private String resref = "MNCR";
     private Path outputDirectory;
@@ -125,6 +129,8 @@ public final class CreatureAnimationExporter {
     private boolean falseColor;
     private boolean pathSmooth = true;
     private boolean translucent;
+    private int quadrants = CreatureAnimationFamily.MONSTER_QUADRANT.getDefaultQuadrants();
+    private int armorLevels = CreatureAnimationFamily.CHARACTER.getDefaultArmorLevels();
     private int moveScale = 9;
     private int ellipse = 16;
     private int personalSpace = 3;
@@ -137,6 +143,15 @@ public final class CreatureAnimationExporter {
 
     public Config setGame(Profile.Game game) {
       this.game = game;
+      return this;
+    }
+
+    public CreatureAnimationFamily getFamily() {
+      return family;
+    }
+
+    public Config setFamily(CreatureAnimationFamily family) {
+      this.family = family;
       return this;
     }
 
@@ -239,6 +254,24 @@ public final class CreatureAnimationExporter {
       return this;
     }
 
+    public int getQuadrants() {
+      return quadrants;
+    }
+
+    public Config setQuadrants(int quadrants) {
+      this.quadrants = quadrants;
+      return this;
+    }
+
+    public int getArmorLevels() {
+      return armorLevels;
+    }
+
+    public Config setArmorLevels(int armorLevels) {
+      this.armorLevels = armorLevels;
+      return this;
+    }
+
     public int getMoveScale() {
       return moveScale;
     }
@@ -312,16 +345,19 @@ public final class CreatureAnimationExporter {
       report.add(Severity.ERROR, "No export configuration was supplied.");
       return report;
     }
-    if (!MonsterAnimationLayout.isSupportedGame(config.game)) {
+    if (config.family == null) {
+      report.add(Severity.ERROR, "No creature animation family was selected.");
+    } else if (!MonsterAnimationLayout.isSupportedGame(config.game)) {
       report.add(Severity.ERROR, "Creature Animation Creator supports BG:EE, SoD, BG2:EE, EET, IWD:EE and PST:EE.");
-    } else if (!MonsterAnimationLayout.isValidSlot(config.game, config.animationId)) {
+    } else if (!config.family.isSupportedGame(config.game)) {
+      report.add(Severity.ERROR, config.family + " is not supported by " + config.game.getTitle() + ".");
+    } else if (!config.family.isValidSlot(config.game, config.animationId)) {
       report.add(Severity.ERROR, String.format(Locale.ENGLISH,
-          "Animation slot 0x%04X is not a type 0x7000 monster slot for %s.", config.animationId,
+          "Animation slot 0x%04X does not belong to the %s family for %s.", config.animationId, config.family,
           config.game.getTitle()));
     }
     if (!RESREF.matcher(config.resref).matches()) {
-      report.add(Severity.ERROR, "The BAM resref must contain 1-4 ASCII letters, digits or underscores. Type 0x7000 "
-          + "requires room for its Gxx filename suffix.");
+      report.add(Severity.ERROR, "The BAM resref must contain 1-8 ASCII letters, digits or underscores.");
     }
     if (config.outputDirectory == null) {
       report.add(Severity.ERROR, "No output directory was selected.");
@@ -337,27 +373,116 @@ public final class CreatureAnimationExporter {
     validateRange(report, "Blood color", config.bloodColor, 0, 255);
     validateRange(report, "Chunk color", config.chunkColor, 0, 255);
 
+    FamilyLayout layout = null;
+    if (config.family != null) {
+      if (config.family.getSplitMode() == CreatureAnimationFamily.SplitMode.NONE && config.splitBams) {
+        report.add(Severity.ERROR, config.family + " does not use a selectable split BAM layout.");
+      } else if (config.family.isSplitBamsRequired() && !config.splitBams) {
+        report.add(Severity.ERROR, config.family + " requires the verified split BAM layout.");
+      }
+      if (config.family.hasQuadrants()) {
+        validateRange(report, "Quadrants", config.quadrants, 1, 9);
+      }
+      if (config.family.hasArmorLevels()) {
+        validateRange(report, "Armor levels", config.armorLevels, 1, 4);
+      }
+      if (config.falseColor && !config.family.isFalseColorSupported()) {
+        report.add(Severity.ERROR, config.family + " has no engine-supported false-color definition property.");
+      }
+      if (config.translucent && !config.family.isTranslucencySupported()) {
+        report.add(Severity.ERROR, config.family + " has no engine-supported translucency definition property.");
+      }
+      final boolean splitParameterValid =
+          (config.family.getSplitMode() != CreatureAnimationFamily.SplitMode.NONE || !config.splitBams)
+              && (!config.family.isSplitBamsRequired() || config.splitBams);
+      final boolean layoutParametersValid = (!config.family.hasQuadrants()
+          || (config.quadrants >= 1 && config.quadrants <= 9))
+          && (!config.family.hasArmorLevels()
+              || (config.armorLevels >= 1 && config.armorLevels <= 4));
+      if (splitParameterValid && layoutParametersValid && RESREF.matcher(config.resref).matches()) {
+        try {
+          layout = config.family.createLayout(config.resref, config.splitBams, config.quadrants, config.armorLevels);
+          final int maximumResrefLength =
+              config.family.getMaximumResrefLength(config.splitBams, config.quadrants, config.armorLevels);
+          if (config.resref.length() > maximumResrefLength) {
+            report.add(Severity.ERROR, config.family + " reserves more of the eight-character resource name in this "
+                + "layout; its base resref may contain at most " + maximumResrefLength + " characters.");
+          } else if (config.family.requiresExactResrefLength()
+              && config.resref.length() != maximumResrefLength) {
+            report.add(Severity.ERROR, config.family
+                + " uses the documented four-character character/race/gender/class base resref.");
+          }
+          boolean resourceNameErrorReported = config.resref.length() > maximumResrefLength;
+          for (final ResourcePlan resource : layout.getResources().values()) {
+            final String baseName = resource.getFileName().substring(0, resource.getFileName().length() - 4);
+            if (baseName.length() > 8 && !resourceNameErrorReported) {
+              report.add(Severity.ERROR, "Generated BAM resref " + baseName + " exceeds the engine's "
+                  + "eight-character resource-name limit.");
+              resourceNameErrorReported = true;
+            }
+            if (resource.getCycleCount() <= 0) {
+              report.add(Severity.ERROR, resource.getFileName() + " has no animation cycles.");
+            }
+          }
+        } catch (RuntimeException e) {
+          report.add(Severity.ERROR, "Could not construct the selected family layout: " + e.getMessage());
+        }
+      }
+      if (config.family == CreatureAnimationFamily.MONSTER_MULTI) {
+        report.add(Severity.INFO, "Custom monster_multi definitions use split_bams=0 because the Enhanced Edition "
+            + "engine's split implementation is not reliable for new slots.");
+      }
+      if (config.family.hasQuadrants()) {
+        report.add(Severity.INFO, "Frames will be divided into " + config.quadrants
+            + " synchronized spatial quadrant resource(s).");
+      }
+      if (config.family.hasArmorLevels() && config.armorLevels > 1) {
+        report.add(Severity.INFO, "The neutral source is encoded independently for armor codes 1-"
+            + config.armorLevels + "; exported PNGs can be refined per generated BAM afterward.");
+      }
+      if (config.family == CreatureAnimationFamily.MONSTER_PLANESCAPE) {
+        report.add(Severity.INFO, "PST misc1-misc20 slots are custom by definition and use stable action fallbacks "
+            + "until their generated BAMs are replaced with artist-specific sequences.");
+      }
+    }
+
     if (model == null || model.isEmpty()) {
       report.add(Severity.ERROR, "No animation source frames are loaded.");
       return report;
     }
 
     int missingCells = 0;
-    final EnumSet<Sequence> required = EnumSet.allOf(Sequence.class);
-    if (config.splitBams) {
-      required.remove(Sequence.SLEEP);
-      required.remove(Sequence.GET_UP);
-      report.add(Severity.INFO, "Split BAM mode reuses the death animation for sleep and reversed get-up sequences.");
-    }
-    for (final Sequence sequence : required) {
-      for (final Direction direction : Direction.values()) {
-        if (!model.hasFrames(sequence, direction)) {
-          missingCells++;
+    final Set<String> requiredCells = new LinkedHashSet<>();
+    if (layout != null) {
+      for (final ResourcePlan resource : layout.getResources().values()) {
+        for (final CyclePlan cycle : resource.getCycles()) {
+          final Sequence sequence = cycle.getSequence();
+          final Direction direction = cycle.getSourceDirection();
+          final String key = sequence.name() + "/" + direction.name();
+          if (!requiredCells.add(key)) {
+            continue;
+          }
+          if (!model.hasFrames(sequence, direction)) {
+            missingCells++;
+          }
+          final ResolvedFrames resolved = model.resolveFrames(sequence, direction);
+          if (resolved.getFrames().isEmpty()) {
+            report.add(Severity.ERROR, "No source fallback exists for " + sequence.getCode() + "/"
+                + direction.getCode() + ".");
+          }
         }
-        final ResolvedFrames resolved = model.resolveFrames(sequence, direction);
-        if (resolved.getFrames().isEmpty()) {
-          report.add(Severity.ERROR, "No source fallback exists for " + sequence.getCode() + "/"
-              + direction.getCode() + ".");
+      }
+    } else {
+      for (final Sequence sequence : Sequence.values()) {
+        for (final Direction direction : Direction.values()) {
+          if (!model.hasFrames(sequence, direction)) {
+            missingCells++;
+          }
+          final ResolvedFrames resolved = model.resolveFrames(sequence, direction);
+          if (resolved.getFrames().isEmpty()) {
+            report.add(Severity.ERROR, "No source fallback exists for " + sequence.getCode() + "/"
+                + direction.getCode() + ".");
+          }
         }
       }
     }
@@ -385,6 +510,44 @@ public final class CreatureAnimationExporter {
       }
     }
 
+    if (layout != null) {
+      final Set<String> reportedGeometry = new LinkedHashSet<>();
+      for (final ResourcePlan resource : layout.getResources().values()) {
+        for (final CyclePlan cycle : resource.getCycles()) {
+          final ResolvedFrames resolved = model.resolveFrames(cycle.getSequence(), cycle.getSourceDirection());
+          for (final AnimationFrame frame : resolved.getFrames()) {
+            int width = frame.getImage().getWidth();
+            int height = frame.getImage().getHeight();
+            int centerX = cycle.isMirrored() ? width - 1 - frame.getCenter().x : frame.getCenter().x;
+            int centerY = frame.getCenter().y;
+            if (cycle.getQuadrantCount() > 0) {
+              final int[] bounds =
+                  getQuadrantBounds(width, height, cycle.getQuadrantIndex(), cycle.getQuadrantCount());
+              width = bounds[2];
+              height = bounds[3];
+              centerX -= bounds[0];
+              centerY -= bounds[1];
+            }
+            if (width <= 0 || height <= 0) {
+              final String key = resource.getFileName() + "/size";
+              if (reportedGeometry.add(key)) {
+                report.add(Severity.ERROR, resource.getFileName()
+                    + " would contain a zero-sized quadrant. Use larger source frames or fewer quadrants.");
+              }
+            }
+            if (centerX < Short.MIN_VALUE || centerX > Short.MAX_VALUE || centerY < Short.MIN_VALUE
+                || centerY > Short.MAX_VALUE) {
+              final String key = resource.getFileName() + "/center";
+              if (reportedGeometry.add(key)) {
+                report.add(Severity.ERROR, resource.getFileName()
+                    + " would contain a transformed center outside the signed 16-bit BAM range.");
+              }
+            }
+          }
+        }
+      }
+    }
+
     if (config.falseColor && !hasCommonIndexedPalette(model)) {
       report.add(Severity.ERROR, "False-color output requires every source frame to use the same indexed palette "
           + "with transparent palette index 0. Truecolor or independently paletted frames cannot preserve Infinity "
@@ -400,7 +563,7 @@ public final class CreatureAnimationExporter {
   }
 
   public static List<Path> getExistingPrimaryTargets(Config config) {
-    if (config == null || config.outputDirectory == null || config.resref == null) {
+    if (config == null || config.family == null || config.outputDirectory == null || config.resref == null) {
       return Collections.emptyList();
     }
     final List<Path> existing = new ArrayList<>();
@@ -408,8 +571,10 @@ public final class CreatureAnimationExporter {
     if (Files.exists(ini)) {
       existing.add(ini);
     }
-    for (final String suffix : MonsterAnimationLayout.getOutputLayout(config.splitBams).keySet()) {
-      final Path bam = config.outputDirectory.resolve(config.resref + suffix + ".BAM");
+    final FamilyLayout layout =
+        config.family.createLayout(config.resref, config.splitBams, config.quadrants, config.armorLevels);
+    for (final String fileName : layout.getResources().keySet()) {
+      final Path bam = config.outputDirectory.resolve(fileName);
       if (Files.exists(bam)) {
         existing.add(bam);
       }
@@ -433,16 +598,16 @@ public final class CreatureAnimationExporter {
     final Path staging = Files.createTempDirectory(config.outputDirectory, ".ni-creature-animation-");
     boolean installed = false;
     try {
-      final Map<String, List<OutputSlot>> layout = MonsterAnimationLayout.getOutputLayout(config.splitBams);
+      final FamilyLayout layout =
+          config.family.createLayout(config.resref, config.splitBams, config.quadrants, config.armorLevels);
       int pvrzIndex = (config.bamFormat == BamFormat.BAM_V2)
           ? findPvrzStartIndex(config.outputDirectory) : 0;
       final Map<String, Integer> expectedCycles = new LinkedHashMap<>();
 
-      for (final Map.Entry<String, List<OutputSlot>> entry : layout.entrySet()) {
-        final String fileName = config.resref + entry.getKey() + ".BAM";
-        final PseudoBamDecoder source = createBam(model, entry.getValue());
-        final int cycleCount = getRequiredCycleCount(entry.getValue());
-        expectedCycles.put(fileName, cycleCount);
+      for (final ResourcePlan resource : layout.getResources().values()) {
+        final String fileName = resource.getFileName();
+        final PseudoBamDecoder source = createBam(model, resource);
+        expectedCycles.put(fileName, resource.getCycleCount());
         try {
           if (config.bamFormat == BamFormat.BAM_V1) {
             final PseudoBamDecoder paletted = convertToPalettedBam(source);
@@ -469,8 +634,8 @@ public final class CreatureAnimationExporter {
       }
 
       Files.write(staging.resolve(getIniFileName(config.animationId)),
-          createIniText(config).getBytes(StandardCharsets.UTF_8));
-      validateStagedOutput(staging, config, expectedCycles);
+          createIniText(config, layout).getBytes(StandardCharsets.UTF_8));
+      validateStagedOutput(staging, config, layout, expectedCycles);
       final List<Path> installedFiles = installStagedFiles(staging, config.outputDirectory, overwrite);
       installed = true;
       return new ExportResult(installedFiles, report);
@@ -482,23 +647,164 @@ public final class CreatureAnimationExporter {
   }
 
   public static String createIniText(Config config) {
-    final StringBuilder result = new StringBuilder(320);
+    final FamilyLayout layout =
+        config.family.createLayout(config.resref, config.splitBams, config.quadrants, config.armorLevels);
+    return createIniText(config, layout);
+  }
+
+  private static String createIniText(Config config, FamilyLayout layout) {
+    final StringBuilder result = new StringBuilder(1024);
     result.append("[general]\n");
-    result.append("animation_type=7000\n");
+    result.append(String.format(Locale.ENGLISH, "animation_type=%04X%n",
+        config.family.getAnimationTypeCode(config.animationId)));
     result.append("move_scale=").append(config.moveScale).append('\n');
     result.append("ellipse=").append(config.ellipse).append('\n');
     result.append("color_blood=").append(config.bloodColor).append('\n');
     result.append("color_chunks=").append(config.chunkColor).append('\n');
     result.append("personal_space=").append(config.personalSpace).append("\n\n");
-    result.append("[monster]\n");
-    result.append("resref=").append(config.resref).append('\n');
-    result.append("can_lie_down=").append(config.canLieDown ? 1 : 0).append('\n');
-    result.append("detected_by_infravision=").append(config.detectedByInfravision ? 1 : 0).append('\n');
-    result.append("false_color=").append(config.falseColor ? 1 : 0).append('\n');
-    result.append("path_smooth=").append(config.pathSmooth ? 1 : 0).append('\n');
-    result.append("split_bams=").append(config.splitBams ? 1 : 0).append('\n');
-    result.append("translucent=").append(config.translucent ? 1 : 0).append('\n');
+
+    result.append('[').append(config.family.getSectionName()).append("]\n");
+    switch (config.family) {
+      case EFFECT:
+        appendResref(result, config);
+        appendBoolean(result, "false_color", config.falseColor);
+        appendBoolean(result, "translucent", config.translucent);
+        appendBoolean(result, "random_render", false);
+        break;
+      case MONSTER_QUADRANT:
+        appendResref(result, config);
+        appendBoolean(result, "caster", false);
+        appendBoolean(result, "extend_direction", true);
+        result.append("extend_direction_test=9\n");
+        appendBoolean(result, "false_color", config.falseColor);
+        appendBoolean(result, "path_smooth", config.pathSmooth);
+        result.append("quadrants=").append(config.quadrants).append('\n');
+        break;
+      case MONSTER_MULTI:
+        appendResref(result, config);
+        result.append("quadrants=").append(config.quadrants).append('\n');
+        appendBoolean(result, "split_bams", false);
+        break;
+      case MONSTER_MULTI_NEW:
+        appendResref(result, config);
+        appendBoolean(result, "can_lie_down", config.canLieDown);
+        appendBoolean(result, "detected_by_infravision", config.detectedByInfravision);
+        appendBoolean(result, "false_color", config.falseColor);
+        appendBoolean(result, "path_smooth", config.pathSmooth);
+        result.append("quadrants=").append(config.quadrants).append('\n');
+        appendBoolean(result, "split_bams", config.splitBams);
+        appendBoolean(result, "translucent", config.translucent);
+        break;
+      case MONSTER_LAYERED_SPELL:
+        appendResref(result, config);
+        appendBoolean(result, "dual_attack", false);
+        appendBoolean(result, "false_color", config.falseColor);
+        appendBoolean(result, "invulnerable", false);
+        break;
+      case MONSTER_ANKHEG:
+        appendResref(result, config);
+        appendBoolean(result, "detected_by_infravision", config.detectedByInfravision);
+        appendBoolean(result, "false_color", config.falseColor);
+        appendBoolean(result, "mirror", true);
+        appendBoolean(result, "extend_direction", true);
+        break;
+      case TOWN_STATIC:
+        appendResref(result, config);
+        appendBoolean(result, "can_lie_down", config.canLieDown);
+        appendBoolean(result, "false_color", config.falseColor);
+        break;
+      case CHARACTER:
+        appendResref(result, config);
+        result.append("armor_max_code=").append(config.armorLevels).append('\n');
+        appendBoolean(result, "can_lie_down", config.canLieDown);
+        appendBoolean(result, "detected_by_infravision", config.detectedByInfravision);
+        appendBoolean(result, "equip_helmet", false);
+        appendBoolean(result, "split_bams", true);
+        appendBoolean(result, "false_color", config.falseColor);
+        break;
+      case CHARACTER_OLD:
+        appendResref(result, config);
+        result.append("armor_max_code=").append(config.armorLevels).append('\n');
+        appendBoolean(result, "can_lie_down", config.canLieDown);
+        appendBoolean(result, "detected_by_infravision", config.detectedByInfravision);
+        appendBoolean(result, "equip_helmet", false);
+        appendBoolean(result, "false_color", config.falseColor);
+        appendBoolean(result, "hide_weapons", true);
+        break;
+      case MONSTER:
+        appendResref(result, config);
+        appendBoolean(result, "can_lie_down", config.canLieDown);
+        appendBoolean(result, "detected_by_infravision", config.detectedByInfravision);
+        appendBoolean(result, "false_color", config.falseColor);
+        appendBoolean(result, "path_smooth", config.pathSmooth);
+        appendBoolean(result, "split_bams", config.splitBams);
+        appendBoolean(result, "translucent", config.translucent);
+        break;
+      case MONSTER_OLD:
+        appendResref(result, config);
+        appendBoolean(result, "detected_by_infravision", config.detectedByInfravision);
+        appendBoolean(result, "false_color", config.falseColor);
+        appendBoolean(result, "translucent", config.translucent);
+        break;
+      case MONSTER_LAYERED:
+        appendResref(result, config);
+        appendBoolean(result, "caster", false);
+        appendBoolean(result, "detected_by_infravision", config.detectedByInfravision);
+        appendBoolean(result, "false_color", config.falseColor);
+        break;
+      case MONSTER_LARGE:
+      case MONSTER_LARGE_16:
+        appendResref(result, config);
+        appendBoolean(result, "detected_by_infravision", config.detectedByInfravision);
+        appendBoolean(result, "false_color", config.falseColor);
+        break;
+      case AMBIENT_STATIC:
+        appendResref(result, config);
+        appendBoolean(result, "false_color", config.falseColor);
+        appendBoolean(result, "invulnerable", false);
+        break;
+      case AMBIENT:
+        appendResref(result, config);
+        appendBoolean(result, "false_color", config.falseColor);
+        appendBoolean(result, "invulnerable", false);
+        result.append("list_type=0\n");
+        appendBoolean(result, "path_smooth", config.pathSmooth);
+        break;
+      case FLYING:
+        appendResref(result, config);
+        appendBoolean(result, "false_color", config.falseColor);
+        break;
+      case MONSTER_ICEWIND:
+        appendResref(result, config);
+        appendBoolean(result, "weapon_left_hand", false);
+        appendBoolean(result, "translucent", config.translucent);
+        appendBoolean(result, "detected_by_infravision", config.detectedByInfravision);
+        break;
+      case MONSTER_PLANESCAPE:
+        appendBoolean(result, "clown", config.falseColor);
+        if (config.falseColor) {
+          for (int index = 0; index < 7; index++) {
+            result.append("color").append(index + 1).append('=').append(128 + index * 16).append('\n');
+          }
+        }
+        result.append("walkscale=").append(config.moveScale).append('\n');
+        result.append("runscale=").append(config.moveScale).append('\n');
+        for (final Map.Entry<String, String> action : layout.getActionResrefs().entrySet()) {
+          result.append(action.getKey()).append('=').append(action.getValue()).append('\n');
+        }
+        break;
+      default:
+        throw new IllegalStateException("Unsupported animation family: " + config.family);
+    }
     return result.toString();
+  }
+
+  private static void appendResref(StringBuilder result, Config config) {
+    result.append("resref=").append(config.resref).append('\n');
+  }
+
+  private static void appendBoolean(StringBuilder result, String name, boolean value) {
+    result.append(name).append('=').append(value ? 1 : 0).append('\n');
   }
 
   static PseudoBamDecoder createBam(CreatureAnimationModel model, List<OutputSlot> slots) {
@@ -541,6 +847,131 @@ public final class CreatureAnimationExporter {
       control.cycleAdd(indices);
     }
     return decoder;
+  }
+
+  static PseudoBamDecoder createBam(CreatureAnimationModel model, ResourcePlan resource) {
+    final PseudoBamDecoder decoder = new PseudoBamDecoder();
+    final PseudoBamControl control = decoder.createControl();
+    final Map<Integer, CyclePlan> cycles = new HashMap<>();
+    for (final CyclePlan cycle : resource.getCycles()) {
+      cycles.put(cycle.getCycleIndex(), cycle);
+    }
+
+    final IdentityHashMap<AnimationFrame, Map<Integer, Integer>> frameIndices = new IdentityHashMap<>();
+    for (int cycleIndex = 0; cycleIndex < resource.getCycleCount(); cycleIndex++) {
+      final CyclePlan cycle = cycles.get(cycleIndex);
+      if (cycle == null) {
+        control.cycleAdd();
+        continue;
+      }
+
+      final ResolvedFrames resolved = model.resolveFrames(cycle.getSequence(), cycle.getSourceDirection());
+      if (resolved.getFrames().isEmpty()) {
+        decoder.close();
+        throw new IllegalArgumentException("No source frames resolve for " + cycle.getSequence().getCode() + "/"
+            + cycle.getSourceDirection().getCode() + ".");
+      }
+
+      final int[] indices = new int[resolved.getFrames().size()];
+      for (int targetIndex = 0; targetIndex < resolved.getFrames().size(); targetIndex++) {
+        final int sourceIndex = cycle.isReversed() ? resolved.getFrames().size() - 1 - targetIndex : targetIndex;
+        final AnimationFrame frame = resolved.getFrames().get(sourceIndex);
+        final int transformKey = getTransformKey(cycle);
+        final Map<Integer, Integer> transformedIndices =
+            frameIndices.computeIfAbsent(frame, key -> new HashMap<Integer, Integer>());
+        Integer frameIndex = transformedIndices.get(transformKey);
+        if (frameIndex == null) {
+          final TransformedFrame transformed = transformFrame(frame, cycle);
+          frameIndex = decoder.frameAdd(transformed.image, transformed.center);
+          transformedIndices.put(transformKey, frameIndex);
+        }
+        indices[targetIndex] = frameIndex;
+      }
+      control.cycleAdd(indices);
+    }
+    return decoder;
+  }
+
+  private static int getTransformKey(CyclePlan cycle) {
+    int result = cycle.isMirrored() ? 1 : 0;
+    result |= cycle.isBlank() ? 2 : 0;
+    result |= (cycle.getQuadrantIndex() + 1) << 2;
+    result |= cycle.getQuadrantCount() << 8;
+    return result;
+  }
+
+  private static TransformedFrame transformFrame(AnimationFrame frame, CyclePlan cycle) {
+    BufferedImage image = frame.getImage();
+    Point center = frame.getCenter();
+    if (cycle.isMirrored()) {
+      image = mirrorImage(image);
+      center = new Point(image.getWidth() - 1 - center.x, center.y);
+    }
+    if (cycle.isBlank()) {
+      image = createCompatibleImage(image, image.getWidth(), image.getHeight());
+    }
+    if (cycle.getQuadrantCount() > 0) {
+      final int[] bounds = getQuadrantBounds(image.getWidth(), image.getHeight(), cycle.getQuadrantIndex(),
+          cycle.getQuadrantCount());
+      image = copyRegion(image, bounds[0], bounds[1], bounds[2], bounds[3]);
+      center.translate(-bounds[0], -bounds[1]);
+    }
+    return new TransformedFrame(image, center);
+  }
+
+  private static BufferedImage mirrorImage(BufferedImage source) {
+    final int width = source.getWidth();
+    final int height = source.getHeight();
+    final BufferedImage target = createCompatibleImage(source, width, height);
+    final WritableRaster sourceRaster = source.getRaster();
+    final WritableRaster targetRaster = target.getRaster();
+    Object pixel = null;
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        pixel = sourceRaster.getDataElements(x, y, pixel);
+        targetRaster.setDataElements(width - 1 - x, y, pixel);
+      }
+    }
+    return target;
+  }
+
+  private static BufferedImage copyRegion(BufferedImage source, int x, int y, int width, int height) {
+    if (width <= 0 || height <= 0) {
+      throw new IllegalArgumentException("A source frame is too small for the selected quadrant count.");
+    }
+    final BufferedImage target = createCompatibleImage(source, width, height);
+    final Object data = source.getRaster().getDataElements(x, y, width, height, null);
+    target.getRaster().setDataElements(0, 0, width, height, data);
+    return target;
+  }
+
+  private static BufferedImage createCompatibleImage(BufferedImage source, int width, int height) {
+    final WritableRaster raster = source.getRaster().createCompatibleWritableRaster(width, height);
+    return new BufferedImage(source.getColorModel(), raster, source.isAlphaPremultiplied(), null);
+  }
+
+  static int[] getQuadrantBounds(int width, int height, int quadrantIndex, int quadrantCount) {
+    final int columns = (int) Math.ceil(Math.sqrt(quadrantCount));
+    final int rows = (quadrantCount + columns - 1) / columns;
+    final int row = quadrantIndex / columns;
+    final int firstInRow = row * columns;
+    final int columnsInRow = Math.min(columns, quadrantCount - firstInRow);
+    final int column = quadrantIndex - firstInRow;
+    final int x = column * width / columnsInRow;
+    final int y = row * height / rows;
+    final int nextX = (column + 1) * width / columnsInRow;
+    final int nextY = (row + 1) * height / rows;
+    return new int[] { x, y, nextX - x, nextY - y };
+  }
+
+  private static final class TransformedFrame {
+    private final BufferedImage image;
+    private final Point center;
+
+    private TransformedFrame(BufferedImage image, Point center) {
+      this.image = image;
+      this.center = center;
+    }
   }
 
   static int getRequiredCycleCount(List<OutputSlot> slots) {
@@ -692,8 +1123,8 @@ public final class CreatureAnimationExporter {
     return Arrays.equals(firstColors, secondColors);
   }
 
-  private static void validateStagedOutput(Path staging, Config config, Map<String, Integer> expectedCycles)
-      throws Exception {
+  private static void validateStagedOutput(Path staging, Config config, FamilyLayout layout,
+      Map<String, Integer> expectedCycles) throws Exception {
     for (final Map.Entry<String, Integer> entry : expectedCycles.entrySet()) {
       final Path path = staging.resolve(entry.getKey());
       final FileResourceEntry resource = new FileResourceEntry(path);
@@ -722,8 +1153,21 @@ public final class CreatureAnimationExporter {
 
     final Path iniPath = staging.resolve(getIniFileName(config.animationId));
     final String ini = new String(Files.readAllBytes(iniPath), StandardCharsets.UTF_8);
-    if (!ini.contains("[general]") || !ini.contains("animation_type=7000") || !ini.contains("[monster]")
-        || !ini.contains("resref=" + config.resref)) {
+    final String expectedType = String.format(Locale.ENGLISH, "animation_type=%04X",
+        config.family.getAnimationTypeCode(config.animationId));
+    boolean valid = ini.contains("[general]") && ini.contains(expectedType)
+        && ini.contains("[" + config.family.getSectionName() + "]");
+    if (config.family == CreatureAnimationFamily.MONSTER_PLANESCAPE) {
+      for (final Map.Entry<String, String> action : layout.getActionResrefs().entrySet()) {
+        if (!ini.contains(action.getKey() + "=" + action.getValue())) {
+          valid = false;
+          break;
+        }
+      }
+    } else {
+      valid &= ini.contains("resref=" + config.resref);
+    }
+    if (!valid) {
       throw new IOException("Round-trip validation rejected the generated animation INI.");
     }
   }

@@ -216,7 +216,7 @@ public class ToolsMenu extends JMenu implements BrowserSubMenu, ActionListener {
     toolCreatureAnimationCreator = BrowserMenuBar.makeMenuItem("Creature Animation Creator...", KeyEvent.VK_C,
         Icons.ICON_CRE_VIEWER_24.getIcon(), -1, this);
     toolCreatureAnimationCreator.setToolTipText(
-        "Creates Enhanced Edition type 0x7000 creature animation resources from descriptions or PNG frames.");
+        "Creates resources for every Enhanced Edition creature animation family from descriptions or PNG frames.");
     toolCreatureAnimationCreator.setEnabled(Profile.isEnhancedEdition());
     convertMenu.add(toolCreatureAnimationCreator);
     convertMenu.addSeparator();

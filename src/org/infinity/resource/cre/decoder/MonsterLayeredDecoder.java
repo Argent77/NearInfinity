@@ -145,8 +145,8 @@ public class MonsterLayeredDecoder extends SpriteDecoder {
     // setting properties
     initDefaults(getAnimationInfo());
     IniMapSection section = getSpecificIniSection();
-    setFalseColor(true);
-    setDetectedByInfravision(true);
+    setFalseColor(section.getAsInteger(KEY_FALSE_COLOR.getName(), 1) != 0);
+    setDetectedByInfravision(section.getAsInteger(KEY_DETECTED_BY_INFRAVISION.getName(), 1) != 0);
     setWeapon1Overlay(section.getAsString(KEY_RESREF_WEAPON1.getName(), ""));
     setWeapon2Overlay(section.getAsString(KEY_RESREF_WEAPON2.getName(), ""));
   }
