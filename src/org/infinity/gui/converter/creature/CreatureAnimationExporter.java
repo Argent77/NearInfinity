@@ -501,7 +501,7 @@ public final class CreatureAnimationExporter {
     return result.toString();
   }
 
-  private static PseudoBamDecoder createBam(CreatureAnimationModel model, List<OutputSlot> slots) {
+  static PseudoBamDecoder createBam(CreatureAnimationModel model, List<OutputSlot> slots) {
     final PseudoBamDecoder decoder = new PseudoBamDecoder();
     final PseudoBamControl control = decoder.createControl();
     final Map<Integer, Sequence> cycles = new HashMap<>();
@@ -543,7 +543,7 @@ public final class CreatureAnimationExporter {
     return decoder;
   }
 
-  private static int getRequiredCycleCount(List<OutputSlot> slots) {
+  static int getRequiredCycleCount(List<OutputSlot> slots) {
     int result = 0;
     for (final OutputSlot slot : slots) {
       result = Math.max(result, slot.getCycleOffset() + Direction.values().length);
@@ -551,7 +551,7 @@ public final class CreatureAnimationExporter {
     return result;
   }
 
-  private static PseudoBamDecoder convertToPalettedBam(PseudoBamDecoder source) {
+  static PseudoBamDecoder convertToPalettedBam(PseudoBamDecoder source) {
     if (hasCommonIndexedPalette(source)) {
       return normalizeIndexedPalette(source);
     }
@@ -728,7 +728,7 @@ public final class CreatureAnimationExporter {
     }
   }
 
-  private static void validatePvrzReferences(Path staging, Path bamPath) throws IOException {
+  static void validatePvrzReferences(Path staging, Path bamPath) throws IOException {
     final byte[] data = Files.readAllBytes(bamPath);
     if (data.length < 0x20) {
       throw new IOException("BAM V2 header is truncated in " + bamPath.getFileName() + ".");
@@ -748,7 +748,7 @@ public final class CreatureAnimationExporter {
     }
   }
 
-  private static List<Path> installStagedFiles(Path staging, Path output, boolean overwrite) throws IOException {
+  static List<Path> installStagedFiles(Path staging, Path output, boolean overwrite) throws IOException {
     final List<Path> sources;
     try (Stream<Path> stream = Files.list(staging)) {
       sources = stream.filter(Files::isRegularFile)
@@ -829,7 +829,7 @@ public final class CreatureAnimationExporter {
     }
   }
 
-  private static int findPvrzStartIndex(Path directory) throws IOException {
+  static int findPvrzStartIndex(Path directory) throws IOException {
     int highest = -1;
     if (directory != null && Files.isDirectory(directory)) {
       try (Stream<Path> stream = Files.list(directory)) {
@@ -857,7 +857,7 @@ public final class CreatureAnimationExporter {
     }
   }
 
-  private static void deleteTree(Path root) throws IOException {
+  static void deleteTree(Path root) throws IOException {
     if (root == null || !Files.exists(root)) {
       return;
     }

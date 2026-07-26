@@ -75,6 +75,14 @@ public final class CreatureAnimationCreator extends ChildFrame {
   private final JButton exportPngButton = new JButton("Export editable PNGs...");
   private final JButton clearButton = new JButton("Clear source");
 
+  private final JTextArea equipmentPromptArea = new JTextArea(6, 28);
+  private final JTextField equipmentSourceCodeField = new JTextField("AUTO", 5);
+  private final JTextField equipmentTargetCodeField = new JTextField("AUTO", 5);
+  private final JSpinner equipmentSeedSpinner =
+      new JSpinner(new SpinnerNumberModel(1, Integer.MIN_VALUE, Integer.MAX_VALUE, 1));
+  private final JLabel equipmentDescriptionLabel = new JLabel(" ");
+  private final JButton equipmentGenerateButton = new JButton("Generate synchronized overlay");
+
   private final JLabel gameLabel = new JLabel();
   private final JTextField slotField = new JTextField(8);
   private final JLabel slotStatusLabel = new JLabel(" ");
@@ -112,8 +120,10 @@ public final class CreatureAnimationCreator extends ChildFrame {
   private final JLabel operationLabel = new JLabel("Ready");
 
   private CreatureAnimationModel model = new CreatureAnimationModel();
+  private EquipmentOverlayReference.Result equipmentResult;
   private Path lastSourceDirectory;
   private boolean busy;
+  private boolean updatingEquipmentFields;
 
   public CreatureAnimationCreator() {
     super("Creature Animation Creator", true);
@@ -133,6 +143,13 @@ public final class CreatureAnimationCreator extends ChildFrame {
     promptArea.setText("armored emerald horned wolf with glowing gold eyes");
     promptArea.setToolTipText("A deterministic offline description. Body plan, colors, scale and visible traits "
         + "are parsed from the text.");
+
+    equipmentPromptArea.setLineWrap(true);
+    equipmentPromptArea.setWrapStyleWord(true);
+    equipmentPromptArea.setText("I want an animation similar to the existing SOLAR, but instead of wielding a "
+        + "sword, it should wield an ornate silver scythe with a blue glow.");
+    equipmentPromptArea.setToolTipText("Name an ANIMATE.IDS reference, its current weapon and the replacement. "
+        + "The last named weapon is treated as the requested result.");
 
     final int slot = findSuggestedSlot();
     slotField.setText(String.format(Locale.ENGLISH, "0x%04X", slot));
@@ -154,7 +171,8 @@ public final class CreatureAnimationCreator extends ChildFrame {
     final JLabel heading = new JLabel("Enhanced Edition creature animation authoring — family 0x7000");
     heading.setFont(heading.getFont().deriveFont(Font.BOLD, heading.getFont().getSize2D() + 1.0f));
     final JLabel boundary = new JLabel("<html>Generate a coherent offline procedural draft, or import artist-authored "
-        + "PNG sequences. Eastern orientations are previewed exactly as the engine mirrors them.</html>");
+        + "PNG sequences. Existing synchronized weapon layers can also be redrawn from a prompt while retaining the "
+        + "reference animation's timing and grip motion.</html>");
     boundary.setForeground(UIManager.getColor("Label.disabledForeground"));
     final JPanel header = new JPanel(new BorderLayout(4, 3));
     header.add(heading, BorderLayout.NORTH);
@@ -163,6 +181,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
 
     final JTabbedPane tabs = new JTabbedPane();
     tabs.addTab("Source", createSourcePanel());
+    tabs.addTab("Equipment overlay", createEquipmentPanel());
     tabs.addTab("Definition", createDefinitionPanel());
     tabs.addTab("Engine properties", createEnginePanel());
 
@@ -227,6 +246,64 @@ public final class CreatureAnimationCreator extends ChildFrame {
 
     sourceStatusLabel.setBorder(BorderFactory.createEmptyBorder(8, 2, 0, 2));
     addWide(panel, sourceStatusLabel, gbc, 7);
+    return panel;
+  }
+
+  private JPanel createEquipmentPanel() {
+    final JPanel panel = new JPanel(new GridBagLayout());
+    panel.setBorder(BorderFactory.createEmptyBorder(9, 9, 9, 9));
+    final GridBagConstraints gbc = baseConstraints();
+    int row = 0;
+
+    addWide(panel, new JLabel("Reference-and-replace prompt"), gbc, row++);
+    final GridBagConstraints promptConstraints = (GridBagConstraints) gbc.clone();
+    promptConstraints.gridy = row++;
+    promptConstraints.gridwidth = 2;
+    promptConstraints.weighty = 0.38;
+    promptConstraints.fill = GridBagConstraints.BOTH;
+    panel.add(new JScrollPane(equipmentPromptArea), promptConstraints);
+
+    final JPanel codes = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+    codes.add(new JLabel("Source appearance:"));
+    codes.add(equipmentSourceCodeField);
+    codes.add(new JLabel("New appearance:"));
+    codes.add(equipmentTargetCodeField);
+    addWide(panel, codes, gbc, row++);
+
+    final JLabel codeHelp = new JLabel("<html>Use <code>AUTO</code> to discover the source from the prompt and choose "
+        + "an unused target code. The generated code must also be assigned to the test ITM's "
+        + "<b>Equipped appearance</b> field.</html>");
+    codeHelp.setForeground(UIManager.getColor("Label.disabledForeground"));
+    addWide(panel, codeHelp, gbc, row++);
+
+    final JPanel generation = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+    generation.add(equipmentGenerateButton);
+    generation.add(new JLabel("Seed:"));
+    generation.add(equipmentSeedSpinner);
+    addWide(panel, generation, gbc, row++);
+
+    equipmentDescriptionLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
+    addWide(panel, equipmentDescriptionLabel, gbc, row++);
+
+    final JLabel mechanism = new JLabel("<html><b>How it works:</b> type 0x7000 stores equipment in separate "
+        + "<code>[resref]G1[appearance].BAM</code> and <code>G2</code> layers. The creator analyzes the reference "
+        + "layer frame by frame, keeps its timing and grip angle, redraws the requested weapon, and previews both "
+        + "layers together. The body BAMs and animation INI are never replaced by this mode.</html>");
+    mechanism.setBorder(BorderFactory.createEmptyBorder(9, 0, 8, 0));
+    addWide(panel, mechanism, gbc, row++);
+
+    final JLabel limitations = new JLabel("<html>This mode requires an existing complete G1/G2 weapon overlay, such "
+        + "as SOLAR's <code>S1</code> sword. Procedural sickles, scythes, swords, axes, maces, hammers, spears, "
+        + "polearms, staves, clubs, flails, bows and whips are supported. Artist PNG export remains available for "
+        + "paint-over refinement.</html>");
+    limitations.setForeground(UIManager.getColor("Label.disabledForeground"));
+    addWide(panel, limitations, gbc, row++);
+
+    final GridBagConstraints filler = (GridBagConstraints) gbc.clone();
+    filler.gridy = row;
+    filler.weighty = 0.62;
+    filler.fill = GridBagConstraints.BOTH;
+    panel.add(new JPanel(), filler);
     return panel;
   }
 
@@ -362,10 +439,12 @@ public final class CreatureAnimationCreator extends ChildFrame {
 
   private void initializeListeners() {
     generateButton.addActionListener(event -> generateDraft());
+    equipmentGenerateButton.addActionListener(event -> generateEquipmentOverlay());
     importButton.addActionListener(event -> importPngDirectory());
     exportPngButton.addActionListener(event -> exportPngDirectory());
     clearButton.addActionListener(event -> {
-      if (model.isEmpty() || JOptionPane.showConfirmDialog(this, "Clear all loaded source frames?", "Clear source",
+      if (getEditableModel().isEmpty() || JOptionPane.showConfirmDialog(this, "Clear all loaded source frames?",
+          "Clear source",
           JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION) {
         setModel(new CreatureAnimationModel());
       }
@@ -396,7 +475,15 @@ public final class CreatureAnimationCreator extends ChildFrame {
     outputField.getDocument().addDocumentListener(new SimpleDocumentListener(this::updateSlotStatus));
     promptArea.getDocument().addDocumentListener(new SimpleDocumentListener(this::updateDescriptionSummary));
     seedSpinner.addChangeListener(event -> updateDescriptionSummary());
+    equipmentPromptArea.getDocument()
+        .addDocumentListener(new SimpleDocumentListener(this::equipmentGenerationInputChanged));
+    equipmentSourceCodeField.getDocument()
+        .addDocumentListener(new SimpleDocumentListener(this::equipmentGenerationInputChanged));
+    equipmentTargetCodeField.getDocument()
+        .addDocumentListener(new SimpleDocumentListener(this::updateEquipmentDescriptionSummary));
+    equipmentSeedSpinner.addChangeListener(event -> equipmentGenerationInputChanged());
     updateDescriptionSummary();
+    updateEquipmentDescriptionSummary();
   }
 
   private void generateDraft() {
@@ -428,6 +515,59 @@ public final class CreatureAnimationCreator extends ChildFrame {
         }
       }
     };
+    worker.addPropertyChangeListener(event -> {
+      if ("progress".equals(event.getPropertyName())) {
+        progressBar.setIndeterminate(false);
+        progressBar.setValue((Integer) event.getNewValue());
+      }
+    });
+    worker.execute();
+  }
+
+  private void generateEquipmentOverlay() {
+    if (busy) {
+      return;
+    }
+    setBusy(true, "Resolving reference and drawing synchronized equipment...", true);
+    final String prompt = equipmentPromptArea.getText();
+    final String sourceCode = equipmentSourceCodeField.getText();
+    final String targetCode = equipmentTargetCodeField.getText();
+    final long seed = ((Number) equipmentSeedSpinner.getValue()).longValue();
+    final SwingWorker<EquipmentOverlayReference.Result, Void> worker =
+        new SwingWorker<EquipmentOverlayReference.Result, Void>() {
+          @Override
+          protected EquipmentOverlayReference.Result doInBackground() throws Exception {
+            return EquipmentOverlayReference.generate(prompt, sourceCode, targetCode, seed,
+                (completed, total, sequence, direction) ->
+                    setProgress((int) ((completed * 100L) / total)));
+          }
+
+          @Override
+          protected void done() {
+            try {
+              final EquipmentOverlayReference.Result result = get();
+              updatingEquipmentFields = true;
+              try {
+                equipmentSourceCodeField.setText(result.getSourceAppearanceCode());
+                equipmentTargetCodeField.setText(result.getTargetAppearanceCode());
+              } finally {
+                updatingEquipmentFields = false;
+              }
+              setEquipmentResult(result);
+              equipmentSourceCodeField.setToolTipText("Available complete reference pairs: "
+                  + String.join(", ", result.getAvailableAppearanceCodes()));
+              operationLabel.setText("Synchronized " + result.getPrompt().getTargetWeapon().getLabel()
+                  + " overlay generated");
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              showFailure("Equipment overlay generation was interrupted.", e);
+            } catch (ExecutionException e) {
+              showFailure("Could not generate the equipment overlay.", e.getCause());
+            } finally {
+              setBusy(false, null, false);
+            }
+          }
+        };
     worker.addPropertyChangeListener(event -> {
       if ("progress".equals(event.getPropertyName())) {
         progressBar.setIndeterminate(false);
@@ -476,7 +616,8 @@ public final class CreatureAnimationCreator extends ChildFrame {
   }
 
   private void exportPngDirectory() {
-    if (busy || model.isEmpty()) {
+    final CreatureAnimationModel editableModel = getEditableModel();
+    if (busy || editableModel.isEmpty()) {
       return;
     }
     final Path directory = chooseDirectory("Export editable creature animation PNGs", lastSourceDirectory);
@@ -501,7 +642,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
     new SwingWorker<Integer, Void>() {
       @Override
       protected Integer doInBackground() throws Exception {
-        return CreatureAnimationImporter.exportDirectory(model, directory, true);
+        return CreatureAnimationImporter.exportDirectory(editableModel, directory, true);
       }
 
       @Override
@@ -522,6 +663,10 @@ public final class CreatureAnimationCreator extends ChildFrame {
 
   private void exportToGame() {
     if (busy) {
+      return;
+    }
+    if (equipmentResult != null) {
+      exportEquipmentToGame();
       return;
     }
     final Config config;
@@ -593,7 +738,92 @@ public final class CreatureAnimationCreator extends ChildFrame {
     }.execute();
   }
 
+  private void exportEquipmentToGame() {
+    final EquipmentOverlayExporter.Config config;
+    try {
+      config = createEquipmentConfig();
+    } catch (Exception e) {
+      showFailure("The equipment overlay definition is invalid.", e);
+      return;
+    }
+
+    final CreatureAnimationModel overlay = equipmentResult.getOverlayModel();
+    final ValidationReport report = EquipmentOverlayExporter.validate(overlay, config);
+    if (report.hasErrors()) {
+      showReport(report, "Equipment overlay validation", JOptionPane.ERROR_MESSAGE);
+      return;
+    }
+    if (report.hasWarnings() && JOptionPane.showConfirmDialog(this, createReportComponent(report),
+        "Export with validation warnings?", JOptionPane.YES_NO_OPTION,
+        JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) {
+      return;
+    }
+
+    final List<Path> existing = EquipmentOverlayExporter.getExistingTargets(config);
+    final boolean overwrite;
+    if (!existing.isEmpty()) {
+      final StringBuilder text = new StringBuilder("The following equipment overlays already exist:\n\n");
+      for (final Path path : existing) {
+        text.append("• ").append(path.getFileName()).append('\n');
+      }
+      text.append("\nReplace them after the staged output passes validation?");
+      overwrite = JOptionPane.showConfirmDialog(this, text.toString(), "Confirm overlay replacement",
+          JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION;
+      if (!overwrite) {
+        return;
+      }
+    } else {
+      overwrite = false;
+    }
+
+    setBusy(true, "Encoding and validating equipment overlay resources...", true);
+    new SwingWorker<EquipmentOverlayExporter.ExportResult, Void>() {
+      @Override
+      protected EquipmentOverlayExporter.ExportResult doInBackground() throws Exception {
+        return EquipmentOverlayExporter.export(overlay, config, overwrite);
+      }
+
+      @Override
+      protected void done() {
+        try {
+          final EquipmentOverlayExporter.ExportResult result = get();
+          for (final Path path : result.getInstalledFiles()) {
+            ResourceFactory.registerResource(path, false);
+          }
+          operationLabel.setText(result.getInstalledFiles().size() + " equipment resource(s) installed");
+          JOptionPane.showMessageDialog(CreatureAnimationCreator.this,
+              "The " + equipmentResult.getPrompt().getTargetWeapon().getLabel() + " overlay was installed for "
+                  + equipmentResult.getSymbol() + " as appearance code " + config.getAppearanceCode() + ".\n\n"
+                  + "Set the equipped test ITM's Equipped appearance field to " + config.getAppearanceCode()
+                  + " and equip it on the creature.\n\nOutput: " + config.getOutputDirectory(),
+              "Equipment overlay exported", JOptionPane.INFORMATION_MESSAGE);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          showFailure("Equipment overlay export was interrupted.", e);
+        } catch (ExecutionException e) {
+          showFailure("Equipment overlay export failed. Existing files were preserved or restored.", e.getCause());
+        } finally {
+          setBusy(false, null, false);
+        }
+      }
+    }.execute();
+  }
+
   private boolean showValidation() {
+    if (equipmentResult != null) {
+      final EquipmentOverlayExporter.Config config;
+      try {
+        config = createEquipmentConfig();
+      } catch (Exception e) {
+        showFailure("The equipment overlay definition is invalid.", e);
+        return false;
+      }
+      final ValidationReport report = EquipmentOverlayExporter.validate(equipmentResult.getOverlayModel(), config);
+      final int messageType = report.hasErrors() ? JOptionPane.ERROR_MESSAGE
+          : report.hasWarnings() ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE;
+      showReport(report, "Equipment overlay validation", messageType);
+      return !report.hasErrors();
+    }
     final Config config;
     try {
       config = createConfig();
@@ -623,6 +853,26 @@ public final class CreatureAnimationCreator extends ChildFrame {
         .setTranslucent(translucentCheck.isSelected()).setMoveScale((Integer) moveScaleSpinner.getValue())
         .setEllipse((Integer) ellipseSpinner.getValue()).setPersonalSpace((Integer) personalSpaceSpinner.getValue())
         .setBloodColor((Integer) bloodSpinner.getValue()).setChunkColor((Integer) chunksSpinner.getValue());
+  }
+
+  private EquipmentOverlayExporter.Config createEquipmentConfig() {
+    if (equipmentResult == null) {
+      throw new IllegalStateException("Generate an equipment overlay first.");
+    }
+    final String outputText = outputField.getText().trim();
+    if (outputText.isEmpty()) {
+      throw new IllegalArgumentException("Select an output directory.");
+    }
+    final String appearanceCode = equipmentTargetCodeField.getText().trim().toUpperCase(Locale.ENGLISH);
+    if (appearanceCode.equals(equipmentResult.getSourceAppearanceCode())) {
+      throw new IllegalArgumentException("The target appearance code must differ from the source layer "
+          + equipmentResult.getSourceAppearanceCode() + ".");
+    }
+    return new EquipmentOverlayExporter.Config().setResref(equipmentResult.getResref())
+        .setAppearanceCode(appearanceCode)
+        .setOutputDirectory(Paths.get(outputText).toAbsolutePath().normalize())
+        .setBamFormat((BamFormat) formatCombo.getSelectedItem())
+        .setCompressedBam(compressedCheck.isSelected());
   }
 
   private void chooseOutputDirectory() {
@@ -656,18 +906,43 @@ public final class CreatureAnimationCreator extends ChildFrame {
   }
 
   private void setModel(CreatureAnimationModel model) {
+    equipmentResult = null;
     this.model = (model != null) ? model : new CreatureAnimationModel();
     previewPanel.setModel(this.model);
+    previewPanel.setOverlayModel(null);
+    updateModeUi();
     updateSourceUi();
   }
 
+  private void setEquipmentResult(EquipmentOverlayReference.Result result) {
+    equipmentResult = result;
+    model = result != null ? result.getAvatarModel() : new CreatureAnimationModel();
+    previewPanel.setModel(model);
+    previewPanel.setOverlayModel(result != null ? result.getOverlayModel() : null);
+    if (result != null) {
+      slotField.setText(String.format(Locale.ENGLISH, "0x%04X", result.getAnimationId()));
+      resrefField.setText(result.getResref());
+      splitCheck.setSelected(result.isSplitBams());
+      equipmentDescriptionLabel.setText(result.getSummary());
+    }
+    updateModeUi();
+    updateSourceUi();
+  }
+
+  private CreatureAnimationModel getEditableModel() {
+    return equipmentResult != null ? equipmentResult.getOverlayModel() : model;
+  }
+
   private void updateSourceUi() {
-    final int cells = model.getPopulatedCellCount();
+    final CreatureAnimationModel editableModel = getEditableModel();
+    final int cells = editableModel.getPopulatedCellCount();
     final int requiredCells = Sequence.values().length * Direction.values().length;
-    sourceStatusLabel.setText(model.isEmpty() ? "No source frames loaded"
-        : model.getFrameCount() + " frames • " + cells + "/" + requiredCells + " action/direction cells");
-    exportPngButton.setEnabled(!busy && !model.isEmpty());
-    clearButton.setEnabled(!busy && !model.isEmpty());
+    sourceStatusLabel.setText(editableModel.isEmpty() ? "No source frames loaded"
+        : (equipmentResult != null ? "Equipment overlay • " : "")
+            + editableModel.getFrameCount() + " frames • " + cells + "/" + requiredCells
+            + " action/direction cells");
+    exportPngButton.setEnabled(!busy && !editableModel.isEmpty());
+    clearButton.setEnabled(!busy && !editableModel.isEmpty());
     sequenceList.repaint();
     updatePreviewStatus();
   }
@@ -683,11 +958,58 @@ public final class CreatureAnimationCreator extends ChildFrame {
         Locale.ENGLISH) + " • scale " + String.format(Locale.ENGLISH, "%.2f", description.getScale()));
   }
 
+  private void updateEquipmentDescriptionSummary() {
+    try {
+      if (equipmentResult != null) {
+        equipmentDescriptionLabel.setText(equipmentResult.getSummary() + " • export target "
+            + equipmentTargetCodeField.getText().trim().toUpperCase(Locale.ENGLISH));
+        return;
+      }
+      final EquipmentOverlayGenerator.PromptSpec prompt =
+          EquipmentOverlayGenerator.parsePrompt(equipmentPromptArea.getText());
+      final String source = equipmentSourceCodeField.getText().trim().isEmpty()
+          ? "AUTO" : equipmentSourceCodeField.getText().trim().toUpperCase(Locale.ENGLISH);
+      final String targetText = equipmentTargetCodeField.getText().trim();
+      final String target = targetText.isEmpty() || "AUTO".equalsIgnoreCase(targetText)
+          ? prompt.getTargetWeapon().getSuggestedAppearanceCode() + " (auto)" : targetText.toUpperCase(Locale.ENGLISH);
+      equipmentDescriptionLabel.setText(prompt.getSummary() + " • source " + source + " • target " + target);
+    } catch (Exception e) {
+      equipmentDescriptionLabel.setText(e.getMessage());
+    }
+  }
+
+  private void equipmentGenerationInputChanged() {
+    if (!updatingEquipmentFields && equipmentResult != null) {
+      setModel(new CreatureAnimationModel());
+      operationLabel.setText("Equipment request changed • generate the synchronized overlay again");
+    }
+    updateEquipmentDescriptionSummary();
+  }
+
+  private void updateModeUi() {
+    final boolean equipmentMode = equipmentResult != null;
+    slotField.setEnabled(!busy && !equipmentMode);
+    resrefField.setEnabled(!busy && !equipmentMode);
+    splitCheck.setEnabled(!busy && !equipmentMode);
+    lieDownCheck.setEnabled(!busy && !equipmentMode);
+    infravisionCheck.setEnabled(!busy && !equipmentMode);
+    smoothPathCheck.setEnabled(!busy && !equipmentMode);
+    translucentCheck.setEnabled(!busy && !equipmentMode);
+    moveScaleSpinner.setEnabled(!busy && !equipmentMode);
+    ellipseSpinner.setEnabled(!busy && !equipmentMode);
+    personalSpaceSpinner.setEnabled(!busy && !equipmentMode);
+    bloodSpinner.setEnabled(!busy && !equipmentMode);
+    chunksSpinner.setEnabled(!busy && !equipmentMode);
+    exportButton.setText(equipmentMode ? "Export overlay to override" : "Export to override");
+    updateFormatUi();
+    updateSlotStatus();
+  }
+
   private void updateFormatUi() {
     final boolean bamV1 = formatCombo.getSelectedItem() == BamFormat.BAM_V1;
     compressedCheck.setEnabled(!busy && bamV1);
-    falseColorCheck.setEnabled(!busy && bamV1);
-    if (!bamV1) {
+    falseColorCheck.setEnabled(!busy && bamV1 && equipmentResult == null);
+    if (!bamV1 || equipmentResult != null) {
       falseColorCheck.setSelected(false);
     }
     final BamFormat format = (BamFormat) formatCombo.getSelectedItem();
@@ -695,6 +1017,11 @@ public final class CreatureAnimationCreator extends ChildFrame {
   }
 
   private void updateSlotStatus() {
+    if (equipmentResult != null) {
+      slotStatusLabel.setForeground(new Color(47, 139, 72));
+      slotStatusLabel.setText("Reference animation • overlay export leaves its INI and avatar BAMs unchanged");
+      return;
+    }
     try {
       final int slot = parseAnimationId(slotField.getText());
       if (!MonsterAnimationLayout.isValidSlot(Profile.getGame(), slot)) {
@@ -719,12 +1046,12 @@ public final class CreatureAnimationCreator extends ChildFrame {
     this.busy = busy;
     setCursor(busy ? Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR) : Cursor.getDefaultCursor());
     generateButton.setEnabled(!busy);
+    equipmentGenerateButton.setEnabled(!busy);
     importButton.setEnabled(!busy);
     outputButton.setEnabled(!busy);
     validateButton.setEnabled(!busy);
     exportButton.setEnabled(!busy);
     formatCombo.setEnabled(!busy);
-    splitCheck.setEnabled(!busy);
     progressBar.setIndeterminate(busy && indeterminate);
     if (!busy) {
       progressBar.setIndeterminate(false);
@@ -733,7 +1060,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
     if (text != null) {
       operationLabel.setText(text);
     }
-    updateFormatUi();
+    updateModeUi();
     updateSourceUi();
   }
 
@@ -748,6 +1075,14 @@ public final class CreatureAnimationCreator extends ChildFrame {
         + "WK_S_000.png, WK/S/000.png and WK_S/000.png are accepted. Actions are WK, SC, SD, GH, DE, TW, SL, GU, "
         + "A1-A5, SP and CA. Store S, SSW, SW, WSW, W, WNW, NW, NNW and N; the engine mirrors the seven eastern "
         + "orientations. centers.csv preserves each frame's BAM pivot.\n\n"
+        + "Equipment replacement\n"
+        + "---------------------\n"
+        + "For type 0x7000 references with an existing G1/G2 weapon layer, enter a prompt such as: \"similar to "
+        + "SOLAR, but instead of a sword wielding an ornate silver scythe with blue glow.\" The creator resolves the "
+        + "ANIMATE.IDS symbol, discovers the source appearance (S1 for SOLAR's sword), infers the grip and angle in "
+        + "every frame, and exports [resref]G1[code].BAM plus G2. The chosen two-character code must also be assigned "
+        + "to the Equipped appearance field of the ITM equipped by the creature. The reference INI and body BAMs are "
+        + "not modified. References without a complete existing overlay cannot be synthesized reliably.\n\n"
         + "Export safety\n"
         + "-------------\n"
         + "The creator validates slot ranges, source coverage, centers, dimensions, palettes and filenames. It writes "
@@ -883,12 +1218,13 @@ public final class CreatureAnimationCreator extends ChildFrame {
       final JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, selected, focused);
       if (value instanceof Sequence) {
         final Sequence sequence = (Sequence) value;
+        final CreatureAnimationModel displayModel = getEditableModel();
         int directions = 0;
         int frames = 0;
         for (final Direction direction : Direction.values()) {
-          if (model.hasFrames(sequence, direction)) {
+          if (displayModel.hasFrames(sequence, direction)) {
             directions++;
-            frames += model.getFrames(sequence, direction).size();
+            frames += displayModel.getFrames(sequence, direction).size();
           }
         }
         label.setText(sequence.getCode() + "  " + sequence.getLabel() + "   " + directions + "/9 • " + frames);

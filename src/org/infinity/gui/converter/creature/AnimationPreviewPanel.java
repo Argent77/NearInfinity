@@ -48,6 +48,7 @@ public final class AnimationPreviewPanel extends JPanel {
 
   private final Timer timer;
   private CreatureAnimationModel model = new CreatureAnimationModel();
+  private CreatureAnimationModel overlayModel;
   private Sequence sequence = Sequence.WALK;
   private int directionIndex;
   private int frameIndex;
@@ -65,6 +66,13 @@ public final class AnimationPreviewPanel extends JPanel {
 
   public void setModel(CreatureAnimationModel model) {
     this.model = (model != null) ? model : new CreatureAnimationModel();
+    frameIndex = 0;
+    repaint();
+  }
+
+  /** Sets an optional synchronized layer that is rendered over the primary creature model. */
+  public void setOverlayModel(CreatureAnimationModel overlayModel) {
+    this.overlayModel = overlayModel;
     frameIndex = 0;
     repaint();
   }
@@ -110,15 +118,16 @@ public final class AnimationPreviewPanel extends JPanel {
 
   public String getStatusText() {
     final PreviewFrames preview = getPreviewFrames();
-    if (preview.frames.isEmpty()) {
+    if (preview.getFrameCount() == 0) {
       return sequence.getCode() + " / " + PREVIEW_DIRECTIONS[directionIndex] + " - no frames";
     }
-    final String fallback = preview.resolved.isFallback()
+    final String fallback = preview.resolved != null && preview.resolved.isFallback()
         ? " - fallback " + preview.resolved.getResolvedSequence().getCode() + "/"
             + preview.resolved.getResolvedDirection().getCode()
         : "";
     return sequence.getCode() + " / " + PREVIEW_DIRECTIONS[directionIndex] + " - "
-        + (frameIndex % preview.frames.size() + 1) + "/" + preview.frames.size() + fallback;
+        + (frameIndex % preview.getFrameCount() + 1) + "/" + preview.getFrameCount()
+        + (!preview.overlayFrames.isEmpty() ? " + equipment overlay" : "") + fallback;
   }
 
   @Override
@@ -128,42 +137,37 @@ public final class AnimationPreviewPanel extends JPanel {
     try {
       drawCheckerboard(g);
       final PreviewFrames preview = getPreviewFrames();
-      if (preview.frames.isEmpty()) {
+      if (preview.getFrameCount() == 0) {
         drawEmptyMessage(g);
         return;
       }
 
-      final AnimationFrame frame = preview.frames.get(frameIndex % preview.frames.size());
-      final BufferedImage image = frame.getImage();
+      final AnimationFrame frame = selectFrame(preview.frames, frameIndex, preview.getFrameCount());
+      final AnimationFrame overlay = selectFrame(preview.overlayFrames, frameIndex, preview.getFrameCount());
+      final java.awt.Rectangle bounds = getSharedBounds(frame, overlay, preview.mirrored);
       final double availableWidth = Math.max(1.0, getWidth() - 56.0);
       final double availableHeight = Math.max(1.0, getHeight() - 56.0);
-      double scale = Math.min(availableWidth / image.getWidth(), availableHeight / image.getHeight());
+      double scale = Math.min(availableWidth / Math.max(1, bounds.width),
+          availableHeight / Math.max(1, bounds.height));
       scale = Math.max(0.1, Math.min(5.0, scale));
-      final int width = Math.max(1, (int) Math.round(image.getWidth() * scale));
-      final int height = Math.max(1, (int) Math.round(image.getHeight() * scale));
-      final int x = (getWidth() - width) / 2;
-      final int y = (getHeight() - height) / 2;
+      final int renderedWidth = Math.max(1, (int) Math.round(bounds.width * scale));
+      final int renderedHeight = Math.max(1, (int) Math.round(bounds.height * scale));
+      final int originX = (getWidth() - renderedWidth) / 2 - (int) Math.round(bounds.x * scale);
+      final int originY = (getHeight() - renderedHeight) / 2 - (int) Math.round(bounds.y * scale);
 
       g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
           scale >= 1.0 ? RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
               : RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-      if (preview.mirrored) {
-        g.drawImage(image, x + width, y, x, y + height, 0, 0, image.getWidth(), image.getHeight(), null);
-      } else {
-        g.drawImage(image, x, y, x + width, y + height, 0, 0, image.getWidth(), image.getHeight(), null);
-      }
+      drawFrame(g, frame, originX, originY, scale, preview.mirrored);
+      drawFrame(g, overlay, originX, originY, scale, preview.mirrored);
 
       if (showPivot) {
-        final Point center = frame.getCenter();
-        final int centerX = preview.mirrored ? image.getWidth() - 1 - center.x : center.x;
-        final int pivotX = x + (int) Math.round(centerX * scale);
-        final int pivotY = y + (int) Math.round(center.y * scale);
         g.setStroke(new BasicStroke(1.0f));
         g.setColor(new Color(255, 206, 72, 185));
-        g.drawLine(12, pivotY, getWidth() - 12, pivotY);
+        g.drawLine(12, originY, getWidth() - 12, originY);
         g.setColor(new Color(85, 218, 255, 215));
-        g.drawLine(pivotX - 8, pivotY, pivotX + 8, pivotY);
-        g.drawLine(pivotX, pivotY - 8, pivotX, pivotY + 8);
+        g.drawLine(originX - 8, originY, originX + 8, originY);
+        g.drawLine(originX, originY - 8, originX, originY + 8);
       }
     } finally {
       g.dispose();
@@ -185,7 +189,7 @@ public final class AnimationPreviewPanel extends JPanel {
   }
 
   private void advanceFrame() {
-    final int count = getPreviewFrames().frames.size();
+    final int count = getPreviewFrames().getFrameCount();
     if (count > 0) {
       frameIndex = (frameIndex + 1) % count;
       repaint();
@@ -200,7 +204,66 @@ public final class AnimationPreviewPanel extends JPanel {
     final ResolvedFrames resolved = model.resolveFrames(sequence, storedDirection);
     final List<AnimationFrame> frames = (resolved != null) ? resolved.getFrames()
         : Collections.<AnimationFrame>emptyList();
-    return new PreviewFrames(resolved, frames, mirrored);
+    final ResolvedFrames overlayResolved = overlayModel != null
+        ? overlayModel.resolveFrames(sequence, storedDirection) : null;
+    final List<AnimationFrame> overlayFrames = overlayResolved != null ? overlayResolved.getFrames()
+        : Collections.<AnimationFrame>emptyList();
+    return new PreviewFrames(resolved, frames, overlayFrames, mirrored);
+  }
+
+  private static AnimationFrame selectFrame(List<AnimationFrame> frames, int index, int timelineCount) {
+    if (frames == null || frames.isEmpty()) {
+      return null;
+    }
+    if (frames.size() == timelineCount || timelineCount <= 1) {
+      return frames.get(index % frames.size());
+    }
+    final int timelineIndex = index % timelineCount;
+    final int mapped = (int) Math.round(timelineIndex * (frames.size() - 1.0) / (timelineCount - 1.0));
+    return frames.get(Math.max(0, Math.min(frames.size() - 1, mapped)));
+  }
+
+  private static java.awt.Rectangle getSharedBounds(AnimationFrame first, AnimationFrame second, boolean mirrored) {
+    int minimumX = Integer.MAX_VALUE;
+    int minimumY = Integer.MAX_VALUE;
+    int maximumX = Integer.MIN_VALUE;
+    int maximumY = Integer.MIN_VALUE;
+    for (final AnimationFrame frame : new AnimationFrame[] { first, second }) {
+      if (frame == null) {
+        continue;
+      }
+      final BufferedImage image = frame.getImage();
+      final Point center = frame.getCenter();
+      final int centerX = mirrored ? image.getWidth() - 1 - center.x : center.x;
+      minimumX = Math.min(minimumX, -centerX);
+      minimumY = Math.min(minimumY, -center.y);
+      maximumX = Math.max(maximumX, image.getWidth() - centerX);
+      maximumY = Math.max(maximumY, image.getHeight() - center.y);
+    }
+    if (minimumX == Integer.MAX_VALUE) {
+      return new java.awt.Rectangle(0, 0, 1, 1);
+    }
+    return new java.awt.Rectangle(minimumX, minimumY, Math.max(1, maximumX - minimumX),
+        Math.max(1, maximumY - minimumY));
+  }
+
+  private static void drawFrame(Graphics2D graphics, AnimationFrame frame, int originX, int originY, double scale,
+      boolean mirrored) {
+    if (frame == null) {
+      return;
+    }
+    final BufferedImage image = frame.getImage();
+    final Point center = frame.getCenter();
+    final int centerX = mirrored ? image.getWidth() - 1 - center.x : center.x;
+    final int x = originX - (int) Math.round(centerX * scale);
+    final int y = originY - (int) Math.round(center.y * scale);
+    final int width = Math.max(1, (int) Math.round(image.getWidth() * scale));
+    final int height = Math.max(1, (int) Math.round(image.getHeight() * scale));
+    if (mirrored) {
+      graphics.drawImage(image, x + width, y, x, y + height, 0, 0, image.getWidth(), image.getHeight(), null);
+    } else {
+      graphics.drawImage(image, x, y, x + width, y + height, 0, 0, image.getWidth(), image.getHeight(), null);
+    }
   }
 
   private void drawCheckerboard(Graphics2D g) {
@@ -225,12 +288,19 @@ public final class AnimationPreviewPanel extends JPanel {
   private static final class PreviewFrames {
     private final ResolvedFrames resolved;
     private final List<AnimationFrame> frames;
+    private final List<AnimationFrame> overlayFrames;
     private final boolean mirrored;
 
-    private PreviewFrames(ResolvedFrames resolved, List<AnimationFrame> frames, boolean mirrored) {
+    private PreviewFrames(ResolvedFrames resolved, List<AnimationFrame> frames, List<AnimationFrame> overlayFrames,
+        boolean mirrored) {
       this.resolved = resolved;
       this.frames = frames;
+      this.overlayFrames = overlayFrames;
       this.mirrored = mirrored;
+    }
+
+    private int getFrameCount() {
+      return Math.max(frames.size(), overlayFrames.size());
     }
   }
 }
