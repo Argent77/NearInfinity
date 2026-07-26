@@ -41,6 +41,7 @@ import org.infinity.gui.InfinityAmpPlus;
 import org.infinity.gui.MassExporter;
 import org.infinity.gui.SplProtFrame;
 import org.infinity.gui.converter.bam.ConvertToBam;
+import org.infinity.gui.converter.creature.CreatureAnimationCreator;
 import org.infinity.gui.converter.bmp.ConvertToBmp;
 import org.infinity.gui.converter.mos.ConvertToMos;
 import org.infinity.gui.converter.pvrz.ConvertToPvrz;
@@ -88,6 +89,7 @@ public class ToolsMenu extends JMenu implements BrowserSubMenu, ActionListener {
   private final JMenuItem toolCheckEffectIsValid;
 
   private final JMenuItem toolConvImageToBam;
+  private final JMenuItem toolCreatureAnimationCreator;
   private final JMenuItem toolConvImageToBmp;
   private final JMenuItem toolConvImageToMos;
   private final JMenuItem toolConvImageToTis;
@@ -211,6 +213,14 @@ public class ToolsMenu extends JMenu implements BrowserSubMenu, ActionListener {
     convertMenu.setMnemonic('v');
     add(convertMenu);
 
+    toolCreatureAnimationCreator = BrowserMenuBar.makeMenuItem("Creature Animation Creator...", KeyEvent.VK_C,
+        Icons.ICON_CRE_VIEWER_24.getIcon(), -1, this);
+    toolCreatureAnimationCreator.setToolTipText(
+        "Creates Enhanced Edition type 0x7000 creature animation resources from descriptions or PNG frames.");
+    toolCreatureAnimationCreator.setEnabled(Profile.isEnhancedEdition());
+    convertMenu.add(toolCreatureAnimationCreator);
+    convertMenu.addSeparator();
+
     toolConvImageToBam = BrowserMenuBar.makeMenuItem("BAM Converter...", KeyEvent.VK_B,
         Icons.ICON_APPLICATION_16.getIcon(), -1, this);
     convertMenu.add(toolConvImageToBam);
@@ -303,6 +313,7 @@ public class ToolsMenu extends JMenu implements BrowserSubMenu, ActionListener {
 
   public void gameLoaded() {
     toolSplProtEncoder.setEnabled(Profile.isEnhancedEdition() && ResourceFactory.resourceExists("SPLPROT.2DA"));
+    toolCreatureAnimationCreator.setEnabled(Profile.isEnhancedEdition());
   }
 
   public JMenuItem getDumpDebugInfoItem() {
@@ -411,6 +422,8 @@ public class ToolsMenu extends JMenu implements BrowserSubMenu, ActionListener {
       ChildFrame.show(ConvertToBmp.class, ConvertToBmp::new);
     } else if (event.getSource() == toolConvImageToBam) {
       ChildFrame.show(ConvertToBam.class, ConvertToBam::new);
+    } else if (event.getSource() == toolCreatureAnimationCreator) {
+      ChildFrame.show(CreatureAnimationCreator.class, CreatureAnimationCreator::new);
     }
   }
 }

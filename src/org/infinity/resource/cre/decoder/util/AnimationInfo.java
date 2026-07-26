@@ -300,7 +300,7 @@ public class AnimationInfo {
       retVal = (type == this);
 
       if (!retVal) {
-        retVal = contains(value, rangeMap.get(Profile.getGame()));
+        retVal = contains(value, rangeMap.get(game));
       }
       return retVal;
     }
@@ -323,7 +323,8 @@ public class AnimationInfo {
      */
     public static Type containsInfinityAnimations(int value) {
       Type retVal = null;
-      if (Profile.<Integer>getProperty(Profile.Key.GET_INFINITY_ANIMATIONS) > 0) {
+      final Integer infinityAnimations = Profile.getProperty(Profile.Key.GET_INFINITY_ANIMATIONS);
+      if (infinityAnimations != null && infinityAnimations > 0) {
         for (Type type : Type.values()) {
           if (contains(value, type.iaRanges)) {
             retVal = type;
