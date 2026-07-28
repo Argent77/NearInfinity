@@ -114,7 +114,11 @@ public final class CreatureAnimationCreator extends ChildFrame {
   private final AnimationPreviewPanel previewPanel = new AnimationPreviewPanel();
   private final JCheckBox playCheck = new JCheckBox("Play", true);
   private final JCheckBox pivotCheck = new JCheckBox("Show center", true);
-  private final JSlider speedSlider = new JSlider(45, 400, 110);
+  private final JSlider speedSlider = new JSlider(AnimationPreviewPanel.MIN_FRAME_RATE,
+      AnimationPreviewPanel.MAX_FRAME_RATE, AnimationPreviewPanel.DEFAULT_FRAME_RATE);
+  private final JLabel speedValueLabel = new JLabel();
+  private final JSpinner zoomSpinner = new JSpinner(new SpinnerNumberModel(AnimationPreviewPanel.DEFAULT_ZOOM_PERCENT,
+      AnimationPreviewPanel.MIN_ZOOM_PERCENT, AnimationPreviewPanel.MAX_ZOOM_PERCENT, 25));
   private final JLabel previewStatusLabel = new JLabel(" ");
   private final JLabel sourceStatusLabel = new JLabel("No source frames loaded");
 
@@ -139,8 +143,16 @@ public final class CreatureAnimationCreator extends ChildFrame {
     updateSourceUi();
     updateFormatUi();
     updateSlotStatus();
+    updatePreviewOptions();
+    updateExportTooltip();
     setSize(new Dimension(1180, 760));
     setLocationRelativeTo(getParent());
+  }
+
+  @Override
+  protected boolean windowClosing(boolean forced) throws Exception {
+    CreatureAnimationCreatorSettings.store(createSettingsSnapshot());
+    return super.windowClosing(forced);
   }
 
   private void initializeDefaults() {
@@ -157,17 +169,46 @@ public final class CreatureAnimationCreator extends ChildFrame {
     equipmentPromptArea.setToolTipText("Name an ANIMATE.IDS reference, a compatible source weapon and the "
         + "replacement. The last named weapon is treated as the requested result.");
 
-    familyCombo.setSelectedItem(CreatureAnimationFamily.MONSTER);
-    final int slot = findSuggestedSlot(CreatureAnimationFamily.MONSTER);
+    final Path defaultOutput = getDefaultOutputDirectory();
+    final CreatureAnimationCreatorSettings.State settings =
+        CreatureAnimationCreatorSettings.load(defaultOutput, Profile.getGameRoot());
+    final CreatureAnimationFamily family = settings.family != null
+        && settings.family.isSupportedGame(Profile.getGame()) ? settings.family : CreatureAnimationFamily.MONSTER;
+    familyCombo.setSelectedItem(family);
+    final int slot = findSuggestedSlot(family);
     slotField.setText(String.format(Locale.ENGLISH, "0x%04X", slot));
-    resrefField.setText(getSuggestedResref(CreatureAnimationFamily.MONSTER, slot));
+    resrefField.setText(getSuggestedResref(family, slot));
     gameLabel.setText(Profile.getGame().getTitle());
 
-    final Path output = getDefaultOutputDirectory();
-    if (output != null) {
-      outputField.setText(output.toAbsolutePath().normalize().toString());
+    if (settings.outputDirectory != null) {
+      outputField.setText(settings.outputDirectory.toString());
     }
-    outputField.setToolTipText("Defaults to the active game's highest-priority override directory.");
+    lastSourceDirectory = settings.sourceDirectory;
+    formatCombo.setSelectedItem(settings.bamFormat);
+    compressedCheck.setSelected(settings.compressedBam);
+    splitCheck.setSelected(settings.splitBams);
+    quadrantsSpinner.setValue(settings.quadrants);
+    armorLevelsSpinner.setValue(settings.armorLevels);
+    lieDownCheck.setSelected(settings.canLieDown);
+    infravisionCheck.setSelected(settings.detectedByInfravision);
+    falseColorCheck.setSelected(settings.falseColor);
+    smoothPathCheck.setSelected(settings.pathSmooth);
+    translucentCheck.setSelected(settings.translucent);
+    moveScaleSpinner.setValue(settings.moveScale);
+    ellipseSpinner.setValue(settings.ellipse);
+    personalSpaceSpinner.setValue(settings.personalSpace);
+    bloodSpinner.setValue(settings.bloodColor);
+    chunksSpinner.setValue(settings.chunkColor);
+    sequenceList.setSelectedValue(settings.previewSequence, true);
+    directionCombo.setSelectedIndex(settings.previewDirection);
+    playCheck.setSelected(settings.previewPlaying);
+    pivotCheck.setSelected(settings.previewPivot);
+    speedSlider.setValue(settings.previewFrameRate);
+    zoomSpinner.setValue(settings.previewZoom);
+
+    outputField.setToolTipText("The initial default is the active game's install override directory. "
+        + "The selected directory is remembered.");
+    outputButton.setToolTipText("Choose a different output directory.");
   }
 
   private void initializeUi() {
@@ -390,7 +431,6 @@ public final class CreatureAnimationCreator extends ChildFrame {
     panel.setBorder(BorderFactory.createTitledBorder("Animation preview"));
 
     sequenceList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-    sequenceList.setSelectedValue(Sequence.WALK, true);
     sequenceList.setCellRenderer(new SequenceRenderer());
     final JScrollPane sequenceScroll = new JScrollPane(sequenceList);
     sequenceScroll.setPreferredSize(new Dimension(215, 450));
@@ -415,11 +455,24 @@ public final class CreatureAnimationCreator extends ChildFrame {
     gbc.gridx = 2;
     gbc.weightx = 1.0;
     gbc.fill = GridBagConstraints.HORIZONTAL;
-    speedSlider.setToolTipText("Preview frame delay");
+    speedSlider.getAccessibleContext().setAccessibleName("Preview frame rate");
     controls.add(speedSlider, gbc);
+    gbc.gridx = 3;
+    gbc.weightx = 0.0;
+    gbc.fill = GridBagConstraints.NONE;
+    speedValueLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+    controls.add(speedValueLabel, gbc);
+    gbc.gridx = 4;
+    controls.add(new JLabel("Zoom:"), gbc);
+    gbc.gridx = 5;
+    zoomSpinner.setToolTipText("Percentage of the fitted preview size");
+    zoomSpinner.getAccessibleContext().setAccessibleName("Preview zoom percentage");
+    controls.add(zoomSpinner, gbc);
+    gbc.gridx = 6;
+    controls.add(new JLabel("%"), gbc);
     gbc.gridx = 0;
     gbc.gridy = 1;
-    gbc.gridwidth = 3;
+    gbc.gridwidth = 7;
     previewStatusLabel.setHorizontalAlignment(SwingConstants.LEFT);
     controls.add(previewStatusLabel, gbc);
     preview.add(controls, BorderLayout.SOUTH);
@@ -477,7 +530,8 @@ public final class CreatureAnimationCreator extends ChildFrame {
     });
     playCheck.addActionListener(event -> previewPanel.setPlaying(playCheck.isSelected()));
     pivotCheck.addActionListener(event -> previewPanel.setShowPivot(pivotCheck.isSelected()));
-    speedSlider.addChangeListener(event -> previewPanel.setDelay(speedSlider.getValue()));
+    speedSlider.addChangeListener(event -> updatePreviewOptions());
+    zoomSpinner.addChangeListener(event -> updatePreviewOptions());
     previewPanel.addPropertyChangeListener("frameStatus", event -> updatePreviewStatus());
 
     formatCombo.addActionListener(event -> updateFormatUi());
@@ -486,7 +540,10 @@ public final class CreatureAnimationCreator extends ChildFrame {
     quadrantsSpinner.addChangeListener(event -> updateSlotStatus());
     armorLevelsSpinner.addChangeListener(event -> updateSlotStatus());
     slotField.getDocument().addDocumentListener(new SimpleDocumentListener(this::updateSlotStatus));
-    outputField.getDocument().addDocumentListener(new SimpleDocumentListener(this::updateSlotStatus));
+    outputField.getDocument().addDocumentListener(new SimpleDocumentListener(() -> {
+      updateSlotStatus();
+      updateExportTooltip();
+    }));
     promptArea.getDocument().addDocumentListener(new SimpleDocumentListener(this::updateDescriptionSummary));
     seedSpinner.addChangeListener(event -> updateDescriptionSummary());
     equipmentPromptArea.getDocument()
@@ -875,6 +932,48 @@ public final class CreatureAnimationCreator extends ChildFrame {
         .setBloodColor((Integer) bloodSpinner.getValue()).setChunkColor((Integer) chunksSpinner.getValue());
   }
 
+  private CreatureAnimationCreatorSettings.State createSettingsSnapshot() {
+    final CreatureAnimationCreatorSettings.State settings =
+        new CreatureAnimationCreatorSettings.State(getDefaultOutputDirectory(), Profile.getGameRoot());
+    final String outputText = outputField.getText().trim();
+    if (!outputText.isEmpty()) {
+      try {
+        settings.outputDirectory = Paths.get(outputText).toAbsolutePath().normalize();
+      } catch (RuntimeException e) {
+        Logger.trace(e);
+      }
+    }
+    if (lastSourceDirectory != null) {
+      settings.sourceDirectory = lastSourceDirectory.toAbsolutePath().normalize();
+    }
+    final CreatureAnimationFamily family = (CreatureAnimationFamily) familyCombo.getSelectedItem();
+    settings.family = family != null ? family : CreatureAnimationFamily.MONSTER;
+    final BamFormat bamFormat = (BamFormat) formatCombo.getSelectedItem();
+    settings.bamFormat = bamFormat != null ? bamFormat : BamFormat.BAM_V1;
+    settings.compressedBam = compressedCheck.isSelected();
+    settings.splitBams = splitCheck.isSelected();
+    settings.quadrants = (Integer) quadrantsSpinner.getValue();
+    settings.armorLevels = (Integer) armorLevelsSpinner.getValue();
+    settings.canLieDown = lieDownCheck.isSelected();
+    settings.detectedByInfravision = infravisionCheck.isSelected();
+    settings.falseColor = falseColorCheck.isSelected();
+    settings.pathSmooth = smoothPathCheck.isSelected();
+    settings.translucent = translucentCheck.isSelected();
+    settings.moveScale = (Integer) moveScaleSpinner.getValue();
+    settings.ellipse = (Integer) ellipseSpinner.getValue();
+    settings.personalSpace = (Integer) personalSpaceSpinner.getValue();
+    settings.bloodColor = (Integer) bloodSpinner.getValue();
+    settings.chunkColor = (Integer) chunksSpinner.getValue();
+    final Sequence sequence = sequenceList.getSelectedValue();
+    settings.previewSequence = sequence != null ? sequence : Sequence.WALK;
+    settings.previewDirection = directionCombo.getSelectedIndex();
+    settings.previewPlaying = playCheck.isSelected();
+    settings.previewPivot = pivotCheck.isSelected();
+    settings.previewFrameRate = speedSlider.getValue();
+    settings.previewZoom = (Integer) zoomSpinner.getValue();
+    return settings;
+  }
+
   private EquipmentOverlayExporter.Config createEquipmentConfig() {
     if (equipmentResult == null) {
       throw new IllegalStateException("Generate an equipment overlay first.");
@@ -921,18 +1020,35 @@ public final class CreatureAnimationCreator extends ChildFrame {
   }
 
   private Path chooseDirectory(String title, Path initial) {
-    final JFileChooser chooser = new JFileChooser();
+    final Path initialDirectory = resolveInitialDirectory(initial, Profile.getGameRoot());
+    final JFileChooser chooser = initialDirectory != null
+        ? new JFileChooser(initialDirectory.toFile()) : new JFileChooser();
     chooser.setDialogTitle(title);
     chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
     chooser.setAcceptAllFileFilterUsed(false);
-    if (initial != null) {
-      final Path directory = Files.isDirectory(initial) ? initial : initial.getParent();
-      if (directory != null) {
-        chooser.setCurrentDirectory(directory.toFile());
-      }
-    }
     return chooser.showDialog(this, "Select") == JFileChooser.APPROVE_OPTION
         ? chooser.getSelectedFile().toPath().toAbsolutePath().normalize() : null;
+  }
+
+  static Path resolveInitialDirectory(Path preferred, Path fallback) {
+    if (preferred != null) {
+      Path directory = preferred.toAbsolutePath().normalize();
+      if (Files.isDirectory(directory)) {
+        return directory;
+      }
+      directory = directory.getParent();
+      while (directory != null && directory.getParent() != null) {
+        if (Files.isDirectory(directory)) {
+          return directory;
+        }
+        directory = directory.getParent();
+      }
+    }
+    Path directory = fallback != null ? fallback.toAbsolutePath().normalize() : null;
+    while (directory != null && !Files.isDirectory(directory)) {
+      directory = directory.getParent();
+    }
+    return directory;
   }
 
   private void setModel(CreatureAnimationModel model) {
@@ -996,6 +1112,34 @@ public final class CreatureAnimationCreator extends ChildFrame {
     previewStatusLabel.setText(previewPanel.getStatusText());
   }
 
+  private void updatePreviewOptions() {
+    final int frameRate = speedSlider.getValue();
+    previewPanel.setSequence(sequenceList.getSelectedValue());
+    previewPanel.setDirectionIndex(directionCombo.getSelectedIndex());
+    previewPanel.setFrameRate(frameRate);
+    previewPanel.setZoomPercent((Integer) zoomSpinner.getValue());
+    previewPanel.setPlaying(playCheck.isSelected());
+    previewPanel.setShowPivot(pivotCheck.isSelected());
+    speedValueLabel.setText(frameRate + " fps");
+    speedSlider.setToolTipText("Preview speed: " + frameRate + " frames per second");
+    updatePreviewStatus();
+  }
+
+  private void updateExportTooltip() {
+    final String pathText = outputField.getText().trim();
+    if (pathText.isEmpty()) {
+      exportButton.setToolTipText("Select an output directory before exporting.");
+      return;
+    }
+    try {
+      final Path path = Paths.get(pathText).toAbsolutePath().normalize();
+      final String resourceType = equipmentResult != null ? "equipment overlay" : "creature animation";
+      exportButton.setToolTipText("Export the validated " + resourceType + " to " + path);
+    } catch (RuntimeException e) {
+      exportButton.setToolTipText("The current output directory is invalid: " + pathText);
+    }
+  }
+
   private void updateDescriptionSummary() {
     final ProceduralCreatureGenerator.Description description = ProceduralCreatureGenerator.parseDescription(
         promptArea.getText(), ((Number) seedSpinner.getValue()).longValue());
@@ -1042,6 +1186,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
     bloodSpinner.setEnabled(!busy && !equipmentMode);
     chunksSpinner.setEnabled(!busy && !equipmentMode);
     exportButton.setText(equipmentMode ? "Export overlay to override" : "Export to override");
+    updateExportTooltip();
     updateFamilyUi(false);
     updateFormatUi();
     updateSlotStatus();
@@ -1158,27 +1303,23 @@ public final class CreatureAnimationCreator extends ChildFrame {
   }
 
   private void showHelp() {
-    final String text = "Professional offline scope\n"
-        + "--------------------------\n"
+    final String text = "Professional offline scope\n\n"
         + "The built-in renderer actually draws a complete animation family from a description, but uses deterministic "
         + "parametric body plans. It cannot invent arbitrary production art like a large diffusion model. Its purpose "
         + "is coherent direction/action blocking that can be exported, painted over and imported again.\n\n"
-        + "Animation families\n"
-        + "------------------\n"
+        + "Animation families\n\n"
         + "The family selector covers every real Near Infinity Enhanced Edition decoder from effect (0000) through "
         + "monster_planescape (F000). The exporter applies the selected family's own filenames, cycle offsets, "
         + "direction set, split policy, quadrant layout, armor codes and INI section. Planescape is offered only for "
         + "PSTEE. Character uses the verified split layout; new monster_multi definitions use the engine-safe "
         + "unsplit layout. Quadrant and armor counts are explicit definition options.\n\n"
-        + "PNG source naming\n"
-        + "-----------------\n"
+        + "PNG source naming\n\n"
         + "WK_S_000.png, WK/S/000.png and WK_S/000.png are accepted. Actions are WK, SC, SD, GH, DE, TW, SL, GU, "
         + "A1-A5, SP and CA. Store S, SSW, SW, WSW, W, WNW, NW, NNW and N. The exporter mirrors those source cells "
         + "only where a target family requires explicit eastern cycles. centers.csv preserves each frame's BAM "
         + "pivot. Family-only actions use documented deterministic aliases; PST misc1-misc20 remain replaceable "
         + "custom sequences.\n\n"
-        + "Equipment replacement\n"
-        + "---------------------\n"
+        + "Equipment replacement\n\n"
         + "Weapon replacement is available for the six decoder families that define weapon sprite segments: "
         + "character, character_old, monster, monster_layered_spell, monster_layered and monster_icewind. Enter a "
         + "prompt such as: \"similar to SOLAR, but instead of a sword wielding an ornate silver scythe with blue "
@@ -1188,12 +1329,12 @@ public final class CreatureAnimationCreator extends ChildFrame {
         + "report that shared-prefix behavior before export. Avatar BAMs and animation definitions are not modified. "
         + "A complete compatible source layer remains required; avatar-only grip inference is intentionally rejected "
         + "because it cannot preserve alignment and occlusion reliably.\n\n"
-        + "Export safety\n"
-        + "-------------\n"
+        + "Export safety\n\n"
         + "The creator validates slot ranges, source coverage, centers, dimensions, palettes and filenames. It writes "
         + "to a staging directory, reopens the BAMs, checks cycle counts and PVRZ references, and only then installs "
-        + "the full family. Existing primary resources are replaced only after confirmation and are restored if the "
-        + "transaction fails.";
+        + "the full family. The initial output is the active game's install override directory, and the export "
+        + "button tooltip always shows the current destination. Existing primary resources are replaced only after "
+        + "confirmation and are restored if the transaction fails.";
     showTextDialog("Creature Animation Creator help", text, JOptionPane.INFORMATION_MESSAGE);
   }
 
@@ -1271,12 +1412,8 @@ public final class CreatureAnimationCreator extends ChildFrame {
   }
 
   private Path getDefaultOutputDirectory() {
-    final List<Path> overrides = Profile.getOverrideFolders(false);
-    if (!overrides.isEmpty()) {
-      return overrides.get(0);
-    }
-    final Path root = Profile.getGameRoot();
-    return (root != null) ? root.resolve(Profile.getOverrideFolderName().toLowerCase(Locale.ENGLISH)) : null;
+    return Profile.getGameRoot() != null
+        ? ResourceFactory.getDefaultSavePath(null).toAbsolutePath().normalize() : null;
   }
 
   private static int parseAnimationId(String value) {

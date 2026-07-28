@@ -27,6 +27,13 @@ import org.infinity.gui.converter.creature.MonsterAnimationLayout.Sequence;
 public final class AnimationPreviewPanel extends JPanel {
   private static final long serialVersionUID = 1L;
 
+  static final int MIN_FRAME_RATE = 1;
+  static final int MAX_FRAME_RATE = 60;
+  static final int DEFAULT_FRAME_RATE = 15;
+  static final int MIN_ZOOM_PERCENT = 25;
+  static final int MAX_ZOOM_PERCENT = 500;
+  static final int DEFAULT_ZOOM_PERCENT = 100;
+
   public static final String[] PREVIEW_DIRECTIONS = {
       "S - South",
       "SSW - South-southwest",
@@ -56,13 +63,15 @@ public final class AnimationPreviewPanel extends JPanel {
   private int frameIndex;
   private boolean playing = true;
   private boolean showPivot = true;
+  private int frameRate = DEFAULT_FRAME_RATE;
+  private int zoomPercent = DEFAULT_ZOOM_PERCENT;
 
   public AnimationPreviewPanel() {
     setOpaque(true);
     setBackground(new Color(45, 48, 53));
     setPreferredSize(new Dimension(500, 460));
     setMinimumSize(new Dimension(300, 260));
-    timer = new Timer(110, event -> advanceFrame());
+    timer = new Timer(getFrameDelay(frameRate), event -> advanceFrame());
     timer.start();
   }
 
@@ -125,8 +134,32 @@ public final class AnimationPreviewPanel extends JPanel {
     return playing;
   }
 
-  public void setDelay(int delay) {
-    timer.setDelay(Math.max(35, Math.min(1000, delay)));
+  public void setFrameRate(int frameRate) {
+    if (frameRate < MIN_FRAME_RATE || frameRate > MAX_FRAME_RATE) {
+      throw new IllegalArgumentException("Frame rate must be between " + MIN_FRAME_RATE + " and "
+          + MAX_FRAME_RATE + " frames per second.");
+    }
+    this.frameRate = frameRate;
+    final int delay = getFrameDelay(frameRate);
+    timer.setDelay(delay);
+    timer.setInitialDelay(delay);
+  }
+
+  public int getFrameRate() {
+    return frameRate;
+  }
+
+  public void setZoomPercent(int zoomPercent) {
+    if (zoomPercent < MIN_ZOOM_PERCENT || zoomPercent > MAX_ZOOM_PERCENT) {
+      throw new IllegalArgumentException("Zoom must be between " + MIN_ZOOM_PERCENT + "% and "
+          + MAX_ZOOM_PERCENT + "%.");
+    }
+    this.zoomPercent = zoomPercent;
+    repaint();
+  }
+
+  public int getZoomPercent() {
+    return zoomPercent;
   }
 
   public void setShowPivot(boolean showPivot) {
@@ -165,9 +198,10 @@ public final class AnimationPreviewPanel extends JPanel {
       final java.awt.Rectangle bounds = getSharedBounds(frame, overlay, preview.mirrored);
       final double availableWidth = Math.max(1.0, getWidth() - 56.0);
       final double availableHeight = Math.max(1.0, getHeight() - 56.0);
-      double scale = Math.min(availableWidth / Math.max(1, bounds.width),
+      double fitScale = Math.min(availableWidth / Math.max(1, bounds.width),
           availableHeight / Math.max(1, bounds.height));
-      scale = Math.max(0.1, Math.min(5.0, scale));
+      fitScale = Math.max(0.1, Math.min(5.0, fitScale));
+      final double scale = fitScale * zoomPercent / 100.0;
       final int renderedWidth = Math.max(1, (int) Math.round(bounds.width * scale));
       final int renderedHeight = Math.max(1, (int) Math.round(bounds.height * scale));
       final int originX = (getWidth() - renderedWidth) / 2 - (int) Math.round(bounds.x * scale);
@@ -213,6 +247,13 @@ public final class AnimationPreviewPanel extends JPanel {
       repaint();
       firePropertyChange("frameStatus", null, getStatusText());
     }
+  }
+
+  static int getFrameDelay(int frameRate) {
+    if (frameRate < MIN_FRAME_RATE || frameRate > MAX_FRAME_RATE) {
+      throw new IllegalArgumentException("Unsupported frame rate: " + frameRate + " fps");
+    }
+    return Math.max(1, 1000 / frameRate);
   }
 
   private PreviewFrames getPreviewFrames() {

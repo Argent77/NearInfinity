@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.prefs.Preferences;
 
 import org.infinity.gui.converter.creature.CreatureAnimationExporter.Config;
 import org.infinity.gui.converter.creature.CreatureAnimationExporter.ExportResult;
@@ -47,6 +48,7 @@ public final class CreatureAnimationCoreTest {
   }
 
   public static void main(String[] args) throws Exception {
+    testCreatorSettingsAndPreviewControls();
     testEnhancedEditionSlotCoverage();
     testAllFamilyLayouts();
     testResourceNameBudgets();
@@ -68,6 +70,104 @@ public final class CreatureAnimationCoreTest {
     testEquipmentOverlayBamV2RoundTrip();
     testEquipmentOverlayFamilyBamV2RoundTrip();
     System.out.println("CreatureAnimationCoreTest: all checks passed");
+  }
+
+  private static void testCreatorSettingsAndPreviewControls() throws Exception {
+    final Path root = createTestDirectory("ni-creature-settings-test-");
+    final Preferences preferences = Preferences.userRoot().node(
+        "/org/infinity/gui/converter/creature/CreatureAnimationCoreTest-" + Long.toHexString(System.nanoTime()));
+    try {
+      final Path source = Files.createDirectories(root.resolve("artist").resolve("source"));
+      final Path missing = source.resolve("not-created").resolve("child");
+      check(CreatureAnimationCreator.resolveInitialDirectory(null, root).equals(root.toAbsolutePath().normalize()),
+          "A file dialog without history should start in the active install root");
+      check(CreatureAnimationCreator.resolveInitialDirectory(missing, root).equals(source.toAbsolutePath().normalize()),
+          "A missing remembered directory should fall back to its closest existing parent");
+
+      final CreatureAnimationCreatorSettings.State stored =
+          new CreatureAnimationCreatorSettings.State(root.resolve("override"), root);
+      stored.sourceDirectory = source;
+      stored.family = CreatureAnimationFamily.MONSTER_LAYERED;
+      stored.bamFormat = BamFormat.BAM_V2;
+      stored.compressedBam = false;
+      stored.splitBams = true;
+      stored.quadrants = 7;
+      stored.armorLevels = 3;
+      stored.canLieDown = false;
+      stored.detectedByInfravision = false;
+      stored.falseColor = true;
+      stored.pathSmooth = false;
+      stored.translucent = true;
+      stored.moveScale = 17;
+      stored.ellipse = 24;
+      stored.personalSpace = 5;
+      stored.bloodColor = 63;
+      stored.chunkColor = 12;
+      stored.previewSequence = Sequence.CAST;
+      stored.previewDirection = 11;
+      stored.previewPlaying = false;
+      stored.previewPivot = false;
+      stored.previewFrameRate = 15;
+      stored.previewZoom = 250;
+      CreatureAnimationCreatorSettings.store(preferences, stored);
+
+      final CreatureAnimationCreatorSettings.State loaded =
+          CreatureAnimationCreatorSettings.load(preferences, root.resolve("different"), root);
+      check(loaded.outputDirectory.equals(root.resolve("override").toAbsolutePath().normalize()),
+          "The selected output directory should survive a preferences round trip");
+      check(loaded.sourceDirectory.equals(source.toAbsolutePath().normalize()),
+          "The selected PNG directory should survive a preferences round trip");
+      check(loaded.family == stored.family && loaded.bamFormat == stored.bamFormat,
+          "Family and BAM format preferences should survive a round trip");
+      check(!loaded.compressedBam && loaded.splitBams && loaded.quadrants == 7 && loaded.armorLevels == 3,
+          "Layout preferences should survive a round trip");
+      check(!loaded.canLieDown && !loaded.detectedByInfravision && loaded.falseColor && !loaded.pathSmooth
+          && loaded.translucent, "Engine switch preferences should survive a round trip");
+      check(loaded.moveScale == 17 && loaded.ellipse == 24 && loaded.personalSpace == 5
+          && loaded.bloodColor == 63 && loaded.chunkColor == 12,
+          "Engine numeric preferences should survive a round trip");
+      check(loaded.previewSequence == Sequence.CAST && loaded.previewDirection == 11
+          && !loaded.previewPlaying && !loaded.previewPivot && loaded.previewFrameRate == 15
+          && loaded.previewZoom == 250, "Preview preferences should survive a round trip");
+
+      final Path otherRoot = root.resolve("other-install");
+      final CreatureAnimationCreatorSettings.State otherGame =
+          CreatureAnimationCreatorSettings.load(preferences, otherRoot.resolve("override"), otherRoot);
+      check(otherGame.outputDirectory.equals(otherRoot.resolve("override").toAbsolutePath().normalize())
+          && otherGame.sourceDirectory.equals(otherRoot.toAbsolutePath().normalize()),
+          "Directories remembered for one game must not replace another game's install defaults");
+
+      stored.quadrants = Integer.MAX_VALUE;
+      stored.armorLevels = Integer.MIN_VALUE;
+      stored.previewDirection = Integer.MAX_VALUE;
+      stored.previewFrameRate = Integer.MAX_VALUE;
+      stored.previewZoom = Integer.MIN_VALUE;
+      CreatureAnimationCreatorSettings.store(preferences, stored);
+      final CreatureAnimationCreatorSettings.State bounded =
+          CreatureAnimationCreatorSettings.load(preferences, root, root);
+      check(bounded.quadrants == 9 && bounded.armorLevels == 1,
+          "Stored family ranges should be bounded before persistence");
+      check(bounded.previewDirection == AnimationPreviewPanel.PREVIEW_DIRECTIONS.length - 1,
+          "Stored preview directions should be bounded before persistence");
+      check(bounded.previewFrameRate == AnimationPreviewPanel.MAX_FRAME_RATE
+          && bounded.previewZoom == AnimationPreviewPanel.MIN_ZOOM_PERCENT,
+          "Stored preview speed and zoom should be bounded before persistence");
+
+      final AnimationPreviewPanel preview = new AnimationPreviewPanel();
+      try {
+        preview.setFrameRate(15);
+        preview.setZoomPercent(250);
+        check(preview.getFrameRate() == 15 && AnimationPreviewPanel.getFrameDelay(15) == 1000 / 15,
+            "A 15 fps selection should use Near Infinity's established 15 fps timer interval");
+        check(preview.getZoomPercent() == 250, "The preview should retain its explicit zoom percentage");
+      } finally {
+        preview.setPlaying(false);
+      }
+    } finally {
+      preferences.removeNode();
+      Preferences.userRoot().flush();
+      deleteTree(root);
+    }
   }
 
   private static void testEnhancedEditionSlotCoverage() {
