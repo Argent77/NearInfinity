@@ -77,7 +77,7 @@ final class CreatureAnimationCreatorSettings {
     state.compressedBam = preferences.getBoolean(PREF_COMPRESSED_BAM, state.compressedBam);
     state.splitBams = preferences.getBoolean(PREF_SPLIT_BAMS, state.splitBams);
     state.quadrants = getBoundedInt(preferences, PREF_QUADRANTS, state.quadrants, 1, 9);
-    state.armorLevels = getBoundedInt(preferences, PREF_ARMOR_LEVELS, state.armorLevels, 1, 4);
+    state.armorLevels = getBoundedInt(preferences, PREF_ARMOR_LEVELS, state.armorLevels, 1, 9);
     state.canLieDown = preferences.getBoolean(PREF_CAN_LIE_DOWN, state.canLieDown);
     state.detectedByInfravision =
         preferences.getBoolean(PREF_DETECTED_BY_INFRAVISION, state.detectedByInfravision);
@@ -114,7 +114,7 @@ final class CreatureAnimationCreatorSettings {
     preferences.putBoolean(PREF_COMPRESSED_BAM, state.compressedBam);
     preferences.putBoolean(PREF_SPLIT_BAMS, state.splitBams);
     preferences.putInt(PREF_QUADRANTS, clamp(state.quadrants, 1, 9));
-    preferences.putInt(PREF_ARMOR_LEVELS, clamp(state.armorLevels, 1, 4));
+    preferences.putInt(PREF_ARMOR_LEVELS, clamp(state.armorLevels, 1, 9));
     preferences.putBoolean(PREF_CAN_LIE_DOWN, state.canLieDown);
     preferences.putBoolean(PREF_DETECTED_BY_INFRAVISION, state.detectedByInfravision);
     preferences.putBoolean(PREF_FALSE_COLOR, state.falseColor);

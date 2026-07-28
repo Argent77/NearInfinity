@@ -21,9 +21,9 @@ import org.infinity.resource.cre.decoder.util.AnimationInfo;
  * Defines the engine-facing layout of type {@code 0x7000} ({@code monster}) creature animations.
  */
 public final class MonsterAnimationLayout {
-  /** Enhanced Edition games supported by the creator. */
-  public static final Set<Profile.Game> SUPPORTED_GAMES = Collections.unmodifiableSet(EnumSet.of(Profile.Game.BG1EE,
-      Profile.Game.BG1SoD, Profile.Game.BG2EE, Profile.Game.EET, Profile.Game.IWDEE, Profile.Game.PSTEE));
+  /** Recognized Infinity Engine game profiles supported by the creator. */
+  public static final Set<Profile.Game> SUPPORTED_GAMES = Collections.unmodifiableSet(
+      EnumSet.complementOf(EnumSet.of(Profile.Game.Unknown)));
 
   /** The nine orientations stored by type 0x7000 BAM resources. Eastern orientations are mirrored by the engine. */
   public enum Direction {
@@ -155,7 +155,7 @@ public final class MonsterAnimationLayout {
 
   /** BAM encodings offered by the creator. */
   public enum BamFormat {
-    BAM_V1("BAM V1 / BAMC", "Palette-based BAM; most compatible for Enhanced Edition creature animations"),
+    BAM_V1("BAM V1 / BAMC", "Palette-based BAM; BAMC availability follows the active game engine"),
     BAM_V2("BAM V2 / PVRZ", "Truecolor BAM with external PVRZ texture pages");
 
     private final String label;

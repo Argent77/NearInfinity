@@ -59,10 +59,13 @@ import org.infinity.gui.converter.creature.MonsterAnimationLayout.Direction;
 import org.infinity.gui.converter.creature.MonsterAnimationLayout.Sequence;
 import org.infinity.resource.Profile;
 import org.infinity.resource.ResourceFactory;
+import org.infinity.util.IdsMap;
+import org.infinity.util.IdsMapCache;
+import org.infinity.util.IdsMapEntry;
 import org.infinity.util.Logger;
 
 /**
- * Integrated source-to-game creator for Enhanced Edition creature animation families.
+ * Integrated source-to-game creator for Infinity Engine creature animation families.
  */
 public final class CreatureAnimationCreator extends ChildFrame {
   private static final long serialVersionUID = 1L;
@@ -86,7 +89,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
   private final JLabel headingLabel = new JLabel();
   private final JLabel gameLabel = new JLabel();
   private final JComboBox<CreatureAnimationFamily> familyCombo =
-      new JComboBox<>(CreatureAnimationFamily.values());
+      new JComboBox<>(getAvailableFamilies());
   private final JTextField slotField = new JTextField(8);
   private final JLabel slotStatusLabel = new JLabel(" ");
   private final JTextField resrefField = new JTextField(8);
@@ -94,10 +97,11 @@ public final class CreatureAnimationCreator extends ChildFrame {
   private final JCheckBox compressedCheck = new JCheckBox("Compress as BAMC", true);
   private final JCheckBox splitCheck = new JCheckBox("Split action groups into separate BAM files");
   private final JSpinner quadrantsSpinner = new JSpinner(new SpinnerNumberModel(4, 1, 9, 1));
-  private final JSpinner armorLevelsSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 4, 1));
+  private final JSpinner armorLevelsSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 9, 1));
   private final JTextField outputField = new JTextField(30);
   private final JButton outputButton = new JButton("Browse...");
 
+  private final JLabel engineProfileLabel = new JLabel();
   private final JCheckBox lieDownCheck = new JCheckBox("Can lie down", true);
   private final JCheckBox infravisionCheck = new JCheckBox("Detected by infravision", true);
   private final JCheckBox falseColorCheck = new JCheckBox("Use false-color palette ranges");
@@ -130,9 +134,11 @@ public final class CreatureAnimationCreator extends ChildFrame {
 
   private CreatureAnimationModel model = new CreatureAnimationModel();
   private EquipmentOverlayReference.Result equipmentResult;
+  private ClassicAnimationDefinition classicDefinition;
   private Path lastSourceDirectory;
   private boolean busy;
   private boolean updatingEquipmentFields;
+  private boolean updatingDefinition;
 
   public CreatureAnimationCreator() {
     super("Creature Animation Creator", true);
@@ -172,23 +178,35 @@ public final class CreatureAnimationCreator extends ChildFrame {
     final Path defaultOutput = getDefaultOutputDirectory();
     final CreatureAnimationCreatorSettings.State settings =
         CreatureAnimationCreatorSettings.load(defaultOutput, Profile.getGameRoot());
-    final CreatureAnimationFamily family = settings.family != null
-        && settings.family.isSupportedGame(Profile.getGame()) ? settings.family : CreatureAnimationFamily.MONSTER;
-    familyCombo.setSelectedItem(family);
-    final int slot = findSuggestedSlot(family);
-    slotField.setText(String.format(Locale.ENGLISH, "0x%04X", slot));
-    resrefField.setText(getSuggestedResref(family, slot));
+    CreatureAnimationFamily family = settings.family != null
+        && settings.family.isSupportedGame(Profile.getGame()) ? settings.family : null;
+    if (family == null && familyCombo.getItemCount() > 0) {
+      family = familyCombo.getItemAt(0);
+    }
+    if (family != null) {
+      familyCombo.setSelectedItem(family);
+      final int slot = findSuggestedSlot(family);
+      slotField.setText(formatAnimationId(slot));
+      if (Profile.isEnhancedEdition(Profile.getGame())) {
+        resrefField.setText(slot >= 0 ? getSuggestedResref(family, slot) : "");
+      } else if (classicDefinition != null && classicDefinition.matches(Profile.getGame(), slot, family)) {
+        resrefField.setText(classicDefinition.getResref());
+      }
+    }
     gameLabel.setText(Profile.getGame().getTitle());
 
     if (settings.outputDirectory != null) {
       outputField.setText(settings.outputDirectory.toString());
     }
     lastSourceDirectory = settings.sourceDirectory;
-    formatCombo.setSelectedItem(settings.bamFormat);
-    compressedCheck.setSelected(settings.compressedBam);
+    formatCombo.setSelectedItem(Profile.isBamV2Supported(Profile.getGame())
+        ? settings.bamFormat : BamFormat.BAM_V1);
+    compressedCheck.setSelected(Profile.isBamcSupported(Profile.getGame()) && settings.compressedBam);
     splitCheck.setSelected(settings.splitBams);
     quadrantsSpinner.setValue(settings.quadrants);
-    armorLevelsSpinner.setValue(settings.armorLevels);
+    final int maximumArmorLevels = Profile.isEnhancedEdition(Profile.getGame()) ? 4 : 9;
+    ((SpinnerNumberModel) armorLevelsSpinner.getModel()).setMaximum(maximumArmorLevels);
+    armorLevelsSpinner.setValue(Math.min(settings.armorLevels, maximumArmorLevels));
     lieDownCheck.setSelected(settings.canLieDown);
     infravisionCheck.setSelected(settings.detectedByInfravision);
     falseColorCheck.setSelected(settings.falseColor);
@@ -369,7 +387,8 @@ public final class CreatureAnimationCreator extends ChildFrame {
     addRow(panel, "BAM resref:", resrefField, gbc, row++);
     final JLabel resrefHelp = new JLabel("<html>The validator derives the exact prefix budget from the selected "
         + "layout. Modern character bases use the documented four-character schema; Planescape's longest standard "
-        + "action leaves three characters.</html>");
+        + "action leaves three characters. Classic profiles use the exact installed definition and keep its resref "
+        + "read-only.</html>");
     resrefHelp.setForeground(UIManager.getColor("Label.disabledForeground"));
     addWide(panel, resrefHelp, gbc, row++);
 
@@ -401,8 +420,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
     final GridBagConstraints gbc = baseConstraints();
     int row = 0;
 
-    addWide(panel, new JLabel("<html>These values are written to the generated slot INI. Defaults are conservative "
-        + "humanoid/monster values and can be changed before every export.</html>"), gbc, row++);
+    addWide(panel, engineProfileLabel, gbc, row++);
     addWide(panel, lieDownCheck, gbc, row++);
     addWide(panel, infravisionCheck, gbc, row++);
     addWide(panel, falseColorCheck, gbc, row++);
@@ -535,11 +553,19 @@ public final class CreatureAnimationCreator extends ChildFrame {
     previewPanel.addPropertyChangeListener("frameStatus", event -> updatePreviewStatus());
 
     formatCombo.addActionListener(event -> updateFormatUi());
-    familyCombo.addActionListener(event -> updateFamilyUi(true));
+    familyCombo.addActionListener(event -> {
+      if (!updatingDefinition) {
+        updateFamilyUi(true);
+      }
+    });
     splitCheck.addActionListener(event -> updateSourceUi());
     quadrantsSpinner.addChangeListener(event -> updateSlotStatus());
     armorLevelsSpinner.addChangeListener(event -> updateSlotStatus());
-    slotField.getDocument().addDocumentListener(new SimpleDocumentListener(this::updateSlotStatus));
+    slotField.getDocument().addDocumentListener(new SimpleDocumentListener(() -> {
+      if (!updatingDefinition) {
+        updateSlotStatus();
+      }
+    }));
     outputField.getDocument().addDocumentListener(new SimpleDocumentListener(() -> {
       updateSlotStatus();
       updateExportTooltip();
@@ -911,15 +937,19 @@ public final class CreatureAnimationCreator extends ChildFrame {
     return !report.hasErrors();
   }
 
-  private Config createConfig() {
+  private Config createConfig() throws Exception {
     final int animationId = parseAnimationId(slotField.getText());
+    final CreatureAnimationFamily family = (CreatureAnimationFamily) familyCombo.getSelectedItem();
+    if (family == null) {
+      throw new IllegalArgumentException("Select an animation family.");
+    }
     final String outputText = outputField.getText().trim();
     if (outputText.isEmpty()) {
       throw new IllegalArgumentException("Select an output directory.");
     }
     final Path output = Paths.get(outputText).toAbsolutePath().normalize();
-    return new Config().setGame(Profile.getGame())
-        .setFamily((CreatureAnimationFamily) familyCombo.getSelectedItem())
+    final Config config = new Config().setGame(Profile.getGame())
+        .setFamily(family)
         .setAnimationId(animationId).setResref(resrefField.getText())
         .setOutputDirectory(output).setBamFormat((BamFormat) formatCombo.getSelectedItem())
         .setCompressedBam(compressedCheck.isSelected()).setSplitBams(splitCheck.isSelected())
@@ -930,6 +960,10 @@ public final class CreatureAnimationCreator extends ChildFrame {
         .setTranslucent(translucentCheck.isSelected()).setMoveScale((Integer) moveScaleSpinner.getValue())
         .setEllipse((Integer) ellipseSpinner.getValue()).setPersonalSpace((Integer) personalSpaceSpinner.getValue())
         .setBloodColor((Integer) bloodSpinner.getValue()).setChunkColor((Integer) chunksSpinner.getValue());
+    if (!Profile.isEnhancedEdition(Profile.getGame())) {
+      config.setClassicDefinition(resolveClassicDefinition(family, animationId));
+    }
+    return config;
   }
 
   private CreatureAnimationCreatorSettings.State createSettingsSnapshot() {
@@ -947,7 +981,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
       settings.sourceDirectory = lastSourceDirectory.toAbsolutePath().normalize();
     }
     final CreatureAnimationFamily family = (CreatureAnimationFamily) familyCombo.getSelectedItem();
-    settings.family = family != null ? family : CreatureAnimationFamily.MONSTER;
+    settings.family = family != null ? family : CreatureAnimationFamily.EFFECT;
     final BamFormat bamFormat = (BamFormat) formatCombo.getSelectedItem();
     settings.bamFormat = bamFormat != null ? bamFormat : BamFormat.BAM_V1;
     settings.compressedBam = compressedCheck.isSelected();
@@ -995,7 +1029,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
           + " requires the target Equipped appearance to begin with "
           + equipmentResult.getFamily().getFileCode(equipmentResult.getTargetAppearanceCode()) + ".");
     }
-    return new EquipmentOverlayExporter.Config().setFamily(equipmentResult.getFamily())
+    return new EquipmentOverlayExporter.Config().setGame(Profile.getGame()).setFamily(equipmentResult.getFamily())
         .setResourcePrefix(equipmentResult.getResourcePrefix())
         .setAppearanceCode(appearanceCode)
         .setWeaponType(equipmentResult.getPrompt().getTargetWeapon())
@@ -1177,14 +1211,15 @@ public final class CreatureAnimationCreator extends ChildFrame {
 
   private void updateModeUi() {
     final boolean equipmentMode = equipmentResult != null;
+    final boolean enhancedEdition = Profile.isEnhancedEdition(Profile.getGame());
     familyCombo.setEnabled(!busy && !equipmentMode);
     slotField.setEnabled(!busy && !equipmentMode);
-    resrefField.setEnabled(!busy && !equipmentMode);
-    moveScaleSpinner.setEnabled(!busy && !equipmentMode);
-    ellipseSpinner.setEnabled(!busy && !equipmentMode);
-    personalSpaceSpinner.setEnabled(!busy && !equipmentMode);
-    bloodSpinner.setEnabled(!busy && !equipmentMode);
-    chunksSpinner.setEnabled(!busy && !equipmentMode);
+    resrefField.setEnabled(!busy && !equipmentMode && enhancedEdition);
+    moveScaleSpinner.setEnabled(!busy && !equipmentMode && enhancedEdition);
+    ellipseSpinner.setEnabled(!busy && !equipmentMode && enhancedEdition);
+    personalSpaceSpinner.setEnabled(!busy && !equipmentMode && enhancedEdition);
+    bloodSpinner.setEnabled(!busy && !equipmentMode && enhancedEdition);
+    chunksSpinner.setEnabled(!busy && !equipmentMode && enhancedEdition);
     exportButton.setText(equipmentMode ? "Export overlay to override" : "Export to override");
     updateExportTooltip();
     updateFamilyUi(false);
@@ -1197,11 +1232,19 @@ public final class CreatureAnimationCreator extends ChildFrame {
     if (family == null) {
       return;
     }
-    headingLabel.setText("Enhanced Edition creature animation authoring — " + family);
+    final boolean enhancedEdition = Profile.isEnhancedEdition(Profile.getGame());
+    headingLabel.setText("Infinity Engine creature animation authoring — " + family);
     if (resetDefinition && equipmentResult == null) {
       final int slot = findSuggestedSlot(family);
-      slotField.setText(String.format(Locale.ENGLISH, "0x%04X", slot));
-      resrefField.setText(getSuggestedResref(family, slot));
+      updatingDefinition = true;
+      try {
+        slotField.setText(formatAnimationId(slot));
+        resrefField.setText(enhancedEdition && slot >= 0 ? getSuggestedResref(family, slot)
+            : classicDefinition != null && classicDefinition.matches(Profile.getGame(), slot, family)
+                ? classicDefinition.getResref() : "");
+      } finally {
+        updatingDefinition = false;
+      }
       if (family.hasQuadrants()) {
         quadrantsSpinner.setValue(family.getDefaultQuadrants());
       }
@@ -1221,7 +1264,13 @@ public final class CreatureAnimationCreator extends ChildFrame {
       translucentCheck.setSelected(false);
     }
 
-    final boolean editable = !busy && equipmentResult == null;
+    final boolean editable = !busy && equipmentResult == null && enhancedEdition;
+    resrefField.setEnabled(editable);
+    moveScaleSpinner.setEnabled(editable);
+    ellipseSpinner.setEnabled(editable);
+    personalSpaceSpinner.setEnabled(editable);
+    bloodSpinner.setEnabled(editable);
+    chunksSpinner.setEnabled(editable);
     splitCheck.setEnabled(editable && family.getSplitMode() == CreatureAnimationFamily.SplitMode.OPTIONAL);
     quadrantsSpinner.setEnabled(editable && family.hasQuadrants());
     armorLevelsSpinner.setEnabled(editable && family.hasArmorLevels());
@@ -1229,19 +1278,34 @@ public final class CreatureAnimationCreator extends ChildFrame {
     infravisionCheck.setEnabled(editable && family.isInfravisionSupported());
     smoothPathCheck.setEnabled(editable && family.isPathSmoothSupported());
     translucentCheck.setEnabled(editable && family.isTranslucencySupported());
+    if (enhancedEdition) {
+      engineProfileLabel.setText("<html>These values are written to the generated slot INI. Defaults are "
+          + "conservative humanoid/monster values and can be changed before every export.</html>");
+    }
     updateFormatUi();
     updateSlotStatus();
   }
 
   private void updateFormatUi() {
+    final Profile.Game game = Profile.getGame();
+    if (!Profile.isBamV2Supported(game) && formatCombo.getSelectedItem() != BamFormat.BAM_V1) {
+      formatCombo.setSelectedItem(BamFormat.BAM_V1);
+    }
     final boolean bamV1 = formatCombo.getSelectedItem() == BamFormat.BAM_V1;
     final CreatureAnimationFamily family = (CreatureAnimationFamily) familyCombo.getSelectedItem();
-    compressedCheck.setEnabled(!busy && bamV1);
+    formatCombo.setEnabled(!busy && Profile.isBamV2Supported(game));
+    if (!Profile.isBamcSupported(game)) {
+      compressedCheck.setSelected(false);
+    }
+    compressedCheck.setEnabled(!busy && bamV1 && Profile.isBamcSupported(game));
     final boolean falseColorAvailable =
         family != null && family.isFalseColorSupported() && equipmentResult == null;
-    falseColorCheck.setEnabled(!busy && bamV1 && falseColorAvailable);
+    final boolean enhancedEdition = Profile.isEnhancedEdition(game);
+    falseColorCheck.setEnabled(!busy && bamV1 && falseColorAvailable && enhancedEdition);
     if (!bamV1 || !falseColorAvailable) {
       falseColorCheck.setSelected(false);
+    } else if (!enhancedEdition && classicDefinition != null) {
+      falseColorCheck.setSelected(classicDefinition.isFalseColor());
     }
     final BamFormat format = (BamFormat) formatCombo.getSelectedItem();
     formatCombo.setToolTipText(format != null ? format.getDescription() : null);
@@ -1259,12 +1323,22 @@ public final class CreatureAnimationCreator extends ChildFrame {
       if (family == null) {
         throw new IllegalArgumentException("Select an animation family.");
       }
+      if (!Profile.isEnhancedEdition(Profile.getGame())
+          && (classicDefinition == null || !classicDefinition.matches(Profile.getGame(), slot, family))) {
+        clearClassicDefinitionUi();
+      }
       if (!family.isSupportedGame(Profile.getGame())) {
         slotStatusLabel.setForeground(new Color(190, 55, 45));
         slotStatusLabel.setText(family + " is not supported by the active game");
       } else if (!family.isValidSlot(Profile.getGame(), slot)) {
         slotStatusLabel.setForeground(new Color(190, 55, 45));
         slotStatusLabel.setText("This slot does not belong to the selected " + family + " family");
+      } else if (!Profile.isEnhancedEdition(Profile.getGame())) {
+        final ClassicAnimationDefinition definition = resolveClassicDefinition(family, slot);
+        applyClassicDefinition(definition);
+        slotStatusLabel.setForeground(new Color(47, 139, 72));
+        slotStatusLabel.setText("Exact hardcoded/Infinity Animations definition • BAM-only replacement; "
+            + "profile tables unchanged");
       } else {
         final String fileName = String.format(Locale.ENGLISH, "%04X.INI", slot);
         final boolean occupied = ResourceFactory.resourceExists(fileName)
@@ -1274,9 +1348,14 @@ public final class CreatureAnimationCreator extends ChildFrame {
         slotStatusLabel.setText(occupied ? "Valid slot • an existing INI definition will require confirmation"
             : "Valid, currently unoccupied " + family + " slot");
       }
-    } catch (Exception e) {
+    } catch (IllegalArgumentException e) {
+      clearClassicDefinitionUi();
       slotStatusLabel.setForeground(new Color(190, 55, 45));
-      slotStatusLabel.setText("Enter a hexadecimal slot such as 0x7303");
+      slotStatusLabel.setText(e.getMessage());
+    } catch (Exception e) {
+      clearClassicDefinitionUi();
+      slotStatusLabel.setForeground(new Color(190, 55, 45));
+      slotStatusLabel.setText(e.getMessage() != null ? e.getMessage() : "The classic definition could not be read.");
     }
   }
 
@@ -1307,12 +1386,22 @@ public final class CreatureAnimationCreator extends ChildFrame {
         + "The built-in renderer actually draws a complete animation family from a description, but uses deterministic "
         + "parametric body plans. It cannot invent arbitrary production art like a large diffusion model. Its purpose "
         + "is coherent direction/action blocking that can be exported, painted over and imported again.\n\n"
+        + "Engine profile behavior\n\n"
+        + "Enhanced Edition profiles can create new animation definitions. Their family layout and editable engine "
+        + "properties are written to a generated slot INI. Classic profiles cannot add animation definitions this "
+        + "way: the selected slot must resolve to exactly one complete hardcoded or Infinity Animations table "
+        + "definition in the active installation. The creator locks its resref, resource graph, cycles, directions, "
+        + "split state, quadrants, armor codes and decoder properties, replaces only the planned BAM cycles, preserves "
+        + "all other installed cycles and palette indices, and never writes an INI. If an exact complete definition "
+        + "cannot be resolved, validation stops instead of inferring one.\n\n"
         + "Animation families\n\n"
-        + "The family selector covers every real Near Infinity Enhanced Edition decoder from effect (0000) through "
+        + "The family selector covers every real Near Infinity decoder supported by the active profile, from effect "
+        + "(0000) through "
         + "monster_planescape (F000). The exporter applies the selected family's own filenames, cycle offsets, "
-        + "direction set, split policy, quadrant layout, armor codes and INI section. Planescape is offered only for "
-        + "PSTEE. Character uses the verified split layout; new monster_multi definitions use the engine-safe "
-        + "unsplit layout. Quadrant and armor counts are explicit definition options.\n\n"
+        + "direction set, split policy, quadrant layout and armor codes. Enhanced Edition creation additionally writes "
+        + "the corresponding INI section. Character uses the verified split layout for new Enhanced Edition "
+        + "definitions; new monster_multi definitions use the engine-safe unsplit layout. Classic layout values are "
+        + "read directly from the selected profile definition.\n\n"
         + "PNG source naming\n\n"
         + "WK_S_000.png, WK/S/000.png and WK_S/000.png are accepted. Actions are WK, SC, SD, GH, DE, TW, SL, GU, "
         + "A1-A5, SP and CA. Store S, SSW, SW, WSW, W, WNW, NW, NNW and N. The exporter mirrors those source cells "
@@ -1332,7 +1421,9 @@ public final class CreatureAnimationCreator extends ChildFrame {
         + "Export safety\n\n"
         + "The creator validates slot ranges, source coverage, centers, dimensions, palettes and filenames. It writes "
         + "to a staging directory, reopens the BAMs, checks cycle counts and PVRZ references, and only then installs "
-        + "the full family. The initial output is the active game's install override directory, and the export "
+        + "the complete validated resource set. BAM V2/PVRZ is available only to Enhanced Edition profiles; BAMC is "
+        + "available only to engines that support it. The initial output is the active game's install override "
+        + "directory, and the export "
         + "button tooltip always shows the current destination. Existing primary resources are replaced only after "
         + "confirmation and are restored if the transaction fails.";
     showTextDialog("Creature Animation Creator help", text, JOptionPane.INFORMATION_MESSAGE);
@@ -1387,7 +1478,37 @@ public final class CreatureAnimationCreator extends ChildFrame {
     final Profile.Game game = Profile.getGame();
     if (family != null) {
       if (!family.isSupportedGame(game)) {
-        return family.getDefaultSlot();
+        return -1;
+      }
+      if (!Profile.isEnhancedEdition(game)) {
+        classicDefinition = null;
+        final int defaultSlot = family.getDefaultSlot();
+        final ClassicAnimationDefinition defaultDefinition =
+            tryResolveClassicDefinition(family, defaultSlot);
+        if (defaultDefinition != null) {
+          classicDefinition = defaultDefinition;
+          return defaultSlot;
+        }
+        final IdsMap animate = IdsMapCache.get("ANIMATE.IDS");
+        if (animate != null) {
+          for (final IdsMapEntry entry : animate.getAllValues()) {
+            final long value = entry.getID();
+            if (value < 0 || value > 0xffff || value == defaultSlot) {
+              continue;
+            }
+            final int slot = (int) value;
+            if (!family.isValidSlot(game, slot)
+                || !ClassicAnimationDefinition.hasTableDefinition(game, slot, family)) {
+              continue;
+            }
+            final ClassicAnimationDefinition definition = tryResolveClassicDefinition(family, slot);
+            if (definition != null) {
+              classicDefinition = definition;
+              return slot;
+            }
+          }
+        }
+        return -1;
       }
       for (int pass = 0; pass < 2; pass++) {
         final int start = (pass == 0) ? family.getDefaultSlot() : 0;
@@ -1401,7 +1522,100 @@ public final class CreatureAnimationCreator extends ChildFrame {
       }
       return family.getDefaultSlot();
     }
-    return 0x7303;
+    return -1;
+  }
+
+  private ClassicAnimationDefinition tryResolveClassicDefinition(CreatureAnimationFamily family, int animationId) {
+    try {
+      return resolveClassicDefinition(family, animationId);
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  private ClassicAnimationDefinition resolveClassicDefinition(CreatureAnimationFamily family, int animationId)
+      throws Exception {
+    if (classicDefinition != null
+        && classicDefinition.matches(Profile.getGame(), animationId, family)) {
+      return classicDefinition;
+    }
+    classicDefinition = null;
+    final ClassicAnimationDefinition definition =
+        ClassicAnimationDefinition.resolve(Profile.getGame(), animationId);
+    if (definition.getFamily() != family) {
+      throw new IllegalArgumentException(String.format(Locale.ENGLISH,
+          "Slot 0x%04X resolves to %s, not %s.", animationId, definition.getFamily(), family));
+    }
+    classicDefinition = definition;
+    return definition;
+  }
+
+  private void applyClassicDefinition(ClassicAnimationDefinition definition) {
+    if (definition == null || updatingDefinition) {
+      return;
+    }
+    updatingDefinition = true;
+    try {
+      resrefField.setText(definition.getResref());
+      splitCheck.setSelected(definition.isSplitBams());
+      if (definition.getFamily().hasQuadrants()) {
+        quadrantsSpinner.setValue(definition.getQuadrants());
+      }
+      if (definition.getFamily().hasArmorLevels()) {
+        armorLevelsSpinner.setValue(definition.getArmorLevels());
+      }
+      lieDownCheck.setSelected(definition.isCanLieDown());
+      infravisionCheck.setSelected(definition.isDetectedByInfravision());
+      falseColorCheck.setSelected(definition.isFalseColor());
+      smoothPathCheck.setSelected(definition.isPathSmooth());
+      translucentCheck.setSelected(definition.isTranslucent());
+      final double moveScale = definition.getMoveScale();
+      if (moveScale >= 0.0 && moveScale <= 255.0 && moveScale == Math.rint(moveScale)) {
+        moveScaleSpinner.setValue((int) moveScale);
+      }
+      moveScaleSpinner.setToolTipText("Exact classic profile movement scale: " + Double.toString(moveScale));
+      ellipseSpinner.setValue(definition.getEllipse());
+      personalSpaceSpinner.setValue(definition.getPersonalSpace());
+      engineProfileLabel.setText("<html><b>BAM-only classic profile:</b> values are locked to the exact hardcoded "
+          + "or Infinity Animations definition; INI-only values are disabled and no INI is written.<br>"
+          + definition.getSummary() + " • resref " + definition.getResref()
+          + " • ellipse " + definition.getEllipse() + " • personal space " + definition.getPersonalSpace()
+          + "</html>");
+    } finally {
+      updatingDefinition = false;
+    }
+    updateFormatUi();
+  }
+
+  private void clearClassicDefinitionUi() {
+    if (Profile.isEnhancedEdition(Profile.getGame())) {
+      return;
+    }
+    classicDefinition = null;
+    updatingDefinition = true;
+    try {
+      resrefField.setText("");
+      falseColorCheck.setSelected(false);
+      engineProfileLabel.setText("<html><b>BAM-only classic profile:</b> select a slot with one complete exact "
+          + "hardcoded or Infinity Animations definition. No inferred layout or INI output is permitted.</html>");
+    } finally {
+      updatingDefinition = false;
+    }
+  }
+
+  private static CreatureAnimationFamily[] getAvailableFamilies() {
+    final List<CreatureAnimationFamily> result = new java.util.ArrayList<>();
+    for (final CreatureAnimationFamily family : CreatureAnimationFamily.values()) {
+      if (family.isSupportedGame(Profile.getGame())) {
+        result.add(family);
+      }
+    }
+    return result.toArray(new CreatureAnimationFamily[0]);
+  }
+
+  private static String formatAnimationId(int animationId) {
+    return animationId >= 0
+        ? String.format(Locale.ENGLISH, "0x%04X", animationId) : "";
   }
 
   private static String getSuggestedResref(CreatureAnimationFamily family, int slot) {

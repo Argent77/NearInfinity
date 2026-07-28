@@ -30,6 +30,7 @@ import org.infinity.gui.converter.creature.CreatureAnimationExporter.Config;
 import org.infinity.gui.converter.creature.CreatureAnimationExporter.ExportResult;
 import org.infinity.gui.converter.creature.CreatureAnimationFamily.CyclePlan;
 import org.infinity.gui.converter.creature.CreatureAnimationFamily.FamilyLayout;
+import org.infinity.gui.converter.creature.CreatureAnimationFamily.LayoutBuilder;
 import org.infinity.gui.converter.creature.CreatureAnimationFamily.ResourcePlan;
 import org.infinity.gui.converter.creature.CreatureAnimationModel.AnimationFrame;
 import org.infinity.gui.converter.creature.EquipmentOverlayGenerator.WeaponType;
@@ -39,7 +40,10 @@ import org.infinity.gui.converter.creature.MonsterAnimationLayout.Sequence;
 import org.infinity.resource.Profile;
 import org.infinity.resource.cre.decoder.util.AnimationInfo;
 import org.infinity.resource.graphics.BamDecoder;
+import org.infinity.resource.graphics.BamV1Decoder;
 import org.infinity.resource.graphics.BamV1Decoder.BamV1Control;
+import org.infinity.resource.graphics.PseudoBamDecoder;
+import org.infinity.resource.graphics.PseudoBamDecoder.PseudoBamControl;
 import org.infinity.resource.key.FileResourceEntry;
 
 /** Dependency-free regression tests for the creature animation creator core. */
@@ -49,8 +53,9 @@ public final class CreatureAnimationCoreTest {
 
   public static void main(String[] args) throws Exception {
     testCreatorSettingsAndPreviewControls();
-    testEnhancedEditionSlotCoverage();
+    testProfileSlotCoverage();
     testAllFamilyLayouts();
+    testClassicProfileExport();
     testResourceNameBudgets();
     testAllFamilyBamV1Exports();
     testDescriptionAndGeneration();
@@ -62,6 +67,7 @@ public final class CreatureAnimationCoreTest {
     testBamV2Export();
     testFamilyBamV2Export();
     testEquipmentPromptAndGeneration();
+    testEquipmentProfileFormats();
     testEquipmentReferenceResrefFallback();
     testEquipmentOverlayFamilyLayouts();
     testAllEquipmentOverlayFamilyBamV1Exports();
@@ -138,14 +144,14 @@ public final class CreatureAnimationCoreTest {
           "Directories remembered for one game must not replace another game's install defaults");
 
       stored.quadrants = Integer.MAX_VALUE;
-      stored.armorLevels = Integer.MIN_VALUE;
+      stored.armorLevels = Integer.MAX_VALUE;
       stored.previewDirection = Integer.MAX_VALUE;
       stored.previewFrameRate = Integer.MAX_VALUE;
       stored.previewZoom = Integer.MIN_VALUE;
       CreatureAnimationCreatorSettings.store(preferences, stored);
       final CreatureAnimationCreatorSettings.State bounded =
           CreatureAnimationCreatorSettings.load(preferences, root, root);
-      check(bounded.quadrants == 9 && bounded.armorLevels == 1,
+      check(bounded.quadrants == 9 && bounded.armorLevels == 9,
           "Stored family ranges should be bounded before persistence");
       check(bounded.previewDirection == AnimationPreviewPanel.PREVIEW_DIRECTIONS.length - 1,
           "Stored preview directions should be bounded before persistence");
@@ -170,12 +176,40 @@ public final class CreatureAnimationCoreTest {
     }
   }
 
-  private static void testEnhancedEditionSlotCoverage() {
-    for (final Profile.Game game : MonsterAnimationLayout.SUPPORTED_GAMES) {
-      check(MonsterAnimationLayout.isValidSlot(game, 0x7303), game + " should accept modern monster slot 0x7303");
-      check(!MonsterAnimationLayout.isValidSlot(game, 0x7000), game + " should reject monster_old slot 0x7000");
+  private static void testProfileSlotCoverage() {
+    check(MonsterAnimationLayout.SUPPORTED_GAMES.size() == Profile.Game.values().length - 1,
+        "Every recognized Infinity Engine profile should be supported");
+    check(MonsterAnimationLayout.isSupportedGame(Profile.Game.BG1)
+        && MonsterAnimationLayout.isSupportedGame(Profile.Game.BG2ToB)
+        && MonsterAnimationLayout.isSupportedGame(Profile.Game.PST)
+        && MonsterAnimationLayout.isSupportedGame(Profile.Game.IWDHowTotLM)
+        && MonsterAnimationLayout.isSupportedGame(Profile.Game.IWD2EE),
+        "Classic engine profiles should be accepted");
+    check(!MonsterAnimationLayout.isSupportedGame(Profile.Game.Unknown),
+        "The unrecognized profile must remain unsupported");
+    check(MonsterAnimationLayout.isValidSlot(Profile.Game.BG2ToB, 0x7303),
+        "Classic BG2 should accept its documented modern monster slot");
+    check(!MonsterAnimationLayout.isValidSlot(Profile.Game.BG2ToB, 0x7000),
+        "Classic BG2 should keep monster_old and modern monster ranges distinct");
+    check(AnimationInfo.Type.MONSTER_MULTI.isSupported(Profile.Game.IWD2EE)
+        && AnimationInfo.Type.MONSTER.isSupported(Profile.Game.IWD2EE)
+        && AnimationInfo.Type.MONSTER_ICEWIND.isSupported(Profile.Game.IWD2EE),
+        "IWD2EE should use the same exact animation-family ranges as IWD2");
+
+    check(!Profile.isBamcSupported(Profile.Game.BG1)
+        && !Profile.isBamcSupported(Profile.Game.BG1TotSC)
+        && !Profile.isBamcSupported(Profile.Game.PST),
+        "BG1-family and PST profiles should reject BAMC");
+    check(Profile.isBamcSupported(Profile.Game.BG2ToB)
+        && Profile.isBamcSupported(Profile.Game.IWDHowTotLM)
+        && Profile.isBamcSupported(Profile.Game.IWD2)
+        && Profile.isBamcSupported(Profile.Game.IWD2EE)
+        && Profile.isBamcSupported(Profile.Game.BG2EE),
+        "BG2, IWD, IWD2 and Enhanced Edition profiles should accept BAMC");
+    for (final Profile.Game game : Profile.Game.values()) {
+      check(Profile.isBamV2Supported(game) == Profile.isEnhancedEdition(game),
+          game + " has an incorrect BAM V2 capability");
     }
-    check(!MonsterAnimationLayout.isSupportedGame(Profile.Game.BG2ToB), "Classic BG2 must not be accepted");
   }
 
   private static void testAllFamilyLayouts() {
@@ -196,10 +230,9 @@ public final class CreatureAnimationCoreTest {
 
     for (final CreatureAnimationFamily family : CreatureAnimationFamily.values()) {
       for (final Profile.Game game : MonsterAnimationLayout.SUPPORTED_GAMES) {
-        final boolean expected =
-            family != CreatureAnimationFamily.MONSTER_PLANESCAPE || game == Profile.Game.PSTEE;
+        final boolean expected = family.getAnimationInfoType().isSupported(game);
         check(family.isSupportedGame(game) == expected,
-            family + " has an incorrect Enhanced Edition compatibility result for " + game);
+            family + " has an incorrect profile compatibility result for " + game);
         check(family.isValidSlot(game, family.getDefaultSlot()) == expected,
             family + " has an incorrect default-slot result for " + game);
       }
@@ -227,8 +260,10 @@ public final class CreatureAnimationCoreTest {
       }
     }
 
-    check(!CreatureAnimationFamily.MONSTER_PLANESCAPE.isSupportedGame(Profile.Game.BG2EE),
-        "Planescape animations must be restricted to PSTEE");
+    check(CreatureAnimationFamily.MONSTER_PLANESCAPE.isSupportedGame(Profile.Game.PST)
+        && CreatureAnimationFamily.MONSTER_PLANESCAPE.isSupportedGame(Profile.Game.PSTEE)
+        && !CreatureAnimationFamily.MONSTER_PLANESCAPE.isSupportedGame(Profile.Game.BG2EE),
+        "Planescape animations must be restricted to PST and PSTEE");
     check(CreatureAnimationFamily.MONSTER_PLANESCAPE.createLayout("P01", false, 1, 1)
         .getActionResrefs().size() == 44, "Planescape layout should define all 44 standard and custom action slots");
     check(CreatureAnimationFamily.CHARACTER.getAnimationTypeCode(0x6500) == 0x6000,
@@ -272,6 +307,153 @@ public final class CreatureAnimationCoreTest {
           check(pixel, "Quadrant bounds must cover every source pixel");
         }
       }
+    }
+  }
+
+  private static void testClassicProfileExport() throws Exception {
+    final LayoutBuilder aliasBuilder = new LayoutBuilder();
+    aliasBuilder.addCycleIfAbsent("ALIAS.BAM",
+        new CyclePlan(0, Sequence.DIE, Direction.S.getCycleOffset(), false, false, -1, 0));
+    aliasBuilder.addCycleIfAbsent("ALIAS.BAM",
+        new CyclePlan(0, Sequence.SLEEP, Direction.S.getCycleOffset(), false, false, -1, 0));
+    check(aliasBuilder.build().getResources().get("ALIAS.BAM").getCycles().get(0).getSequence() == Sequence.DIE,
+        "Classic decoder aliases must retain the first canonical physical-cycle mapping");
+
+    final Path directory = createTestDirectory("ni-creature-classic-test-");
+    final Path target = directory.resolve("CLS.BAM");
+    final int[] palette = new int[256];
+    Arrays.fill(palette, 0xff000000);
+    palette[5] = 0xffcc3322;
+    palette[6] = 0xff2255cc;
+    palette[7] = 0xff33aa55;
+    palette[9] = 0x0000ff00;
+    final IndexColorModel colorModel =
+        new IndexColorModel(8, palette.length, palette, 0, true, 9, DataBuffer.TYPE_BYTE);
+
+    final PseudoBamDecoder installedSource = new PseudoBamDecoder();
+    try {
+      final BufferedImage sharedImage =
+          new BufferedImage(4, 4, BufferedImage.TYPE_BYTE_INDEXED, colorModel);
+      fillIndexedImage(sharedImage, 9);
+      sharedImage.getRaster().setSample(1, 1, 0, 5);
+      final BufferedImage replacedImage =
+          new BufferedImage(4, 4, BufferedImage.TYPE_BYTE_INDEXED, colorModel);
+      fillIndexedImage(replacedImage, 9);
+      replacedImage.getRaster().setSample(2, 2, 0, 6);
+      final int sharedFrame = installedSource.frameAdd(sharedImage, new Point(1, 2));
+      final int replacedFrame = installedSource.frameAdd(replacedImage, new Point(3, 4));
+      final PseudoBamControl control = installedSource.createControl();
+      control.cycleAdd(new int[] { sharedFrame });
+      control.cycleAdd(new int[] { replacedFrame });
+      control.cycleAdd(new int[] { sharedFrame });
+      installedSource.setOption(PseudoBamDecoder.OPTION_INT_RLEINDEX, 9);
+      installedSource.setOption(PseudoBamDecoder.OPTION_BOOL_COMPRESSED, false);
+      check(installedSource.exportBamV1(target, null, 0),
+          "The synthetic installed classic BAM should be written");
+    } finally {
+      installedSource.close();
+    }
+
+    final LayoutBuilder builder = new LayoutBuilder();
+    builder.addCycle("CLS.BAM",
+        new CyclePlan(1, Sequence.STANCE, Direction.S.getCycleOffset(), false, false, -1, 0));
+    builder.preserveExistingCycles("CLS.BAM");
+    final FamilyLayout layout = builder.build();
+    final ClassicAnimationDefinition definition = ClassicAnimationDefinition.forTesting(
+        Profile.Game.BG1, 0x0001, CreatureAnimationFamily.EFFECT, "CLS", layout, true);
+    final Config config = new Config().setGame(Profile.Game.BG1)
+        .setFamily(CreatureAnimationFamily.EFFECT).setAnimationId(0x0001).setResref("CLS")
+        .setClassicDefinition(definition).setOutputDirectory(directory)
+        .setBamFormat(BamFormat.BAM_V1).setCompressedBam(false).setFalseColor(true);
+    final BufferedImage authoredImage =
+        new BufferedImage(16, 16, BufferedImage.TYPE_BYTE_INDEXED, colorModel);
+    fillIndexedImage(authoredImage, 9);
+    authoredImage.getRaster().setSample(8, 8, 0, 7);
+    final CreatureAnimationModel model = new CreatureAnimationModel();
+    model.replaceFrames(Sequence.STANCE, Direction.S,
+        Collections.singletonList(new AnimationFrame(authoredImage, new Point(8, 14), "classic-palette-test")));
+
+    try {
+      final CreatureAnimationExporter.ValidationReport validation =
+          CreatureAnimationExporter.validate(model, config);
+      check(!validation.hasErrors(),
+          "An exact complete classic profile replacement should pass validation: " + validation.getMessages());
+      final ExportResult result = CreatureAnimationExporter.export(model, config, true);
+      check(result.getInstalledFiles().size() == 1 && result.getInstalledFiles().get(0).equals(target),
+          "Classic export should install only the exact planned BAM resource");
+      check(!Files.exists(directory.resolve("0001.INI")),
+          "Classic export must not generate an Enhanced Edition animation INI");
+
+      final BamDecoder reopened = BamDecoder.loadBam(new FileResourceEntry(target));
+      check(reopened instanceof BamV1Decoder && reopened.isOpen(),
+          "The classic replacement should reopen as BAM V1");
+      try {
+        final BamV1Control control = (BamV1Control) reopened.createControl();
+        check(control.cycleCount() == 3,
+            "Classic export must retain the installed BAM's exact cycle count");
+        check(reopened.frameCount() == 3,
+            "Classic export must retain the complete installed frame table before appending generated frames");
+        final BamDecoder.FrameEntry replacedOriginal = reopened.getFrameInfo(1);
+        check(replacedOriginal.getCenterX() == 3 && replacedOriginal.getCenterY() == 4,
+            "Frames referenced only by a replaced cycle must remain at their original absolute index");
+        check(control.cycleSet(0) && control.cycleFrameCount() == 1,
+            "The first untouched classic cycle should remain present");
+        final int firstFrame = control.cycleGetFrameIndexAbsolute(0);
+        check(control.cycleSet(2) && control.cycleFrameCount() == 1,
+            "The last untouched classic cycle should remain present");
+        final int lastFrame = control.cycleGetFrameIndexAbsolute(0);
+        check(firstFrame == lastFrame,
+            "Untouched classic cycles should preserve installed frame sharing");
+        final BamDecoder.FrameEntry shared = reopened.getFrameInfo(firstFrame);
+        check(shared.getCenterX() == 1 && shared.getCenterY() == 2,
+            "Untouched classic frame centers should remain exact");
+        final int[] reopenedPalette = control.getPalette();
+        check(((BamV1Decoder) reopened).getRleIndex() == 9,
+            "Classic export must preserve the installed BAM's transparency index");
+        final IndexColorModel reopenedColorModel =
+            new IndexColorModel(8, reopenedPalette.length, reopenedPalette, 0, true, 9,
+                DataBuffer.TYPE_BYTE);
+        final BufferedImage copied =
+            new BufferedImage(shared.getWidth(), shared.getHeight(), BufferedImage.TYPE_BYTE_INDEXED,
+                reopenedColorModel);
+        reopened.frameGet(control, firstFrame, copied);
+        check(copied.getRaster().getSample(1, 1, 0) == 5,
+            "Untouched classic frames should preserve their exact palette indices");
+        check(control.cycleSet(1) && control.cycleFrameCount() == 1,
+            "The exact planned classic cycle should be replaced");
+        final BamDecoder.FrameEntry generated =
+            reopened.getFrameInfo(control.cycleGetFrameIndexAbsolute(0));
+        check(generated.getCenterX() == 8 && generated.getCenterY() == 14,
+            "Generated classic frame centers should use the authored source pivots");
+        for (int index = 0; index < palette.length; index++) {
+          check((reopenedPalette[index] & 0x00ffffff) == (palette[index] & 0x00ffffff),
+              "Classic export must preserve installed palette index " + index);
+        }
+      } finally {
+        reopened.close();
+      }
+
+      final Config v2 = new Config().setGame(Profile.Game.BG1)
+          .setFamily(CreatureAnimationFamily.EFFECT).setAnimationId(0x0001).setResref("CLS")
+          .setClassicDefinition(definition).setOutputDirectory(directory)
+          .setBamFormat(BamFormat.BAM_V2).setCompressedBam(false);
+      check(hasValidationMessage(CreatureAnimationExporter.validate(model, v2), "does not support BAM V2"),
+          "Classic BG1 should reject BAM V2 explicitly");
+      final Config bamc = new Config().setGame(Profile.Game.BG1)
+          .setFamily(CreatureAnimationFamily.EFFECT).setAnimationId(0x0001).setResref("CLS")
+          .setClassicDefinition(definition).setOutputDirectory(directory)
+          .setBamFormat(BamFormat.BAM_V1).setCompressedBam(true);
+      check(hasValidationMessage(CreatureAnimationExporter.validate(model, bamc), "does not support BAMC"),
+          "Classic BG1 should reject BAMC explicitly");
+      boolean iniRejected = false;
+      try {
+        CreatureAnimationExporter.createIniText(config);
+      } catch (IllegalArgumentException e) {
+        iniRejected = true;
+      }
+      check(iniRejected, "Classic profile configuration must reject INI generation");
+    } finally {
+      deleteTree(directory);
     }
   }
 
@@ -701,6 +883,32 @@ public final class CreatureAnimationCoreTest {
     check(rejected, "Equipment layouts must reject filenames beyond the engine's eight-character resref budget");
   }
 
+  private static void testEquipmentProfileFormats() throws Exception {
+    final Path directory = createTestDirectory("ni-equipment-profile-test-");
+    try {
+      final CreatureAnimationModel model = createCompleteEquipmentModel(false);
+      final EquipmentOverlayExporter.Config v2 = new EquipmentOverlayExporter.Config()
+          .setGame(Profile.Game.BG2ToB).setResref("MSOL").setAppearanceCode("SY")
+          .setOutputDirectory(directory).setBamFormat(BamFormat.BAM_V2).setCompressedBam(false);
+      check(hasValidationMessage(EquipmentOverlayExporter.validate(model, v2), "does not support BAM V2"),
+          "Classic equipment overlay export should reject BAM V2");
+
+      final EquipmentOverlayExporter.Config unsupportedBamc = new EquipmentOverlayExporter.Config()
+          .setGame(Profile.Game.BG1).setResref("MSOL").setAppearanceCode("SY")
+          .setOutputDirectory(directory).setBamFormat(BamFormat.BAM_V1).setCompressedBam(true);
+      check(hasValidationMessage(EquipmentOverlayExporter.validate(model, unsupportedBamc),
+          "does not support BAMC"), "BG1 equipment overlay export should reject BAMC");
+
+      final EquipmentOverlayExporter.Config supportedBamc = new EquipmentOverlayExporter.Config()
+          .setGame(Profile.Game.BG2ToB).setResref("MSOL").setAppearanceCode("SY")
+          .setOutputDirectory(directory).setBamFormat(BamFormat.BAM_V1).setCompressedBam(true);
+      check(!EquipmentOverlayExporter.validate(model, supportedBamc).hasErrors(),
+          "Classic BG2 equipment overlay export should accept BAMC");
+    } finally {
+      deleteTree(directory);
+    }
+  }
+
   private static void testAllEquipmentOverlayFamilyBamV1Exports() throws Exception {
     final Path directory = createTestDirectory("ni-equipment-family-test-");
     try {
@@ -718,7 +926,7 @@ public final class CreatureAnimationCoreTest {
         final String prefix = getEquipmentTestPrefix(family);
         final String appearance = family.usesFullAppearanceCodeInFileName() ? "SY" : "S0";
         final EquipmentOverlayExporter.Config config = new EquipmentOverlayExporter.Config()
-            .setFamily(family).setResourcePrefix(prefix).setAppearanceCode(appearance)
+            .setGame(Profile.Game.BG2EE).setFamily(family).setResourcePrefix(prefix).setAppearanceCode(appearance)
             .setWeaponType(WeaponType.SCYTHE).setOutputDirectory(familyDirectory)
             .setBamFormat(BamFormat.BAM_V1).setCompressedBam(false);
         check(!EquipmentOverlayExporter.validate(generated, config).hasErrors(),
@@ -790,6 +998,7 @@ public final class CreatureAnimationCoreTest {
           "The generated eastern weapon must retain its independent vertical source axis");
 
       final EquipmentOverlayExporter.Config config = new EquipmentOverlayExporter.Config()
+          .setGame(Profile.Game.BG2EE)
           .setFamily(EquipmentOverlayFamily.MONSTER_LAYERED).setResourcePrefix("MLR")
           .setAppearanceCode("S0").setWeaponType(WeaponType.SWORD).setOutputDirectory(directory)
           .setBamFormat(BamFormat.BAM_V1).setCompressedBam(false);
@@ -820,7 +1029,8 @@ public final class CreatureAnimationCoreTest {
           EquipmentOverlayGenerator.parsePrompt("replace the sword with a large silver sickle");
       final CreatureAnimationModel generated = EquipmentOverlayGenerator.generate(
           createCompleteEquipmentModel(false), createCompleteEquipmentModel(true), prompt, 91L, null);
-      final EquipmentOverlayExporter.Config config = new EquipmentOverlayExporter.Config().setResref("MSOL")
+      final EquipmentOverlayExporter.Config config = new EquipmentOverlayExporter.Config()
+          .setGame(Profile.Game.BG2EE).setResref("MSOL")
           .setAppearanceCode("SK").setOutputDirectory(directory).setBamFormat(BamFormat.BAM_V1)
           .setCompressedBam(true);
       check(!EquipmentOverlayExporter.validate(generated, config).hasErrors(),
@@ -861,7 +1071,8 @@ public final class CreatureAnimationCoreTest {
           EquipmentOverlayGenerator.parsePrompt("replace the sword with a glowing silver scythe");
       final CreatureAnimationModel generated = EquipmentOverlayGenerator.generate(
           createCompleteEquipmentModel(false), createCompleteEquipmentModel(true), prompt, 101L, null);
-      final EquipmentOverlayExporter.Config config = new EquipmentOverlayExporter.Config().setResref("MSOL")
+      final EquipmentOverlayExporter.Config config = new EquipmentOverlayExporter.Config()
+          .setGame(Profile.Game.BG2EE).setResref("MSOL")
           .setAppearanceCode("SY").setOutputDirectory(directory).setBamFormat(BamFormat.BAM_V2)
           .setCompressedBam(false);
       final EquipmentOverlayExporter.ExportResult result =
@@ -896,6 +1107,7 @@ public final class CreatureAnimationCoreTest {
           createCompleteEquipmentOverlayModel(false), createCompleteEquipmentOverlayModel(true),
           prompt, 131L, true, null);
       final EquipmentOverlayExporter.Config config = new EquipmentOverlayExporter.Config()
+          .setGame(Profile.Game.BG2EE)
           .setFamily(EquipmentOverlayFamily.MONSTER_LAYERED).setResourcePrefix("MLR")
           .setAppearanceCode("S0").setWeaponType(WeaponType.SCYTHE).setOutputDirectory(directory)
           .setBamFormat(BamFormat.BAM_V2).setCompressedBam(false);
@@ -952,6 +1164,14 @@ public final class CreatureAnimationCoreTest {
     model.replaceFrames(Sequence.STANCE, Direction.S,
         Collections.singletonList(new AnimationFrame(image, new Point(8, 14), "palette-test")));
     return model;
+  }
+
+  private static void fillIndexedImage(BufferedImage image, int paletteIndex) {
+    for (int y = 0; y < image.getHeight(); y++) {
+      for (int x = 0; x < image.getWidth(); x++) {
+        image.getRaster().setSample(x, y, 0, paletteIndex);
+      }
+    }
   }
 
   private static CreatureAnimationModel createCompleteEquipmentModel(boolean avatar) {
@@ -1069,6 +1289,15 @@ public final class CreatureAnimationCoreTest {
     if (!condition) {
       throw new AssertionError(message);
     }
+  }
+
+  private static boolean hasValidationMessage(CreatureAnimationExporter.ValidationReport report, String text) {
+    for (final CreatureAnimationExporter.Message message : report.getMessages()) {
+      if (message.getText().contains(text)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static void deleteTree(Path root) throws IOException {

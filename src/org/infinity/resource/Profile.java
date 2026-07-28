@@ -881,6 +881,27 @@ public final class Profile {
   }
 
   /**
+   * Returns whether the specified game engine supports compressed BAM V1 (BAMC) resources.
+   *
+   * @param game The game to check.
+   * @return {@code true} if BAMC resources are supported, {@code false} otherwise.
+   */
+  public static boolean isBamcSupported(Game game) {
+    final Engine engine = (game != null) ? game.getEngine() : Engine.Unknown;
+    return engine == Engine.BG2 || engine == Engine.IWD || engine == Engine.IWD2 || engine == Engine.EE;
+  }
+
+  /**
+   * Returns whether the specified game engine supports BAM V2/PVRZ resources.
+   *
+   * @param game The game to check.
+   * @return {@code true} if BAM V2 resources are supported, {@code false} otherwise.
+   */
+  public static boolean isBamV2Supported(Game game) {
+    return isEnhancedEdition(game);
+  }
+
+  /**
    * Returns the game's root folder.
    *
    * @return The game's root folder as {@link Path} object.
@@ -2283,10 +2304,9 @@ public final class Profile {
     addEntry(Key.IS_SUPPORTED_ARE_V91, Type.BOOLEAN, (engine == Engine.IWD2));
 
     addEntry(Key.IS_SUPPORTED_BAM_V1, Type.BOOLEAN, true);
-    addEntry(Key.IS_SUPPORTED_BAMC_V1, Type.BOOLEAN,
-        (engine == Engine.BG2 || engine == Engine.IWD || engine == Engine.IWD2 || engine == Engine.EE));
+    addEntry(Key.IS_SUPPORTED_BAMC_V1, Type.BOOLEAN, isBamcSupported(game));
     addEntry(Key.IS_SUPPORTED_BAM_V1_ALPHA, Type.BOOLEAN, isEnhancedEdition());
-    addEntry(Key.IS_SUPPORTED_BAM_V2, Type.BOOLEAN, isEnhancedEdition());
+    addEntry(Key.IS_SUPPORTED_BAM_V2, Type.BOOLEAN, isBamV2Supported(game));
 
     addEntry(Key.IS_SUPPORTED_BCS, Type.BOOLEAN, true);
 

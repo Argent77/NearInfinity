@@ -25,6 +25,7 @@ import org.infinity.gui.converter.creature.CreatureAnimationFamily.ResourcePlan;
 import org.infinity.gui.converter.creature.CreatureAnimationModel.AnimationFrame;
 import org.infinity.gui.converter.creature.EquipmentOverlayGenerator.WeaponType;
 import org.infinity.gui.converter.creature.MonsterAnimationLayout.BamFormat;
+import org.infinity.resource.Profile;
 import org.infinity.resource.graphics.BamDecoder;
 import org.infinity.resource.graphics.DxtEncoder;
 import org.infinity.resource.graphics.PseudoBamDecoder;
@@ -36,6 +37,7 @@ public final class EquipmentOverlayExporter {
   private static final Pattern APPEARANCE_CODE = Pattern.compile("(?i)^[A-Z0-9_]{2}$");
 
   public static final class Config {
+    private Profile.Game game = Profile.getGame();
     private EquipmentOverlayFamily family = EquipmentOverlayFamily.MONSTER;
     private String resourcePrefix = "";
     private String appearanceCode = "";
@@ -43,6 +45,15 @@ public final class EquipmentOverlayExporter {
     private Path outputDirectory;
     private BamFormat bamFormat = BamFormat.BAM_V1;
     private boolean compressedBam = true;
+
+    public Profile.Game getGame() {
+      return game;
+    }
+
+    public Config setGame(Profile.Game value) {
+      game = value;
+      return this;
+    }
 
     public EquipmentOverlayFamily getFamily() {
       return family;
@@ -152,6 +163,9 @@ public final class EquipmentOverlayExporter {
     if (config.family == null) {
       report.add(Severity.ERROR, "No equipment-overlay animation family was selected.");
     }
+    if (!MonsterAnimationLayout.isSupportedGame(config.game)) {
+      report.add(Severity.ERROR, "Equipment overlay export requires a recognized Infinity Engine game profile.");
+    }
     if (!RESOURCE_PREFIX.matcher(config.resourcePrefix).matches()) {
       report.add(Severity.ERROR, "The weapon-overlay resource prefix must contain 1-8 ASCII letters, digits or "
           + "underscores.");
@@ -170,6 +184,12 @@ public final class EquipmentOverlayExporter {
     }
     if (config.bamFormat == null) {
       report.add(Severity.ERROR, "No BAM output format was selected.");
+    } else if (config.bamFormat == BamFormat.BAM_V2 && !Profile.isBamV2Supported(config.game)) {
+      report.add(Severity.ERROR, getGameTitle(config.game) + " does not support BAM V2/PVRZ resources.");
+    } else if (config.bamFormat == BamFormat.BAM_V1 && config.compressedBam
+        && !Profile.isBamcSupported(config.game)) {
+      report.add(Severity.ERROR,
+          getGameTitle(config.game) + " does not support BAMC-compressed BAM V1 resources.");
     }
     if (model == null || model.isEmpty()) {
       report.add(Severity.ERROR, "No generated equipment overlay is loaded.");
@@ -319,6 +339,10 @@ public final class EquipmentOverlayExporter {
 
   private static FamilyLayout createLayout(Config config) {
     return config.family.createOverlayLayout(config.resourcePrefix, config.appearanceCode, config.weaponType);
+  }
+
+  private static String getGameTitle(Profile.Game game) {
+    return game != null ? game.getTitle() : "The selected game profile";
   }
 
   private static void validateStagedOutput(Path staging, Config config, Map<String, Integer> expectedCycles)

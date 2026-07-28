@@ -21,7 +21,7 @@ import org.infinity.resource.cre.decoder.MonsterPlanescapeDecoder;
 import org.infinity.resource.cre.decoder.util.AnimationInfo;
 
 /**
- * Declarative engine resource layouts for every real Enhanced Edition creature animation family.
+ * Declarative engine resource layouts for every real Infinity Engine creature animation family.
  *
  * <p>The source editor deliberately retains one rich, neutral action model. A family plan maps that model to the exact
  * filenames, cycle indices, direction sets, quadrants and action aliases consumed by the corresponding Near Infinity
@@ -77,7 +77,7 @@ public enum CreatureAnimationFamily {
     private final int quadrantIndex;
     private final int quadrantCount;
 
-    private CyclePlan(int cycleIndex, Sequence sequence, int directionIndex, boolean reversed, boolean blank,
+    CyclePlan(int cycleIndex, Sequence sequence, int directionIndex, boolean reversed, boolean blank,
         int quadrantIndex, int quadrantCount) {
       this.cycleIndex = cycleIndex;
       this.sequence = Objects.requireNonNull(sequence);
@@ -137,11 +137,13 @@ public enum CreatureAnimationFamily {
     private final String fileName;
     private final List<CyclePlan> cycles;
     private final int cycleCount;
+    private final boolean preserveExistingCycles;
 
-    private ResourcePlan(String fileName, Map<Integer, CyclePlan> cycles) {
+    private ResourcePlan(String fileName, Map<Integer, CyclePlan> cycles, boolean preserveExistingCycles) {
       this.fileName = fileName;
       this.cycles = Collections.unmodifiableList(new ArrayList<>(cycles.values()));
       this.cycleCount = cycles.isEmpty() ? 0 : Collections.max(cycles.keySet()) + 1;
+      this.preserveExistingCycles = preserveExistingCycles;
     }
 
     public String getFileName() {
@@ -155,6 +157,15 @@ public enum CreatureAnimationFamily {
     public int getCycleCount() {
       return cycleCount;
     }
+
+    /**
+     * Returns whether cycles outside this plan must be copied from the installed BAM.
+     *
+     * <p>Classic engines commonly share BAMs or address only selected cycles in a hardcoded profile definition.</p>
+     */
+    public boolean isPreserveExistingCycles() {
+      return preserveExistingCycles;
+    }
   }
 
   /** Immutable resource and PST action map produced for one export definition. */
@@ -165,7 +176,8 @@ public enum CreatureAnimationFamily {
     private FamilyLayout(Map<String, MutableResourcePlan> resources, Map<String, String> actionResrefs) {
       final Map<String, ResourcePlan> immutableResources = new LinkedHashMap<>();
       for (final Map.Entry<String, MutableResourcePlan> entry : resources.entrySet()) {
-        immutableResources.put(entry.getKey(), new ResourcePlan(entry.getKey(), entry.getValue().cycles));
+        immutableResources.put(entry.getKey(), new ResourcePlan(entry.getKey(), entry.getValue().cycles,
+            entry.getValue().preserveExistingCycles));
       }
       this.resources = Collections.unmodifiableMap(immutableResources);
       this.actionResrefs = Collections.unmodifiableMap(new LinkedHashMap<>(actionResrefs));
@@ -297,7 +309,7 @@ public enum CreatureAnimationFamily {
   }
 
   public boolean isSupportedGame(Profile.Game game) {
-    return MonsterAnimationLayout.isSupportedGame(game) && animationInfoType.contains(game, defaultSlot);
+    return MonsterAnimationLayout.isSupportedGame(game) && animationInfoType.isSupported(game);
   }
 
   public boolean isValidSlot(Profile.Game game, int animationId) {
@@ -820,6 +832,7 @@ public enum CreatureAnimationFamily {
 
   private static final class MutableResourcePlan {
     private final TreeMap<Integer, CyclePlan> cycles = new TreeMap<>();
+    private boolean preserveExistingCycles;
   }
 
   static final class LayoutBuilder {
@@ -852,6 +865,22 @@ public enum CreatureAnimationFamily {
       if (previous != null && !previous.sameMapping(cycle)) {
         throw new IllegalStateException("Conflicting cycle " + cycle.getCycleIndex() + " in " + fileName + ".");
       }
+    }
+
+    /**
+     * Adds the first canonical decoder mapping for a physical cycle.
+     *
+     * <p>Classic decoders may expose the same stored cycle through later sequence aliases (for example, death as
+     * sleep or a forward sleep cycle as reverse get-up). Callers iterate the decoder's canonical sequence and
+     * direction order, so aliases must not overwrite the physical cycle's first canonical mapping.</p>
+     */
+    void addCycleIfAbsent(String fileName, CyclePlan cycle) {
+      resources.computeIfAbsent(fileName, key -> new MutableResourcePlan()).cycles
+          .putIfAbsent(cycle.getCycleIndex(), cycle);
+    }
+
+    void preserveExistingCycles(String fileName) {
+      resources.computeIfAbsent(fileName, key -> new MutableResourcePlan()).preserveExistingCycles = true;
     }
 
     FamilyLayout build() {

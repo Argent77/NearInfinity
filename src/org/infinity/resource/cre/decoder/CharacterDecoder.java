@@ -6,11 +6,13 @@ package org.infinity.resource.cre.decoder;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 import org.infinity.resource.ResourceFactory;
 import org.infinity.resource.cre.CreResource;
@@ -225,6 +227,11 @@ public class CharacterDecoder extends CharacterBaseDecoder {
   /** Returns the correct sequence map for the current settings. */
   private HashMap<Sequence, Couple<String, Integer>> getSuffixMap() {
     return isSplittedBams() ? SUFFIX_MAP_SPLIT : SUFFIX_MAP_UNSPLIT;
+  }
+
+  /** Returns the decoder's exact avatar suffix and cycle schema for the active split mode. */
+  public Map<Sequence, Couple<String, Integer>> getAvatarSequenceMap() {
+    return Collections.unmodifiableMap(getSuffixMap());
   }
 
   /** Returns whether animations are spread over various subfiles. */

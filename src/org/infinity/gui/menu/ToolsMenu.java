@@ -42,6 +42,7 @@ import org.infinity.gui.MassExporter;
 import org.infinity.gui.SplProtFrame;
 import org.infinity.gui.converter.bam.ConvertToBam;
 import org.infinity.gui.converter.creature.CreatureAnimationCreator;
+import org.infinity.gui.converter.creature.MonsterAnimationLayout;
 import org.infinity.gui.converter.bmp.ConvertToBmp;
 import org.infinity.gui.converter.mos.ConvertToMos;
 import org.infinity.gui.converter.pvrz.ConvertToPvrz;
@@ -56,6 +57,8 @@ import org.infinity.resource.cre.browser.CreatureBrowser;
  * Handles Game menu items for the {@link BrowserMenuBar}.
  */
 public class ToolsMenu extends JMenu implements BrowserSubMenu, ActionListener {
+  private static final long serialVersionUID = 1L;
+
   public static final String TOOLS_DEBUG_EXTRA_INFO = "DebugShowExtraInfo";
 
   private final BrowserMenuBar menuBar;
@@ -216,8 +219,8 @@ public class ToolsMenu extends JMenu implements BrowserSubMenu, ActionListener {
     toolCreatureAnimationCreator = BrowserMenuBar.makeMenuItem("Creature Animation Creator...", KeyEvent.VK_C,
         Icons.ICON_CRE_VIEWER_24.getIcon(), -1, this);
     toolCreatureAnimationCreator.setToolTipText(
-        "Creates resources for every Enhanced Edition creature animation family from descriptions or PNG frames.");
-    toolCreatureAnimationCreator.setEnabled(Profile.isEnhancedEdition());
+        "Creates or replaces profile-defined creature animation resources from descriptions or PNG frames.");
+    toolCreatureAnimationCreator.setEnabled(MonsterAnimationLayout.isSupportedGame(Profile.getGame()));
     convertMenu.add(toolCreatureAnimationCreator);
     convertMenu.addSeparator();
 

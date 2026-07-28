@@ -160,55 +160,61 @@ public final class EquipmentOverlayReference {
   public static Result generate(String promptText, String sourceCodeOverride, String targetCodeOverride, long seed,
       ProgressListener listener) throws Exception {
     if (!MonsterAnimationLayout.isSupportedGame(Profile.getGame())) {
-      throw new IllegalArgumentException("Equipment overlays are available only for supported Enhanced Edition games.");
+      throw new IllegalArgumentException("Equipment overlays require a recognized Infinity Engine game profile.");
     }
     final PromptSpec prompt = EquipmentOverlayGenerator.parsePrompt(promptText);
     final AnimationReference reference = resolveAnimation(promptText);
-    final SpriteDecoder decoder = SpriteDecoder.importSprite(reference.animationId);
+    final SpriteDecoder decoder = Profile.isEnhancedEdition()
+        ? SpriteDecoder.importSprite(reference.animationId)
+        : ClassicAnimationDefinition.resolveDecoder(Profile.getGame(), reference.animationId);
     if (decoder == null) {
       throw new IllegalArgumentException("Could not load the animation definition for " + reference.symbol + " ("
           + String.format(Locale.ENGLISH, "0x%04X", reference.animationId) + ").");
     }
-    final EquipmentOverlayFamily family = EquipmentOverlayFamily.forDecoder(decoder);
-    if (family == null) {
-      throw new IllegalArgumentException(reference.symbol + " uses " + decoder.getAnimationType()
-          + ", whose Near Infinity decoder does not define weapon sprite overlays.");
-    }
-    family.validateDecoder(decoder, prompt.getTargetWeapon());
+    try {
+      final EquipmentOverlayFamily family = EquipmentOverlayFamily.forDecoder(decoder);
+      if (family == null) {
+        throw new IllegalArgumentException(reference.symbol + " uses " + decoder.getAnimationType()
+            + ", whose Near Infinity decoder does not define weapon sprite overlays.");
+      }
+      family.validateDecoder(decoder, prompt.getTargetWeapon());
 
-    final String rawAnimationResref = decoder.getAnimationResref();
-    final String animationResref =
-        rawAnimationResref != null ? rawAnimationResref.trim().toUpperCase(Locale.ENGLISH) : "";
-    if (animationResref.isEmpty()) {
-      throw new IllegalArgumentException(reference.symbol + " does not define an animation resource prefix.");
-    }
-    final List<String> resourceNames = listRelevantResourceNames(family, decoder, animationResref);
-    final String resourcePrefix = family == EquipmentOverlayFamily.MONSTER
-        ? resolveMonsterEquipmentPrefix(animationResref, prompt.getSourceWeapon(), sourceCodeOverride, resourceNames)
-        : family.getOverlayResourcePrefix(decoder, null);
-    final List<String> availableCodes =
-        findAvailableSourceCodes(family, decoder, resourcePrefix, prompt.getTargetWeapon(), resourceNames);
-    if (availableCodes.isEmpty()) {
-      throw new IOException(reference.symbol + " has no complete " + family
-          + " weapon layer compatible with the requested " + prompt.getTargetWeapon().getLabel() + " pose.");
-    }
+      final String rawAnimationResref = decoder.getAnimationResref();
+      final String animationResref =
+          rawAnimationResref != null ? rawAnimationResref.trim().toUpperCase(Locale.ENGLISH) : "";
+      if (animationResref.isEmpty()) {
+        throw new IllegalArgumentException(reference.symbol + " does not define an animation resource prefix.");
+      }
+      final List<String> resourceNames = listRelevantResourceNames(family, decoder, animationResref);
+      final String resourcePrefix = family == EquipmentOverlayFamily.MONSTER
+          ? resolveMonsterEquipmentPrefix(animationResref, prompt.getSourceWeapon(), sourceCodeOverride, resourceNames)
+          : family.getOverlayResourcePrefix(decoder, null);
+      final List<String> availableCodes =
+          findAvailableSourceCodes(family, decoder, resourcePrefix, prompt.getTargetWeapon(), resourceNames);
+      if (availableCodes.isEmpty()) {
+        throw new IOException(reference.symbol + " has no complete " + family
+            + " weapon layer compatible with the requested " + prompt.getTargetWeapon().getLabel() + " pose.");
+      }
 
-    final String sourceCode = chooseSourceCode(family, availableCodes, prompt.getSourceWeapon(),
-        prompt.getTargetWeapon(), sourceCodeOverride);
-    final String targetCode = chooseTargetCode(family, decoder, resourcePrefix, sourceCode,
-        prompt.getTargetWeapon(), targetCodeOverride);
-    final String sourceLayoutCode = toLayoutAppearanceCode(sourceCode);
-    final FamilyLayout sourceLayout =
-        family.createOverlayLayout(resourcePrefix, sourceLayoutCode, prompt.getTargetWeapon());
-    final EquipmentOverlayModel sourceOverlay = EquipmentOverlayBamImporter.importLayout(sourceLayout,
-        ResourceFactory::getResourceEntry, true, family);
-    final EquipmentOverlayModel avatar =
-        importAvatar(family, decoder, resourcePrefix, prompt.getTargetWeapon());
-    final EquipmentOverlayModel generated =
-        EquipmentOverlayGenerator.generate(sourceOverlay, avatar, prompt, seed,
-            family.hasExplicitEasternResources(), listener);
-    return new Result(reference.animationId, reference.symbol, animationResref, resourcePrefix,
-        family.isAvatarSplit(decoder), family, sourceCode, targetCode, availableCodes, prompt, avatar, generated);
+      final String sourceCode = chooseSourceCode(family, availableCodes, prompt.getSourceWeapon(),
+          prompt.getTargetWeapon(), sourceCodeOverride);
+      final String targetCode = chooseTargetCode(family, decoder, resourcePrefix, sourceCode,
+          prompt.getTargetWeapon(), targetCodeOverride);
+      final String sourceLayoutCode = toLayoutAppearanceCode(sourceCode);
+      final FamilyLayout sourceLayout =
+          family.createOverlayLayout(resourcePrefix, sourceLayoutCode, prompt.getTargetWeapon());
+      final EquipmentOverlayModel sourceOverlay = EquipmentOverlayBamImporter.importLayout(sourceLayout,
+          ResourceFactory::getResourceEntry, true, family);
+      final EquipmentOverlayModel avatar =
+          importAvatar(family, decoder, resourcePrefix, prompt.getTargetWeapon());
+      final EquipmentOverlayModel generated =
+          EquipmentOverlayGenerator.generate(sourceOverlay, avatar, prompt, seed,
+              family.hasExplicitEasternResources(), listener);
+      return new Result(reference.animationId, reference.symbol, animationResref, resourcePrefix,
+          family.isAvatarSplit(decoder), family, sourceCode, targetCode, availableCodes, prompt, avatar, generated);
+    } finally {
+      decoder.close();
+    }
   }
 
   private static EquipmentOverlayModel importAvatar(EquipmentOverlayFamily family, SpriteDecoder decoder,
