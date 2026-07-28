@@ -29,7 +29,7 @@ import org.infinity.gui.converter.creature.MonsterAnimationLayout.Direction;
 import org.infinity.gui.converter.creature.MonsterAnimationLayout.Sequence;
 
 /**
- * Replaces a synchronized type 0x7000 weapon layer with deterministic vector-like equipment artwork.
+ * Replaces a synchronized weapon layer with deterministic vector-like equipment artwork.
  *
  * <p>The existing overlay provides the per-frame grip, angle, length and timing. The generated result deliberately
  * remains an editable draft; it does not claim to infer hands, occlusion or unseen geometry from the avatar alone.</p>
@@ -212,7 +212,7 @@ public final class EquipmentOverlayGenerator {
   }
 
   /**
-   * Generates a complete overlay model from an existing synchronized weapon overlay.
+   * Generates a complete type {@code 0x7000} overlay model from an existing synchronized weapon overlay.
    *
    * @param sourceOverlay existing equipment layer, normally the sword named by the prompt
    * @param avatar        optional matching avatar frames, used to disambiguate which end of the source is the grip
@@ -247,6 +247,62 @@ public final class EquipmentOverlayGenerator {
         completed++;
         if (listener != null) {
           listener.progress(completed, total, sequence, direction);
+        }
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Generates a family-aware overlay while retaining independent explicit eastern artwork where present.
+   *
+   * @param sourceOverlay existing synchronized weapon resources in canonical direction space
+   * @param avatar        matching avatar resources used to identify the grip end of each source weapon
+   */
+  public static EquipmentOverlayModel generate(EquipmentOverlayModel sourceOverlay, EquipmentOverlayModel avatar,
+      PromptSpec prompt, long seed, ProgressListener listener) {
+    final boolean explicitEastern = sourceOverlay != null && !sourceOverlay.getEasternModel().isEmpty();
+    return generate(sourceOverlay, avatar, prompt, seed, explicitEastern, listener);
+  }
+
+  public static EquipmentOverlayModel generate(EquipmentOverlayModel sourceOverlay, EquipmentOverlayModel avatar,
+      PromptSpec prompt, long seed, boolean explicitEastern, ProgressListener listener) {
+    if (sourceOverlay == null || sourceOverlay.isEmpty()) {
+      throw new IllegalArgumentException("An existing synchronized equipment overlay is required.");
+    }
+    if (prompt == null || prompt.targetWeapon == null) {
+      throw new IllegalArgumentException("A parsed target weapon is required.");
+    }
+
+    final EquipmentOverlayModel result = new EquipmentOverlayModel();
+    final int directionCount = explicitEastern ? 16 : Direction.values().length;
+    final int total = Sequence.values().length * directionCount;
+    int completed = 0;
+    for (final Sequence sequence : Sequence.values()) {
+      for (int directionIndex = 0; directionIndex < directionCount; directionIndex++) {
+        final int variantCount = sourceOverlay.getResolvedVariantCount(sequence, directionIndex);
+        for (int occurrence = 0; occurrence < variantCount; occurrence++) {
+          final List<AnimationFrame> sourceFrames =
+              sourceOverlay.resolveVariantFrames(sequence, directionIndex, occurrence);
+          final List<AnimationFrame> avatarFrames = avatar != null
+              ? avatar.resolveVariantFrames(sequence, directionIndex, occurrence)
+              : Collections.<AnimationFrame>emptyList();
+          final List<AnimationFrame> generated = new ArrayList<>(sourceFrames.size());
+          for (int frameIndex = 0; frameIndex < sourceFrames.size(); frameIndex++) {
+            final AnimationFrame source = sourceFrames.get(frameIndex);
+            final AnimationFrame body = selectProportionalFrame(avatarFrames, frameIndex, sourceFrames.size());
+            generated.add(renderReplacement(source, body, prompt,
+                mixSeed(seed, sequence.ordinal(), directionIndex, occurrence, frameIndex)));
+          }
+          if (!generated.isEmpty()) {
+            result.replaceFrames(sequence, directionIndex, occurrence, generated);
+          }
+        }
+        completed++;
+        if (listener != null) {
+          final int canonicalIndex = directionIndex > Direction.N.getCycleOffset() ? 16 - directionIndex
+              : directionIndex;
+          listener.progress(completed, total, sequence, Direction.values()[canonicalIndex]);
         }
       }
     }
@@ -874,9 +930,14 @@ public final class EquipmentOverlayGenerator {
   }
 
   private static long mixSeed(long seed, int sequence, int direction, int frame) {
+    return mixSeed(seed, sequence, direction, 0, frame);
+  }
+
+  private static long mixSeed(long seed, int sequence, int direction, int occurrence, int frame) {
     long result = seed ^ 0x9e3779b97f4a7c15L;
     result ^= (sequence + 1L) * 0xbf58476d1ce4e5b9L;
     result ^= (direction + 1L) * 0x94d049bb133111ebL;
+    result ^= occurrence * 0xd6e8feb86659fd93L;
     result ^= (frame + 1L) * 0x2545f4914f6cdd1dL;
     return result;
   }

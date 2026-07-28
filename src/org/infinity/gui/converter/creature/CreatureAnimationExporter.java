@@ -892,6 +892,57 @@ public final class CreatureAnimationExporter {
     return decoder;
   }
 
+  static PseudoBamDecoder createBam(EquipmentOverlayModel model, ResourcePlan resource,
+      Map<CyclePlan, Integer> occurrences) {
+    final PseudoBamDecoder decoder = new PseudoBamDecoder();
+    final PseudoBamControl control = decoder.createControl();
+    final Map<Integer, CyclePlan> cycles = new HashMap<>();
+    for (final CyclePlan cycle : resource.getCycles()) {
+      cycles.put(cycle.getCycleIndex(), cycle);
+    }
+
+    final IdentityHashMap<AnimationFrame, Map<Integer, Integer>> frameIndices = new IdentityHashMap<>();
+    for (int cycleIndex = 0; cycleIndex < resource.getCycleCount(); cycleIndex++) {
+      final CyclePlan cycle = cycles.get(cycleIndex);
+      if (cycle == null) {
+        control.cycleAdd();
+        continue;
+      }
+
+      final Integer occurrence = occurrences.get(cycle);
+      if (occurrence == null) {
+        decoder.close();
+        throw new IllegalStateException("No occurrence index was planned for " + resource.getFileName()
+            + " cycle " + cycleIndex + ".");
+      }
+      final List<AnimationFrame> frames =
+          model.resolveVariantFrames(cycle.getSequence(), cycle.getDirectionIndex(), occurrence);
+      if (frames.isEmpty()) {
+        decoder.close();
+        throw new IllegalArgumentException("No equipment frames resolve for " + cycle.getSequence().getCode()
+            + " at direction index " + cycle.getDirectionIndex() + ", occurrence " + occurrence + ".");
+      }
+
+      final int[] indices = new int[frames.size()];
+      for (int targetIndex = 0; targetIndex < frames.size(); targetIndex++) {
+        final int sourceIndex = cycle.isReversed() ? frames.size() - 1 - targetIndex : targetIndex;
+        final AnimationFrame frame = frames.get(sourceIndex);
+        final int transformKey = getTransformKey(cycle);
+        final Map<Integer, Integer> transformedIndices =
+            frameIndices.computeIfAbsent(frame, key -> new HashMap<Integer, Integer>());
+        Integer frameIndex = transformedIndices.get(transformKey);
+        if (frameIndex == null) {
+          final TransformedFrame transformed = transformFrame(frame, cycle);
+          frameIndex = decoder.frameAdd(transformed.image, transformed.center);
+          transformedIndices.put(transformKey, frameIndex);
+        }
+        indices[targetIndex] = frameIndex;
+      }
+      control.cycleAdd(indices);
+    }
+    return decoder;
+  }
+
   private static int getTransformKey(CyclePlan cycle) {
     int result = cycle.isMirrored() ? 1 : 0;
     result |= cycle.isBlank() ? 2 : 0;

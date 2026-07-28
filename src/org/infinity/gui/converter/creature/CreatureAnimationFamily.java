@@ -822,23 +822,23 @@ public enum CreatureAnimationFamily {
     private final TreeMap<Integer, CyclePlan> cycles = new TreeMap<>();
   }
 
-  private static final class LayoutBuilder {
+  static final class LayoutBuilder {
     private final LinkedHashMap<String, MutableResourcePlan> resources = new LinkedHashMap<>();
     private final LinkedHashMap<String, String> actions = new LinkedHashMap<>();
 
-    private boolean hasResource(String fileName) {
+    boolean hasResource(String fileName) {
       return resources.containsKey(fileName);
     }
 
-    private void addAction(String action, String resref) {
+    void addAction(String action, String resref) {
       actions.put(action, resref);
     }
 
-    private void addBlock(String fileName, int cycleOffset, Sequence sequence, int[] directions) {
+    void addBlock(String fileName, int cycleOffset, Sequence sequence, int[] directions) {
       addBlock(fileName, cycleOffset, sequence, directions, false, false, -1, 0);
     }
 
-    private void addBlock(String fileName, int cycleOffset, Sequence sequence, int[] directions, boolean reversed,
+    void addBlock(String fileName, int cycleOffset, Sequence sequence, int[] directions, boolean reversed,
         boolean blank, int quadrantIndex, int quadrantCount) {
       for (int i = 0; i < directions.length; i++) {
         addCycle(fileName, new CyclePlan(cycleOffset + i, sequence, directions[i], reversed, blank, quadrantIndex,
@@ -846,7 +846,7 @@ public enum CreatureAnimationFamily {
       }
     }
 
-    private void addCycle(String fileName, CyclePlan cycle) {
+    void addCycle(String fileName, CyclePlan cycle) {
       final MutableResourcePlan resource = resources.computeIfAbsent(fileName, key -> new MutableResourcePlan());
       final CyclePlan previous = resource.cycles.putIfAbsent(cycle.getCycleIndex(), cycle);
       if (previous != null && !previous.sameMapping(cycle)) {
@@ -854,7 +854,7 @@ public enum CreatureAnimationFamily {
       }
     }
 
-    private FamilyLayout build() {
+    FamilyLayout build() {
       return new FamilyLayout(resources, actions);
     }
   }

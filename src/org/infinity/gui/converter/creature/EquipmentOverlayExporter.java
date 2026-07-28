@@ -19,35 +19,57 @@ import java.util.regex.Pattern;
 
 import org.infinity.gui.converter.creature.CreatureAnimationExporter.Severity;
 import org.infinity.gui.converter.creature.CreatureAnimationExporter.ValidationReport;
+import org.infinity.gui.converter.creature.CreatureAnimationFamily.CyclePlan;
+import org.infinity.gui.converter.creature.CreatureAnimationFamily.FamilyLayout;
+import org.infinity.gui.converter.creature.CreatureAnimationFamily.ResourcePlan;
 import org.infinity.gui.converter.creature.CreatureAnimationModel.AnimationFrame;
+import org.infinity.gui.converter.creature.EquipmentOverlayGenerator.WeaponType;
 import org.infinity.gui.converter.creature.MonsterAnimationLayout.BamFormat;
-import org.infinity.gui.converter.creature.MonsterAnimationLayout.Direction;
-import org.infinity.gui.converter.creature.MonsterAnimationLayout.OutputSlot;
-import org.infinity.gui.converter.creature.MonsterAnimationLayout.Sequence;
 import org.infinity.resource.graphics.BamDecoder;
 import org.infinity.resource.graphics.DxtEncoder;
 import org.infinity.resource.graphics.PseudoBamDecoder;
 import org.infinity.resource.key.FileResourceEntry;
 
-/** Validates, encodes and transactionally installs a type 0x7000 G1/G2 equipment-overlay pair. */
+/** Validates, encodes and transactionally installs family-specific weapon-overlay resources. */
 public final class EquipmentOverlayExporter {
-  private static final Pattern RESREF = Pattern.compile("(?i)^[A-Z0-9_]{1,4}$");
+  private static final Pattern RESOURCE_PREFIX = Pattern.compile("(?i)^[A-Z0-9_]{1,8}$");
   private static final Pattern APPEARANCE_CODE = Pattern.compile("(?i)^[A-Z0-9_]{2}$");
 
   public static final class Config {
-    private String resref = "";
+    private EquipmentOverlayFamily family = EquipmentOverlayFamily.MONSTER;
+    private String resourcePrefix = "";
     private String appearanceCode = "";
+    private WeaponType weaponType = WeaponType.SWORD;
     private Path outputDirectory;
     private BamFormat bamFormat = BamFormat.BAM_V1;
     private boolean compressedBam = true;
 
-    public String getResref() {
-      return resref;
+    public EquipmentOverlayFamily getFamily() {
+      return family;
     }
 
-    public Config setResref(String value) {
-      resref = value != null ? value.trim().toUpperCase(Locale.ENGLISH) : "";
+    public Config setFamily(EquipmentOverlayFamily value) {
+      family = value;
       return this;
+    }
+
+    public String getResourcePrefix() {
+      return resourcePrefix;
+    }
+
+    public Config setResourcePrefix(String value) {
+      resourcePrefix = value != null ? value.trim().toUpperCase(Locale.ENGLISH) : "";
+      return this;
+    }
+
+    /** Compatibility alias for the original type {@code 0x7000} configuration API. */
+    public String getResref() {
+      return getResourcePrefix();
+    }
+
+    /** Compatibility alias for the original type {@code 0x7000} configuration API. */
+    public Config setResref(String value) {
+      return setResourcePrefix(value);
     }
 
     public String getAppearanceCode() {
@@ -56,6 +78,15 @@ public final class EquipmentOverlayExporter {
 
     public Config setAppearanceCode(String value) {
       appearanceCode = value != null ? value.trim().toUpperCase(Locale.ENGLISH) : "";
+      return this;
+    }
+
+    public WeaponType getWeaponType() {
+      return weaponType;
+    }
+
+    public Config setWeaponType(WeaponType value) {
+      weaponType = value;
       return this;
     }
 
@@ -109,18 +140,28 @@ public final class EquipmentOverlayExporter {
   }
 
   public static ValidationReport validate(CreatureAnimationModel model, Config config) {
+    return validate(EquipmentOverlayModel.fromWestern(model), config);
+  }
+
+  public static ValidationReport validate(EquipmentOverlayModel model, Config config) {
     final ValidationReport report = new ValidationReport();
     if (config == null) {
       report.add(Severity.ERROR, "No equipment-overlay export configuration was supplied.");
       return report;
     }
-    if (!RESREF.matcher(config.resref).matches()) {
-      report.add(Severity.ERROR, "The reference animation BAM resref must contain 1-4 ASCII letters, digits or "
+    if (config.family == null) {
+      report.add(Severity.ERROR, "No equipment-overlay animation family was selected.");
+    }
+    if (!RESOURCE_PREFIX.matcher(config.resourcePrefix).matches()) {
+      report.add(Severity.ERROR, "The weapon-overlay resource prefix must contain 1-8 ASCII letters, digits or "
           + "underscores.");
     }
     if (!APPEARANCE_CODE.matcher(config.appearanceCode).matches()) {
       report.add(Severity.ERROR, "The new equipped appearance code must contain exactly two ASCII letters, digits or "
           + "underscores.");
+    }
+    if (config.weaponType == null) {
+      report.add(Severity.ERROR, "No target weapon type was selected.");
     }
     if (config.outputDirectory == null) {
       report.add(Severity.ERROR, "No output directory was selected.");
@@ -134,13 +175,39 @@ public final class EquipmentOverlayExporter {
       report.add(Severity.ERROR, "No generated equipment overlay is loaded.");
       return report;
     }
+    if (report.hasErrors()) {
+      return report;
+    }
 
-    int missingCells = 0;
-    for (final Sequence sequence : Sequence.values()) {
-      for (final Direction direction : Direction.values()) {
-        final List<AnimationFrame> frames = model.getFrames(sequence, direction);
+    final FamilyLayout layout;
+    try {
+      layout = createLayout(config);
+    } catch (IllegalArgumentException e) {
+      report.add(Severity.ERROR, e.getMessage());
+      return report;
+    }
+
+    final Map<CyclePlan, Integer> occurrences = EquipmentOverlayModel.getOccurrenceIndices(layout);
+    final java.util.Set<String> reportedCells = new java.util.HashSet<>();
+    for (final ResourcePlan resource : layout.getResources().values()) {
+      for (final CyclePlan cycle : resource.getCycles()) {
+        final Integer occurrence = occurrences.get(cycle);
+        if (occurrence == null) {
+          report.add(Severity.ERROR, "No cycle occurrence was planned for " + resource.getFileName() + " cycle "
+              + cycle.getCycleIndex() + ".");
+          continue;
+        }
+        final String cellKey =
+            cycle.getSequence().name() + "/" + cycle.getDirectionIndex() + "/" + occurrence;
+        final List<AnimationFrame> frames =
+            model.getFrames(cycle.getSequence(), cycle.getDirectionIndex(), occurrence);
         if (frames.isEmpty()) {
-          missingCells++;
+          if (reportedCells.add(cellKey)) {
+            report.add(Severity.ERROR, "The generated overlay is missing synchronized "
+                + cycle.getSequence().getCode() + " frames for direction index " + cycle.getDirectionIndex()
+                + ", cycle occurrence " + occurrence + ".");
+          }
+          continue;
         }
         for (final AnimationFrame frame : frames) {
           final BufferedImage image = frame.getImage();
@@ -156,25 +223,28 @@ public final class EquipmentOverlayExporter {
         }
       }
     }
-    if (missingCells > 0) {
-      report.add(Severity.ERROR, "The source equipment layer is missing " + missingCells
-          + " synchronized action/direction cell(s); generating a partial overlay would desynchronize the avatar.");
-    }
     if (config.bamFormat == BamFormat.BAM_V2 && config.compressedBam) {
       report.add(Severity.INFO, "BAMC compression applies only to BAM V1 and will be ignored for BAM V2.");
     }
-    report.add(Severity.INFO, "Equip an ITM whose Equipped appearance field is " + config.appearanceCode
-        + " to activate the generated overlay for " + config.resref + ".");
+    if (!config.family.usesFullAppearanceCodeInFileName()) {
+      report.add(Severity.WARNING, config.family + " selects weapon BAMs from only the first character of the "
+          + "Equipped appearance field. Every item code beginning with "
+          + config.family.getFileCode(config.appearanceCode) + " will share this generated layer.");
+    }
+    report.add(Severity.INFO, "Use " + config.family.getActivationSummary(config.appearanceCode)
+        + " on the equipped ITM to activate the generated " + config.family + " weapon overlay.");
     return report;
   }
 
   public static List<Path> getExistingTargets(Config config) {
-    if (config == null || config.outputDirectory == null) {
+    if (config == null || config.outputDirectory == null || config.family == null
+        || !RESOURCE_PREFIX.matcher(config.resourcePrefix).matches()
+        || !APPEARANCE_CODE.matcher(config.appearanceCode).matches() || config.weaponType == null) {
       return Collections.emptyList();
     }
     final List<Path> result = new ArrayList<>();
-    for (final String suffix : MonsterAnimationLayout.getOutputLayout(false).keySet()) {
-      final Path target = config.outputDirectory.resolve(getFileName(config, suffix));
+    for (final String fileName : createLayout(config).getResources().keySet()) {
+      final Path target = config.outputDirectory.resolve(fileName);
       if (Files.exists(target)) {
         result.add(target);
       }
@@ -183,6 +253,10 @@ public final class EquipmentOverlayExporter {
   }
 
   public static ExportResult export(CreatureAnimationModel model, Config config, boolean overwrite) throws Exception {
+    return export(EquipmentOverlayModel.fromWestern(model), config, overwrite);
+  }
+
+  public static ExportResult export(EquipmentOverlayModel model, Config config, boolean overwrite) throws Exception {
     final ValidationReport report = validate(model, config);
     if (report.hasErrors()) {
       throw new IllegalArgumentException("Equipment overlay validation failed: "
@@ -197,14 +271,15 @@ public final class EquipmentOverlayExporter {
     final Path staging = Files.createTempDirectory(config.outputDirectory, ".ni-equipment-overlay-");
     boolean installed = false;
     try {
+      final FamilyLayout layout = createLayout(config);
+      final Map<CyclePlan, Integer> occurrences = EquipmentOverlayModel.getOccurrenceIndices(layout);
       int pvrzIndex = config.bamFormat == BamFormat.BAM_V2
           ? CreatureAnimationExporter.findPvrzStartIndex(config.outputDirectory) : 0;
       final Map<String, Integer> expectedCycles = new LinkedHashMap<>();
-      for (final Map.Entry<String, List<OutputSlot>> entry :
-          MonsterAnimationLayout.getOutputLayout(false).entrySet()) {
-        final String fileName = getFileName(config, entry.getKey());
-        final PseudoBamDecoder source = CreatureAnimationExporter.createBam(model, entry.getValue());
-        expectedCycles.put(fileName, CreatureAnimationExporter.getRequiredCycleCount(entry.getValue()));
+      for (final ResourcePlan resource : layout.getResources().values()) {
+        final String fileName = resource.getFileName();
+        final PseudoBamDecoder source = CreatureAnimationExporter.createBam(model, resource, occurrences);
+        expectedCycles.put(fileName, resource.getCycleCount());
         try {
           if (config.bamFormat == BamFormat.BAM_V1) {
             final PseudoBamDecoder paletted = CreatureAnimationExporter.convertToPalettedBam(source);
@@ -242,6 +317,10 @@ public final class EquipmentOverlayExporter {
     }
   }
 
+  private static FamilyLayout createLayout(Config config) {
+    return config.family.createOverlayLayout(config.resourcePrefix, config.appearanceCode, config.weaponType);
+  }
+
   private static void validateStagedOutput(Path staging, Config config, Map<String, Integer> expectedCycles)
       throws Exception {
     for (final Map.Entry<String, Integer> entry : expectedCycles.entrySet()) {
@@ -269,9 +348,5 @@ public final class EquipmentOverlayExporter {
         CreatureAnimationExporter.validatePvrzReferences(staging, path);
       }
     }
-  }
-
-  private static String getFileName(Config config, String groupSuffix) {
-    return config.resref + groupSuffix + config.appearanceCode + ".BAM";
   }
 }

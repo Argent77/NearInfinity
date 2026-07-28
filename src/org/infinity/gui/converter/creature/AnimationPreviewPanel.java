@@ -37,18 +37,20 @@ public final class AnimationPreviewPanel extends JPanel {
       "NW - Northwest",
       "NNW - North-northwest",
       "N - North",
-      "NNE - North-northeast (mirrored)",
-      "NE - Northeast (mirrored)",
-      "ENE - East-northeast (mirrored)",
-      "E - East (mirrored)",
-      "ESE - East-southeast (mirrored)",
-      "SE - Southeast (mirrored)",
-      "SSE - South-southeast (mirrored)"
+      "NNE - North-northeast",
+      "NE - Northeast",
+      "ENE - East-northeast",
+      "E - East",
+      "ESE - East-southeast",
+      "SE - Southeast",
+      "SSE - South-southeast"
   };
 
   private final Timer timer;
   private CreatureAnimationModel model = new CreatureAnimationModel();
+  private CreatureAnimationModel easternModel;
   private CreatureAnimationModel overlayModel;
+  private CreatureAnimationModel overlayEasternModel;
   private Sequence sequence = Sequence.WALK;
   private int directionIndex;
   private int frameIndex;
@@ -66,6 +68,14 @@ public final class AnimationPreviewPanel extends JPanel {
 
   public void setModel(CreatureAnimationModel model) {
     this.model = (model != null) ? model : new CreatureAnimationModel();
+    easternModel = null;
+    frameIndex = 0;
+    repaint();
+  }
+
+  /** Sets optional canonicalized frames for animation families that store explicit eastern directions. */
+  public void setEasternModel(CreatureAnimationModel easternModel) {
+    this.easternModel = easternModel;
     frameIndex = 0;
     repaint();
   }
@@ -73,6 +83,14 @@ public final class AnimationPreviewPanel extends JPanel {
   /** Sets an optional synchronized layer that is rendered over the primary creature model. */
   public void setOverlayModel(CreatureAnimationModel overlayModel) {
     this.overlayModel = overlayModel;
+    overlayEasternModel = null;
+    frameIndex = 0;
+    repaint();
+  }
+
+  /** Sets optional canonicalized eastern frames for the synchronized layer. */
+  public void setOverlayEasternModel(CreatureAnimationModel overlayEasternModel) {
+    this.overlayEasternModel = overlayEasternModel;
     frameIndex = 0;
     repaint();
   }
@@ -201,11 +219,15 @@ public final class AnimationPreviewPanel extends JPanel {
     final boolean mirrored = directionIndex > Direction.N.getCycleOffset();
     final Direction storedDirection = mirrored ? Direction.values()[16 - directionIndex]
         : Direction.values()[directionIndex];
-    final ResolvedFrames resolved = model.resolveFrames(sequence, storedDirection);
+    final CreatureAnimationModel primary = mirrored && easternModel != null
+        && easternModel.hasFrames(sequence, storedDirection) ? easternModel : model;
+    final ResolvedFrames resolved = primary.resolveFrames(sequence, storedDirection);
     final List<AnimationFrame> frames = (resolved != null) ? resolved.getFrames()
         : Collections.<AnimationFrame>emptyList();
-    final ResolvedFrames overlayResolved = overlayModel != null
-        ? overlayModel.resolveFrames(sequence, storedDirection) : null;
+    final CreatureAnimationModel overlay = mirrored && overlayEasternModel != null
+        && overlayEasternModel.hasFrames(sequence, storedDirection) ? overlayEasternModel : overlayModel;
+    final ResolvedFrames overlayResolved =
+        overlay != null ? overlay.resolveFrames(sequence, storedDirection) : null;
     final List<AnimationFrame> overlayFrames = overlayResolved != null ? overlayResolved.getFrames()
         : Collections.<AnimationFrame>emptyList();
     return new PreviewFrames(resolved, frames, overlayFrames, mirrored);

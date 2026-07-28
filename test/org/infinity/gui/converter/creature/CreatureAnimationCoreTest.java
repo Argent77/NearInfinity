@@ -31,6 +31,7 @@ import org.infinity.gui.converter.creature.CreatureAnimationFamily.CyclePlan;
 import org.infinity.gui.converter.creature.CreatureAnimationFamily.FamilyLayout;
 import org.infinity.gui.converter.creature.CreatureAnimationFamily.ResourcePlan;
 import org.infinity.gui.converter.creature.CreatureAnimationModel.AnimationFrame;
+import org.infinity.gui.converter.creature.EquipmentOverlayGenerator.WeaponType;
 import org.infinity.gui.converter.creature.MonsterAnimationLayout.BamFormat;
 import org.infinity.gui.converter.creature.MonsterAnimationLayout.Direction;
 import org.infinity.gui.converter.creature.MonsterAnimationLayout.Sequence;
@@ -60,8 +61,12 @@ public final class CreatureAnimationCoreTest {
     testFamilyBamV2Export();
     testEquipmentPromptAndGeneration();
     testEquipmentReferenceResrefFallback();
+    testEquipmentOverlayFamilyLayouts();
+    testAllEquipmentOverlayFamilyBamV1Exports();
+    testEquipmentExplicitEasternRoundTrip();
     testEquipmentOverlayBamRoundTrip();
     testEquipmentOverlayBamV2RoundTrip();
+    testEquipmentOverlayFamilyBamV2RoundTrip();
     System.out.println("CreatureAnimationCoreTest: all checks passed");
   }
 
@@ -480,6 +485,12 @@ public final class CreatureAnimationCoreTest {
     check(hasVisiblePixel(frame.getImage()), "Generated scythe frames should contain visible drawing data");
     check(frame.getImage().getWidth() > 20 || frame.getImage().getHeight() > 20,
         "Generated scythe geometry should extend beyond a placeholder-sized frame");
+
+    final EquipmentOverlayModel mirroredFamily = EquipmentOverlayGenerator.generate(
+        EquipmentOverlayModel.fromWestern(createCompleteEquipmentModel(false)),
+        EquipmentOverlayModel.fromWestern(createCompleteEquipmentModel(true)), prompt, 77L, false, null);
+    check(mirroredFamily.getEasternModel().isEmpty(),
+        "Families that mirror east must not retain independent eastern artwork that will not be exported");
   }
 
   private static void testEquipmentReferenceResrefFallback() {
@@ -498,6 +509,208 @@ public final class CreatureAnimationCoreTest {
         EquipmentOverlayReference.findCompatibleEquipmentResrefs("MSOG", resourcesWithPrimary);
     check(!compatible.isEmpty() && "MSOG".equals(compatible.get(0)),
         "The animation's own resref should take precedence when it has a complete equipment pair");
+  }
+
+  private static void testEquipmentOverlayFamilyLayouts() {
+    final EquipmentOverlayFamily[] families = EquipmentOverlayFamily.values();
+    check(families.length == 6,
+        "Exactly the six Near Infinity decoders that emit weapon sprite segments must be supported");
+    final List<AnimationInfo.Type> expectedTypes = Arrays.asList(
+        AnimationInfo.Type.CHARACTER,
+        AnimationInfo.Type.CHARACTER_OLD,
+        AnimationInfo.Type.MONSTER,
+        AnimationInfo.Type.MONSTER_LAYERED_SPELL,
+        AnimationInfo.Type.MONSTER_LAYERED,
+        AnimationInfo.Type.MONSTER_ICEWIND);
+    for (final AnimationInfo.Type type : expectedTypes) {
+      int matches = 0;
+      for (final EquipmentOverlayFamily family : families) {
+        if (family.getAnimationType() == type) {
+          matches++;
+        }
+      }
+      check(matches == 1, type + " must have exactly one equipment-overlay layout");
+    }
+
+    FamilyLayout layout =
+        EquipmentOverlayFamily.MONSTER.createOverlayLayout("MSOL", "SY", WeaponType.SCYTHE);
+    check(layout.getResources().size() == 2, "Type 0x7000 overlays must contain G1 and G2");
+    checkResource(layout, "MSOLG1SY.BAM", 72);
+    checkResource(layout, "MSOLG2SY.BAM", 63);
+
+    layout = EquipmentOverlayFamily.CHARACTER.createOverlayLayout("WQL", "SY", WeaponType.SCYTHE);
+    check(layout.getResources().size() == 5,
+        "A modern two-handed character overlay must contain three attacks, casting and general movement");
+    checkResource(layout, "WQLSYA2.BAM", 9);
+    checkResource(layout, "WQLSYA4.BAM", 9);
+    checkResource(layout, "WQLSYA6.BAM", 9);
+    checkResource(layout, "WQLSYCA.BAM", 72);
+    checkResource(layout, "WQLSYG1.BAM", 99);
+
+    layout = EquipmentOverlayFamily.CHARACTER_OLD.createOverlayLayout("WPL", "SY", WeaponType.SCYTHE);
+    check(layout.getResources().size() == 12,
+        "A legacy two-handed character overlay must contain western/eastern attack, casting and movement resources");
+    checkResource(layout, "WPLSYA2.BAM", 5);
+    checkResource(layout, "WPLSYA2E.BAM", 8);
+    checkResource(layout, "WPLSYCA.BAM", 61);
+    checkResource(layout, "WPLSYCAE.BAM", 64);
+    checkResource(layout, "WPLSYG1.BAM", 61);
+    checkResource(layout, "WPLSYG1E.BAM", 64);
+    checkResource(layout, "WPLSYW2.BAM", 5);
+    checkResource(layout, "WPLSYW2E.BAM", 8);
+
+    layout =
+        EquipmentOverlayFamily.MONSTER_LAYERED_SPELL.createOverlayLayout("MSP", "S0", WeaponType.SWORD);
+    check(layout.getResources().size() == 4,
+        "Layered-spell overlays must contain western/eastern G1 and G2 resources");
+    checkResource(layout, "MSPSG1.BAM", 45);
+    checkResource(layout, "MSPSG1E.BAM", 48);
+    checkResource(layout, "MSPSG2.BAM", 21);
+    checkResource(layout, "MSPSG2E.BAM", 24);
+
+    layout = EquipmentOverlayFamily.MONSTER_LAYERED.createOverlayLayout("MLR", "S0", WeaponType.SWORD);
+    check(EquipmentOverlayFamily.MONSTER_LAYERED.isAppearanceCodeRestrictedByDefinition(),
+        "Layered monster appearance prefixes must remain constrained by the animation definition");
+    check(layout.getResources().size() == 4,
+        "Layered monster overlays must contain western/eastern G1 and G2 resources");
+    checkResource(layout, "MLRSG1.BAM", 45);
+    checkResource(layout, "MLRSG1E.BAM", 48);
+    checkResource(layout, "MLRSG2.BAM", 21);
+    checkResource(layout, "MLRSG2E.BAM", 24);
+    check(layout.getResources().keySet().equals(
+        EquipmentOverlayFamily.MONSTER_LAYERED
+            .createOverlayLayout("MLR", "SY", WeaponType.SWORD).getResources().keySet()),
+        "Layered monster filenames must use only the Equipped appearance field's first character");
+
+    layout = EquipmentOverlayFamily.MONSTER_ICEWIND.createOverlayLayout("MIL", "S0", WeaponType.SWORD);
+    check(!EquipmentOverlayFamily.MONSTER_ICEWIND.isAppearanceCodeRestrictedByDefinition(),
+        "Icewind appearance prefixes are selected directly from the equipped item");
+    check(layout.getResources().size() == 28,
+        "Icewind overlays must contain fourteen western action BAMs and fourteen optional eastern BAMs");
+    checkResource(layout, "MILSA1.BAM", 5);
+    checkResource(layout, "MILSA1E.BAM", 8);
+    checkResource(layout, "MILSWK.BAM", 5);
+    checkResource(layout, "MILSWKE.BAM", 8);
+
+    boolean rejected = false;
+    try {
+      EquipmentOverlayFamily.CHARACTER.createOverlayLayout("ABCDE", "SY", WeaponType.SCYTHE);
+    } catch (IllegalArgumentException e) {
+      rejected = true;
+    }
+    check(rejected, "Equipment layouts must reject filenames beyond the engine's eight-character resref budget");
+  }
+
+  private static void testAllEquipmentOverlayFamilyBamV1Exports() throws Exception {
+    final Path directory = createTestDirectory("ni-equipment-family-test-");
+    try {
+      final EquipmentOverlayGenerator.PromptSpec prompt =
+          EquipmentOverlayGenerator.parsePrompt("replace the sword with an ornate silver scythe");
+      final EquipmentOverlayModel source = createCompleteEquipmentOverlayModel(false);
+      final EquipmentOverlayModel avatar = createCompleteEquipmentOverlayModel(true);
+      final EquipmentOverlayModel generated =
+          EquipmentOverlayGenerator.generate(source, avatar, prompt, 113L, null);
+      check(generated.getVariantCount(Sequence.CONJURE, 0) == 4,
+          "Generation must preserve every distinct synchronized casting occurrence");
+
+      for (final EquipmentOverlayFamily family : EquipmentOverlayFamily.values()) {
+        final Path familyDirectory = directory.resolve(family.name().toLowerCase(java.util.Locale.ENGLISH));
+        final String prefix = getEquipmentTestPrefix(family);
+        final String appearance = family.usesFullAppearanceCodeInFileName() ? "SY" : "S0";
+        final EquipmentOverlayExporter.Config config = new EquipmentOverlayExporter.Config()
+            .setFamily(family).setResourcePrefix(prefix).setAppearanceCode(appearance)
+            .setWeaponType(WeaponType.SCYTHE).setOutputDirectory(familyDirectory)
+            .setBamFormat(BamFormat.BAM_V1).setCompressedBam(false);
+        check(!EquipmentOverlayExporter.validate(generated, config).hasErrors(),
+            family + " should accept a complete sixteen-direction synchronized overlay");
+        final EquipmentOverlayExporter.ExportResult result =
+            EquipmentOverlayExporter.export(generated, config, false);
+        final FamilyLayout layout = family.createOverlayLayout(prefix, appearance, WeaponType.SCYTHE);
+        check(result.getInstalledFiles().size() == layout.getResources().size(),
+            family + " should install exactly its planned BAM resources");
+        for (final ResourcePlan resource : layout.getResources().values()) {
+          final Path bam = familyDirectory.resolve(resource.getFileName());
+          check(BamDecoder.getType(new FileResourceEntry(bam)) == BamDecoder.Type.BAMV1,
+              resource.getFileName() + " should reopen as BAM V1");
+          final BamDecoder decoder = BamDecoder.loadBam(new FileResourceEntry(bam));
+          try {
+            check(decoder.createControl().cycleCount() == resource.getCycleCount(),
+                resource.getFileName() + " should retain its exact planned cycle count");
+          } finally {
+            decoder.close();
+          }
+        }
+
+        if (family == EquipmentOverlayFamily.CHARACTER
+            || family == EquipmentOverlayFamily.CHARACTER_OLD) {
+          final EquipmentOverlayModel imported = EquipmentOverlayBamImporter.importLayout(layout,
+              resourceName -> new FileResourceEntry(familyDirectory.resolve(resourceName)), true);
+          check(imported.getVariantCount(Sequence.CONJURE, 0) == 4,
+              family + " must preserve all four casting occurrences");
+          check(imported.getVariantCount(Sequence.STAND, 0)
+              == (family == EquipmentOverlayFamily.CHARACTER ? 3 : 2),
+              family + " must preserve every distinct general-idle occurrence");
+        }
+
+        if (family == EquipmentOverlayFamily.MONSTER_ICEWIND) {
+          final String omittedEast = prefix + family.getFileCode(appearance) + "WKE.BAM";
+          final EquipmentOverlayModel imported = EquipmentOverlayBamImporter.importLayout(layout,
+              resourceName -> resourceName.equals(omittedEast)
+                  ? null : new FileResourceEntry(familyDirectory.resolve(resourceName)),
+              true, family);
+          check(imported.getFrames(Sequence.WALK, 12).isEmpty(),
+              "The intentionally omitted Icewind eastern walk resource must remain absent");
+          final List<AnimationFrame> fallback = imported.resolveFrames(Sequence.WALK, 12).getFrames();
+          check(!fallback.isEmpty() && fallback.get(0).getSource().startsWith(prefix + "SWK.BAM#"),
+              "A missing Icewind eastern action must mirror the exact matching western action");
+        }
+      }
+    } finally {
+      deleteTree(directory);
+    }
+  }
+
+  private static void testEquipmentExplicitEasternRoundTrip() throws Exception {
+    final Path directory = createTestDirectory("ni-equipment-east-test-");
+    try {
+      final EquipmentOverlayModel source = createCompleteEquipmentOverlayModel(false);
+      source.replaceFrames(Sequence.STANCE, 4,
+          Collections.singletonList(createLineFrame(false, "western-horizontal")));
+      source.replaceFrames(Sequence.STANCE, 12,
+          Collections.singletonList(createLineFrame(true, "eastern-vertical")));
+      final EquipmentOverlayGenerator.PromptSpec prompt =
+          EquipmentOverlayGenerator.parsePrompt("replace the sword with a silver sword");
+      final EquipmentOverlayModel generated =
+          EquipmentOverlayGenerator.generate(source, null, prompt, 127L, null);
+      final AnimationFrame generatedWest = generated.getFrames(Sequence.STANCE, 4).get(0);
+      final AnimationFrame generatedEast = generated.getFrames(Sequence.STANCE, 12).get(0);
+      check(generatedWest.getImage().getWidth() > generatedWest.getImage().getHeight(),
+          "The generated western weapon must retain its horizontal source axis");
+      check(generatedEast.getImage().getHeight() > generatedEast.getImage().getWidth(),
+          "The generated eastern weapon must retain its independent vertical source axis");
+
+      final EquipmentOverlayExporter.Config config = new EquipmentOverlayExporter.Config()
+          .setFamily(EquipmentOverlayFamily.MONSTER_LAYERED).setResourcePrefix("MLR")
+          .setAppearanceCode("S0").setWeaponType(WeaponType.SWORD).setOutputDirectory(directory)
+          .setBamFormat(BamFormat.BAM_V1).setCompressedBam(false);
+      final FamilyLayout layout =
+          EquipmentOverlayFamily.MONSTER_LAYERED.createOverlayLayout("MLR", "S0", WeaponType.SWORD);
+      final EquipmentOverlayExporter.ExportResult result =
+          EquipmentOverlayExporter.export(generated, config, false);
+      check(result.getInstalledFiles().size() == 4,
+          "The explicit-direction layered export must contain four BAM resources");
+
+      final EquipmentOverlayModel imported = EquipmentOverlayBamImporter.importLayout(layout,
+          resourceName -> new FileResourceEntry(directory.resolve(resourceName)), true);
+      final AnimationFrame importedWest = imported.getFrames(Sequence.STANCE, 4).get(0);
+      final AnimationFrame importedEast = imported.getFrames(Sequence.STANCE, 12).get(0);
+      check(importedWest.getImage().getWidth() > importedWest.getImage().getHeight(),
+          "The western axis must survive BAM export and import");
+      check(importedEast.getImage().getHeight() > importedEast.getImage().getWidth(),
+          "Independent eastern artwork must survive BAM export and import without replacement by a mirror");
+    } finally {
+      deleteTree(directory);
+    }
   }
 
   private static void testEquipmentOverlayBamRoundTrip() throws Exception {
@@ -569,6 +782,35 @@ public final class CreatureAnimationCoreTest {
         }
       }
       check(hasTexturePage, "BAM V2 equipment output should install at least one PVRZ texture page");
+    } finally {
+      deleteTree(directory);
+    }
+  }
+
+  private static void testEquipmentOverlayFamilyBamV2RoundTrip() throws Exception {
+    final Path directory = createTestDirectory("ni-equipment-family-v2-test-");
+    try {
+      final EquipmentOverlayGenerator.PromptSpec prompt =
+          EquipmentOverlayGenerator.parsePrompt("replace the sword with a glowing silver scythe");
+      final EquipmentOverlayModel generated = EquipmentOverlayGenerator.generate(
+          createCompleteEquipmentOverlayModel(false), createCompleteEquipmentOverlayModel(true),
+          prompt, 131L, true, null);
+      final EquipmentOverlayExporter.Config config = new EquipmentOverlayExporter.Config()
+          .setFamily(EquipmentOverlayFamily.MONSTER_LAYERED).setResourcePrefix("MLR")
+          .setAppearanceCode("S0").setWeaponType(WeaponType.SCYTHE).setOutputDirectory(directory)
+          .setBamFormat(BamFormat.BAM_V2).setCompressedBam(false);
+      final EquipmentOverlayExporter.ExportResult result =
+          EquipmentOverlayExporter.export(generated, config, false);
+      final FamilyLayout layout =
+          EquipmentOverlayFamily.MONSTER_LAYERED.createOverlayLayout("MLR", "S0", WeaponType.SCYTHE);
+      check(result.getInstalledFiles().size() > layout.getResources().size(),
+          "Layered BAM V2 equipment output must include its BAMs and PVRZ texture pages");
+      for (final ResourcePlan resource : layout.getResources().values()) {
+        final Path bam = directory.resolve(resource.getFileName());
+        check(BamDecoder.getType(new FileResourceEntry(bam)) == BamDecoder.Type.BAMV2,
+            resource.getFileName() + " should reopen as BAM V2");
+        CreatureAnimationExporter.validatePvrzReferences(directory, bam);
+      }
     } finally {
       deleteTree(directory);
     }
@@ -647,6 +889,63 @@ public final class CreatureAnimationCoreTest {
       }
     }
     return model;
+  }
+
+  private static EquipmentOverlayModel createCompleteEquipmentOverlayModel(boolean avatar) {
+    final EquipmentOverlayModel result = new EquipmentOverlayModel(
+        createCompleteEquipmentModel(avatar), createCompleteEquipmentModel(avatar));
+    for (final Sequence sequence : Sequence.values()) {
+      for (int directionIndex = 0; directionIndex < 16; directionIndex++) {
+        final List<AnimationFrame> base = result.getFrames(sequence, directionIndex);
+        for (int occurrence = 1; occurrence < 4; occurrence++) {
+          result.replaceFrames(sequence, directionIndex, occurrence, base);
+        }
+      }
+    }
+    return result;
+  }
+
+  private static AnimationFrame createLineFrame(boolean vertical, String source) {
+    final BufferedImage image = new BufferedImage(48, 48, BufferedImage.TYPE_INT_ARGB);
+    final Graphics2D graphics = image.createGraphics();
+    try {
+      graphics.setColor(new Color(230, 235, 240, 255));
+      graphics.setStroke(new BasicStroke(4.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+      if (vertical) {
+        graphics.drawLine(24, 38, 24, 8);
+      } else {
+        graphics.drawLine(8, 24, 38, 24);
+      }
+    } finally {
+      graphics.dispose();
+    }
+    return new AnimationFrame(image, new Point(24, 40), source);
+  }
+
+  private static String getEquipmentTestPrefix(EquipmentOverlayFamily family) {
+    switch (family) {
+      case CHARACTER:
+        return "WQL";
+      case CHARACTER_OLD:
+        return "WPL";
+      case MONSTER:
+        return "MSOL";
+      case MONSTER_LAYERED_SPELL:
+        return "MSP";
+      case MONSTER_LAYERED:
+        return "MLR";
+      case MONSTER_ICEWIND:
+        return "MIL";
+      default:
+        throw new AssertionError("No test prefix for " + family);
+    }
+  }
+
+  private static void checkResource(FamilyLayout layout, String fileName, int cycleCount) {
+    final ResourcePlan resource = layout.getResources().get(fileName);
+    check(resource != null, "Missing planned equipment resource " + fileName);
+    check(resource.getCycleCount() == cycleCount,
+        fileName + " should contain " + cycleCount + " cycles, not " + resource.getCycleCount());
   }
 
   private static boolean hasVisiblePixel(BufferedImage image) {

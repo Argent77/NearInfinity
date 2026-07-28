@@ -81,7 +81,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
   private final JSpinner equipmentSeedSpinner =
       new JSpinner(new SpinnerNumberModel(1, Integer.MIN_VALUE, Integer.MAX_VALUE, 1));
   private final JLabel equipmentDescriptionLabel = new JLabel(" ");
-  private final JButton equipmentGenerateButton = new JButton("Generate synchronized overlay");
+  private final JButton equipmentGenerateButton = new JButton("Generate weapon overlay");
 
   private final JLabel headingLabel = new JLabel();
   private final JLabel gameLabel = new JLabel();
@@ -154,8 +154,8 @@ public final class CreatureAnimationCreator extends ChildFrame {
     equipmentPromptArea.setWrapStyleWord(true);
     equipmentPromptArea.setText("I want an animation similar to the existing SOLAR, but instead of wielding a "
         + "sword, it should wield an ornate silver scythe with a blue glow.");
-    equipmentPromptArea.setToolTipText("Name an ANIMATE.IDS reference, its current weapon and the replacement. "
-        + "The last named weapon is treated as the requested result.");
+    equipmentPromptArea.setToolTipText("Name an ANIMATE.IDS reference, a compatible source weapon and the "
+        + "replacement. The last named weapon is treated as the requested result.");
 
     familyCombo.setSelectedItem(CreatureAnimationFamily.MONSTER);
     final int slot = findSuggestedSlot(CreatureAnimationFamily.MONSTER);
@@ -270,15 +270,15 @@ public final class CreatureAnimationCreator extends ChildFrame {
     panel.add(new JScrollPane(equipmentPromptArea), promptConstraints);
 
     final JPanel codes = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-    codes.add(new JLabel("Source appearance:"));
+    codes.add(new JLabel("Source layer:"));
     codes.add(equipmentSourceCodeField);
     codes.add(new JLabel("New appearance:"));
     codes.add(equipmentTargetCodeField);
     addWide(panel, codes, gbc, row++);
 
-    final JLabel codeHelp = new JLabel("<html>Use <code>AUTO</code> to discover the source from the prompt and choose "
-        + "an unused target code. The generated code must also be assigned to the test ITM's "
-        + "<b>Equipped appearance</b> field.</html>");
+    final JLabel codeHelp = new JLabel("<html>Use <code>AUTO</code> for resource-driven source discovery and "
+        + "collision-free target selection. Source layer codes are one or two characters according to the family; "
+        + "the target remains a two-character ITM <b>Equipped appearance</b> value.</html>");
     codeHelp.setForeground(UIManager.getColor("Label.disabledForeground"));
     addWide(panel, codeHelp, gbc, row++);
 
@@ -291,17 +291,18 @@ public final class CreatureAnimationCreator extends ChildFrame {
     equipmentDescriptionLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
     addWide(panel, equipmentDescriptionLabel, gbc, row++);
 
-    final JLabel mechanism = new JLabel("<html><b>How it works:</b> type 0x7000 stores equipment in separate "
-        + "<code>[resref]G1[appearance].BAM</code> and <code>G2</code> layers. The creator analyzes the reference "
-        + "layer frame by frame, keeps its timing and grip angle, redraws the requested weapon, and previews both "
-        + "layers together. The body BAMs and animation INI are never replaced by this mode.</html>");
+    final JLabel mechanism = new JLabel("<html><b>How it works:</b> the creator accepts every Near Infinity decoder "
+        + "that defines weapon sprite segments: <code>character</code>, <code>character_old</code>, "
+        + "<code>monster</code>, <code>monster_layered_spell</code>, <code>monster_layered</code>, and "
+        + "<code>monster_icewind</code>. It follows that family's exact filenames, cycles, directions, height code "
+        + "and Equipped appearance semantics, while leaving avatar BAMs and animation definitions unchanged.</html>");
     mechanism.setBorder(BorderFactory.createEmptyBorder(9, 0, 8, 0));
     addWide(panel, mechanism, gbc, row++);
 
-    final JLabel limitations = new JLabel("<html>This mode requires an existing complete G1/G2 weapon overlay, such "
-        + "as SOLAR's <code>S1</code> sword. Procedural sickles, scythes, swords, axes, maces, hammers, spears, "
-        + "polearms, staves, clubs, flails, bows and whips are supported. Artist PNG export remains available for "
-        + "paint-over refinement.</html>");
+    final JLabel limitations = new JLabel("<html>A complete family-compatible weapon layer remains required because "
+        + "avatar pixels alone do not provide a reliable grip axis or occlusion order. Explicit eastern resources are "
+        + "retained where the family stores them. Procedural sickles, scythes, swords, axes, maces, hammers, spears, "
+        + "polearms, staves, clubs, flails, bows and whips are supported.</html>");
     limitations.setForeground(UIManager.getColor("Label.disabledForeground"));
     addWide(panel, limitations, gbc, row++);
 
@@ -541,7 +542,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
     if (busy) {
       return;
     }
-    setBusy(true, "Resolving reference and drawing synchronized equipment...", true);
+    setBusy(true, "Resolving family layout and drawing synchronized equipment...", true);
     final String prompt = equipmentPromptArea.getText();
     final String sourceCode = equipmentSourceCodeField.getText();
     final String targetCode = equipmentTargetCodeField.getText();
@@ -567,7 +568,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
                 updatingEquipmentFields = false;
               }
               setEquipmentResult(result);
-              equipmentSourceCodeField.setToolTipText("Available complete reference pairs: "
+              equipmentSourceCodeField.setToolTipText("Available complete compatible layers: "
                   + String.join(", ", result.getAvailableAppearanceCodes()));
               operationLabel.setText("Synchronized " + result.getPrompt().getTargetWeapon().getLabel()
                   + " overlay generated");
@@ -760,7 +761,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
       return;
     }
 
-    final CreatureAnimationModel overlay = equipmentResult.getOverlayModel();
+    final EquipmentOverlayModel overlay = equipmentResult.getOverlayAnimation();
     final ValidationReport report = EquipmentOverlayExporter.validate(overlay, config);
     if (report.hasErrors()) {
       showReport(report, "Equipment overlay validation", JOptionPane.ERROR_MESSAGE);
@@ -806,8 +807,9 @@ public final class CreatureAnimationCreator extends ChildFrame {
           operationLabel.setText(result.getInstalledFiles().size() + " equipment resource(s) installed");
           JOptionPane.showMessageDialog(CreatureAnimationCreator.this,
               "The " + equipmentResult.getPrompt().getTargetWeapon().getLabel() + " overlay was installed for "
-                  + equipmentResult.getSymbol() + " as appearance code " + config.getAppearanceCode() + ".\n\n"
-                  + "Set the equipped test ITM's Equipped appearance field to " + config.getAppearanceCode()
+                  + equipmentResult.getSymbol() + ".\n\n"
+                  + "Set the equipped test ITM to "
+                  + equipmentResult.getFamily().getActivationSummary(config.getAppearanceCode())
                   + " and equip it on the creature.\n\nOutput: " + config.getOutputDirectory(),
               "Equipment overlay exported", JOptionPane.INFORMATION_MESSAGE);
         } catch (InterruptedException e) {
@@ -831,7 +833,8 @@ public final class CreatureAnimationCreator extends ChildFrame {
         showFailure("The equipment overlay definition is invalid.", e);
         return false;
       }
-      final ValidationReport report = EquipmentOverlayExporter.validate(equipmentResult.getOverlayModel(), config);
+      final ValidationReport report =
+          EquipmentOverlayExporter.validate(equipmentResult.getOverlayAnimation(), config);
       final int messageType = report.hasErrors() ? JOptionPane.ERROR_MESSAGE
           : report.hasWarnings() ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE;
       showReport(report, "Equipment overlay validation", messageType);
@@ -881,12 +884,22 @@ public final class CreatureAnimationCreator extends ChildFrame {
       throw new IllegalArgumentException("Select an output directory.");
     }
     final String appearanceCode = equipmentTargetCodeField.getText().trim().toUpperCase(Locale.ENGLISH);
-    if (appearanceCode.equals(equipmentResult.getSourceAppearanceCode())) {
+    if (equipmentResult.getFamily().usesFullAppearanceCodeInFileName()
+        && appearanceCode.equals(equipmentResult.getSourceAppearanceCode())) {
       throw new IllegalArgumentException("The target appearance code must differ from the source layer "
           + equipmentResult.getSourceAppearanceCode() + ".");
     }
-    return new EquipmentOverlayExporter.Config().setResref(equipmentResult.getResref())
+    if (equipmentResult.getFamily().isAppearanceCodeRestrictedByDefinition()
+        && !equipmentResult.getFamily().getFileCode(appearanceCode)
+            .equals(equipmentResult.getFamily().getFileCode(equipmentResult.getTargetAppearanceCode()))) {
+      throw new IllegalArgumentException(equipmentResult.getFamily()
+          + " requires the target Equipped appearance to begin with "
+          + equipmentResult.getFamily().getFileCode(equipmentResult.getTargetAppearanceCode()) + ".");
+    }
+    return new EquipmentOverlayExporter.Config().setFamily(equipmentResult.getFamily())
+        .setResourcePrefix(equipmentResult.getResourcePrefix())
         .setAppearanceCode(appearanceCode)
+        .setWeaponType(equipmentResult.getPrompt().getTargetWeapon())
         .setOutputDirectory(Paths.get(outputText).toAbsolutePath().normalize())
         .setBamFormat((BamFormat) formatCombo.getSelectedItem())
         .setCompressedBam(compressedCheck.isSelected());
@@ -935,9 +948,11 @@ public final class CreatureAnimationCreator extends ChildFrame {
     equipmentResult = result;
     model = result != null ? result.getAvatarModel() : new CreatureAnimationModel();
     previewPanel.setModel(model);
+    previewPanel.setEasternModel(result != null ? result.getAvatarEasternModel() : null);
     previewPanel.setOverlayModel(result != null ? result.getOverlayModel() : null);
+    previewPanel.setOverlayEasternModel(result != null ? result.getOverlayEasternModel() : null);
     if (result != null) {
-      familyCombo.setSelectedItem(CreatureAnimationFamily.MONSTER);
+      familyCombo.setSelectedItem(result.getFamily().getCreatureFamily());
       slotField.setText(String.format(Locale.ENGLISH, "0x%04X", result.getAnimationId()));
       resrefField.setText(result.getResref());
       splitCheck.setSelected(result.isSplitBams());
@@ -953,13 +968,25 @@ public final class CreatureAnimationCreator extends ChildFrame {
 
   private void updateSourceUi() {
     final CreatureAnimationModel editableModel = getEditableModel();
-    final int cells = editableModel.getPopulatedCellCount();
-    final int requiredCells = Sequence.values().length * Direction.values().length;
-    sourceStatusLabel.setText(editableModel.isEmpty() ? "No source frames loaded"
-        : (equipmentResult != null ? "Equipment overlay • " : "")
-            + editableModel.getFrameCount() + " frames • " + cells + "/" + requiredCells
-            + " action/direction cells");
-    exportPngButton.setEnabled(!busy && !editableModel.isEmpty());
+    if (equipmentResult != null) {
+      final EquipmentOverlayModel equipment = equipmentResult.getOverlayAnimation();
+      sourceStatusLabel.setText(equipment.isEmpty() ? "No equipment frames loaded"
+          : "Equipment overlay • " + equipment.getFrameCount() + " frames • "
+              + equipment.getPopulatedCellCount() + " action/direction cells • "
+              + equipment.getPopulatedVariantCount() + " synchronized cycle variants");
+    } else {
+      final int cells = editableModel.getPopulatedCellCount();
+      final int requiredCells = Sequence.values().length * Direction.values().length;
+      sourceStatusLabel.setText(editableModel.isEmpty() ? "No source frames loaded"
+          : editableModel.getFrameCount() + " frames • " + cells + "/" + requiredCells
+              + " action/direction cells");
+    }
+    final boolean losslessPngExport = equipmentResult == null
+        || equipmentResult.getFamily() == EquipmentOverlayFamily.MONSTER;
+    exportPngButton.setEnabled(!busy && !editableModel.isEmpty() && losslessPngExport);
+    exportPngButton.setToolTipText(losslessPngExport ? null
+        : "This family's explicit eastern or repeated cycle variants cannot be represented losslessly by the "
+            + "nine-direction neutral PNG interchange format.");
     clearButton.setEnabled(!busy && !editableModel.isEmpty());
     sequenceList.repaint();
     updatePreviewStatus();
@@ -1152,12 +1179,15 @@ public final class CreatureAnimationCreator extends ChildFrame {
         + "custom sequences.\n\n"
         + "Equipment replacement\n"
         + "---------------------\n"
-        + "For type 0x7000 references with an existing G1/G2 weapon layer, enter a prompt such as: \"similar to "
-        + "SOLAR, but instead of a sword wielding an ornate silver scythe with blue glow.\" The creator resolves the "
-        + "ANIMATE.IDS symbol, discovers the source appearance (S1 for SOLAR's sword), infers the grip and angle in "
-        + "every frame, and exports [resref]G1[code].BAM plus G2. The chosen two-character code must also be assigned "
-        + "to the Equipped appearance field of the ITM equipped by the creature. The reference INI and body BAMs are "
-        + "not modified. References without a complete existing overlay cannot be synthesized reliably.\n\n"
+        + "Weapon replacement is available for the six decoder families that define weapon sprite segments: "
+        + "character, character_old, monster, monster_layered_spell, monster_layered and monster_icewind. Enter a "
+        + "prompt such as: \"similar to SOLAR, but instead of a sword wielding an ornate silver scythe with blue "
+        + "glow.\" The creator resolves the ANIMATE.IDS symbol, uses the decoder's exact height code, appearance-code "
+        + "width, filenames, cycles and directions, and retains explicit eastern artwork where present. The target "
+        + "ITM must use the reported Equipped appearance code. Families that use only its first character will "
+        + "report that shared-prefix behavior before export. Avatar BAMs and animation definitions are not modified. "
+        + "A complete compatible source layer remains required; avatar-only grip inference is intentionally rejected "
+        + "because it cannot preserve alignment and occlusion reliably.\n\n"
         + "Export safety\n"
         + "-------------\n"
         + "The creator validates slot ranges, source coverage, centers, dimensions, palettes and filenames. It writes "
