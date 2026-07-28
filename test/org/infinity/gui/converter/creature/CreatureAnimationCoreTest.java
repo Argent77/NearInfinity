@@ -835,6 +835,14 @@ public final class CreatureAnimationCoreTest {
     check(unicode.getTargetWeapon() == WeaponType.NINJATO,
         "Unicode Ninjatō spelling must normalize to the procedural ninjato type");
 
+    final EquipmentOverlayGenerator.PromptSpec animationEquipmentName =
+        EquipmentOverlayGenerator.parsePrompt(
+            "GOBLIN_AXE: replace the axe with a huge ornate blackened-steel halberd.", "GOBLIN_AXE");
+    check(animationEquipmentName.getSourceWeapon() == WeaponType.AXE,
+        "An equipment word inside the exact ANIMATE.IDS symbol must not be counted as source equipment");
+    check(animationEquipmentName.getTargetWeapon() == WeaponType.HALBERD,
+        "Equipment parsing must retain the replacement named after the ANIMATE.IDS symbol");
+
     final String[] prompts = {
         "replace the sword with a light crossbow",
         "replace the sword with a heavy crossbow",
@@ -894,7 +902,7 @@ public final class CreatureAnimationCoreTest {
     check(rejected, "A two-handed main weapon plus off-hand shield must be rejected before resource discovery");
   }
 
-  private static void testEquipmentReferenceResrefFallback() {
+  private static void testEquipmentReferenceResrefFallback() throws Exception {
     final List<String> resources = Arrays.asList(
         "MSOGG1.BAM", "MSOGG2.BAM",
         "MSOLG1.BAM", "MSOLG2.BAM", "MSOLG11.BAM", "MSOLG1S1.BAM", "MSOLG2S1.BAM",
@@ -910,6 +918,32 @@ public final class CreatureAnimationCoreTest {
         EquipmentOverlayReference.findCompatibleEquipmentResrefs("MSOG", resourcesWithPrimary);
     check(!compatible.isEmpty() && "MSOG".equals(compatible.get(0)),
         "The animation's own resref should take precedence when it has a complete equipment pair");
+
+    final Path directory = createTestDirectory("ni-equipment-source-validation-test-");
+    try {
+      writeBamWithCycles(directory.resolve("MSOGG1S1.BAM"), 54);
+      writeBamWithCycles(directory.resolve("MSOGG2S1.BAM"), 54);
+      writeBamWithCycles(directory.resolve("MSOLG1S1.BAM"), 72);
+      writeBamWithCycles(directory.resolve("MSOLG2S1.BAM"), 63);
+      final List<String> installed = Arrays.asList(
+          "MSOGG1S1.BAM", "MSOGG2S1.BAM", "MSOLG1S1.BAM", "MSOLG2S1.BAM");
+      final EquipmentOverlayBamImporter.ResourceResolver resolver =
+          resourceName -> new FileResourceEntry(directory.resolve(resourceName));
+
+      final List<String> incompletePrimary = EquipmentOverlayReference.findAvailableSourceCodes(
+          EquipmentOverlayFamily.MONSTER, null, "MSOG", WeaponType.SCYTHE, AttackKind.TWO_HANDED,
+          OverlaySlot.MAIN_HAND, installed, resolver);
+      check(incompletePrimary.isEmpty(),
+          "Filename-compatible equipment BAMs must be rejected when a required source cycle is missing");
+
+      final List<String> completeFallback = EquipmentOverlayReference.findAvailableSourceCodes(
+          EquipmentOverlayFamily.MONSTER, null, "MSOL", WeaponType.SCYTHE, AttackKind.TWO_HANDED,
+          OverlaySlot.MAIN_HAND, installed, resolver);
+      check(Collections.singletonList("S1").equals(completeFallback),
+          "A cycle-complete solid equipment family must remain eligible after rejecting an incomplete primary");
+    } finally {
+      deleteTree(directory);
+    }
   }
 
   private static void testEquipmentOverlayFamilyLayouts() {
@@ -1584,6 +1618,23 @@ public final class CreatureAnimationCoreTest {
       }
     }
     return count;
+  }
+
+  private static void writeBamWithCycles(Path path, int cycleCount) throws Exception {
+    final PseudoBamDecoder source = new PseudoBamDecoder();
+    try {
+      final BufferedImage image = new BufferedImage(2, 2, BufferedImage.TYPE_BYTE_INDEXED);
+      image.getRaster().setSample(0, 0, 0, 1);
+      final int frameIndex = source.frameAdd(image, new Point(1, 1));
+      final PseudoBamControl control = source.createControl();
+      for (int cycleIndex = 0; cycleIndex < cycleCount; cycleIndex++) {
+        control.cycleAdd(new int[] { frameIndex });
+      }
+      source.setOption(PseudoBamDecoder.OPTION_BOOL_COMPRESSED, false);
+      check(source.exportBamV1(path, null, 0), "Could not create synthetic BAM " + path.getFileName());
+    } finally {
+      source.close();
+    }
   }
 
   private static Path createTestDirectory(String prefix) throws IOException {

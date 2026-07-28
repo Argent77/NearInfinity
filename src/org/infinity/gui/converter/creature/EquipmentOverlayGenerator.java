@@ -249,8 +249,18 @@ public final class EquipmentOverlayGenerator {
 
   /** Parses the supported equipment vocabulary from a free-form replacement request. */
   public static PromptSpec parsePrompt(String prompt) {
+    return parsePrompt(prompt, null);
+  }
+
+  /**
+   * Parses the supported equipment vocabulary while excluding the exact resolved animation symbol.
+   *
+   * <p>Animation symbols can contain equipment words (for example {@code GOBLIN_AXE}). They identify the reference
+   * animation and must not be interpreted as requested source or target equipment.</p>
+   */
+  static PromptSpec parsePrompt(String prompt, String animationSymbol) {
     final String original = prompt != null ? prompt.trim() : "";
-    final String normalized = normalizeWords(original);
+    final String normalized = removeAnimationSymbol(normalizeWords(original), animationSymbol);
     final List<WeaponMatch> weaponMatches = findWeaponMatches(normalized);
     if (weaponMatches.isEmpty()) {
       throw new IllegalArgumentException("The equipment prompt must name supported equipment, such as a sword, "
@@ -328,6 +338,21 @@ public final class EquipmentOverlayGenerator {
       scale = 0.86;
     }
     return new PromptSpec(original, source, target, offhand, metal, accent, glow, glowing, ornate, scale);
+  }
+
+  private static String removeAnimationSymbol(String normalizedPrompt, String animationSymbol) {
+    final String normalizedSymbol = normalizeWords(animationSymbol).trim();
+    if (normalizedSymbol.isEmpty()) {
+      return normalizedPrompt;
+    }
+    final String phrase = " " + normalizedSymbol + " ";
+    final int index = normalizedPrompt.indexOf(phrase);
+    if (index < 0) {
+      return normalizedPrompt;
+    }
+    final String remaining =
+        normalizedPrompt.substring(0, index) + " " + normalizedPrompt.substring(index + phrase.length());
+    return " " + remaining.trim().replaceAll("\\s+", " ") + " ";
   }
 
   /**

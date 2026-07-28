@@ -91,6 +91,73 @@ public final class EquipmentOverlayBamImporter {
     return !layout.getResources().isEmpty();
   }
 
+  /**
+   * Returns whether every required resource, cycle and frame entry in a layout can be addressed.
+   *
+   * <p>This is deliberately stricter than {@link #resourceFilesExist(FamilyLayout, Iterable,
+   * EquipmentOverlayFamily)}. Resource discovery uses it before selecting a source family so a filename-compatible
+   * but cycle-incomplete BAM cannot mask a complete fallback family.</p>
+   */
+  static boolean isLayoutComplete(FamilyLayout layout, ResourceResolver resolver, EquipmentOverlayFamily family) {
+    try {
+      validateLayout(layout, resolver, family);
+      return true;
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  private static void validateLayout(FamilyLayout layout, ResourceResolver resolver, EquipmentOverlayFamily family)
+      throws Exception {
+    if (layout == null || resolver == null) {
+      throw new IllegalArgumentException("An animation layout and resource resolver are required.");
+    }
+    int validatedResources = 0;
+    for (final ResourcePlan resource : layout.getResources().values()) {
+      final ResourceEntry entry = resolver.getResourceEntry(resource.getFileName());
+      if (entry == null) {
+        if (family == null || !family.isOptionalResource(resource.getFileName())) {
+          throw new IOException("Required animation resource " + resource.getFileName() + " is unavailable.");
+        }
+        continue;
+      }
+      validateResource(entry, resource);
+      validatedResources++;
+    }
+    if (validatedResources == 0) {
+      throw new IOException("None of the planned animation resources could be validated.");
+    }
+  }
+
+  private static void validateResource(ResourceEntry resource, ResourcePlan plan) throws Exception {
+    final BamDecoder decoder = BamDecoder.loadBam(resource);
+    if (decoder == null || !decoder.isOpen()) {
+      throw new IOException("Could not open " + resource.getResourceName() + " as a BAM resource.");
+    }
+    try {
+      final BamControl control = decoder.createControl();
+      for (final CyclePlan cycle : plan.getCycles()) {
+        final int cycleIndex = cycle.getCycleIndex();
+        if (cycleIndex >= control.cycleCount() || !control.cycleSet(cycleIndex)) {
+          throw new IOException(resource.getResourceName() + " is missing required cycle " + cycleIndex + ".");
+        }
+        final int frameCount = control.cycleFrameCount();
+        if (frameCount <= 0) {
+          throw new IOException(resource.getResourceName() + " cycle " + cycleIndex + " contains no frames.");
+        }
+        for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
+          final int absoluteIndex = control.cycleGetFrameIndexAbsolute(frameIndex);
+          if (absoluteIndex < 0 || decoder.getFrameInfo(absoluteIndex) == null) {
+            throw new IOException(resource.getResourceName() + " cycle " + cycleIndex + " frame " + frameIndex
+                + " is unavailable.");
+          }
+        }
+      }
+    } finally {
+      decoder.close();
+    }
+  }
+
   private static void importResource(EquipmentOverlayModel target, ResourceEntry resource, ResourcePlan plan,
       Map<CyclePlan, Integer> occurrences, boolean strict) throws Exception {
     final BamDecoder decoder = BamDecoder.loadBam(resource);

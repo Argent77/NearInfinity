@@ -19,6 +19,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.infinity.gui.converter.creature.CreatureAnimationFamily.FamilyLayout;
+import org.infinity.gui.converter.creature.EquipmentOverlayBamImporter.ResourceResolver;
 import org.infinity.gui.converter.creature.EquipmentOverlayFamily.AttackKind;
 import org.infinity.gui.converter.creature.EquipmentOverlayFamily.OverlaySlot;
 import org.infinity.gui.converter.creature.EquipmentOverlayGenerator.ProgressListener;
@@ -232,8 +233,8 @@ public final class EquipmentOverlayReference {
     if (!MonsterAnimationLayout.isSupportedGame(Profile.getGame())) {
       throw new IllegalArgumentException("Equipment overlays require a recognized Infinity Engine game profile.");
     }
-    final PromptSpec prompt = EquipmentOverlayGenerator.parsePrompt(promptText);
     final AnimationReference reference = resolveAnimation(promptText);
+    final PromptSpec prompt = EquipmentOverlayGenerator.parsePrompt(promptText, reference.symbol);
     final SpriteDecoder decoder = Profile.isEnhancedEdition()
         ? SpriteDecoder.importSprite(reference.animationId)
         : ClassicAnimationDefinition.resolveDecoder(Profile.getGame(), reference.animationId);
@@ -259,12 +260,20 @@ public final class EquipmentOverlayReference {
       }
       final List<String> resourceNames =
           listRelevantResourceNames(family, decoder, animationResref, OverlaySlot.MAIN_HAND);
-      final String resourcePrefix = family == EquipmentOverlayFamily.MONSTER
-          ? resolveMonsterEquipmentPrefix(animationResref, prompt.getSourceWeapon(), sourceCodeOverride, resourceNames)
-          : family.getOverlayResourcePrefix(decoder, null, OverlaySlot.MAIN_HAND);
-      final List<String> availableCodes =
-          findAvailableSourceCodes(family, decoder, resourcePrefix, prompt.getTargetWeapon(), attackKind,
-              OverlaySlot.MAIN_HAND, resourceNames);
+      final ResourceResolver resolver = ResourceFactory::getResourceEntry;
+      final String resourcePrefix;
+      final List<String> availableCodes;
+      if (family == EquipmentOverlayFamily.MONSTER) {
+        final EquipmentSource source = resolveMonsterEquipmentSource(decoder, animationResref,
+            prompt.getSourceWeapon(), prompt.getTargetWeapon(), attackKind, sourceCodeOverride, resourceNames,
+            resolver);
+        resourcePrefix = source.resref;
+        availableCodes = source.appearanceCodes;
+      } else {
+        resourcePrefix = family.getOverlayResourcePrefix(decoder, null, OverlaySlot.MAIN_HAND);
+        availableCodes = findAvailableSourceCodes(family, decoder, resourcePrefix, prompt.getTargetWeapon(),
+            attackKind, OverlaySlot.MAIN_HAND, resourceNames, resolver);
+      }
       if (availableCodes.isEmpty()) {
         throw new IOException(reference.symbol + " has no complete " + family
             + " weapon layer compatible with the requested " + prompt.getTargetWeapon().getLabel() + " pose.");
@@ -301,7 +310,7 @@ public final class EquipmentOverlayReference {
         final List<String> offhandResourceNames =
             listRelevantResourceNames(family, decoder, animationResref, offhandSlot);
         availableOffhandCodes = findAvailableSourceCodes(family, decoder, offhandResourcePrefix, offhandType,
-            attackKind, offhandSlot, offhandResourceNames);
+            attackKind, offhandSlot, offhandResourceNames, resolver);
         if (availableOffhandCodes.isEmpty()) {
           throw new IOException(reference.symbol + " has no complete " + getSlotDescription(offhandSlot)
               + " layer compatible with the requested " + attackKind.toString().toLowerCase(Locale.ENGLISH)
@@ -432,8 +441,9 @@ public final class EquipmentOverlayReference {
     return result;
   }
 
-  private static String resolveMonsterEquipmentPrefix(String animationResref, WeaponType sourceType,
-      String sourceCodeOverride, List<String> resourceNames) throws IOException {
+  private static EquipmentSource resolveMonsterEquipmentSource(SpriteDecoder decoder, String animationResref,
+      WeaponType sourceType, WeaponType targetType, AttackKind attackKind, String sourceCodeOverride,
+      List<String> resourceNames, ResourceResolver resolver) throws IOException {
     final List<String> compatibleResrefs =
         findCompatibleEquipmentResrefs(animationResref, resourceNames);
     if (compatibleResrefs.isEmpty()) {
@@ -443,10 +453,20 @@ public final class EquipmentOverlayReference {
 
     final List<EquipmentSource> sources = new ArrayList<>();
     for (final String resref : compatibleResrefs) {
-      sources.add(new EquipmentSource(resref, findCompleteMonsterAppearanceCodes(resref, resourceNames)));
+      final FamilyLayout avatarLayout = EquipmentOverlayFamily.MONSTER.createAvatarLayout(resref,
+          EquipmentOverlayFamily.MONSTER.isAvatarSplit(decoder), attackKind);
+      if (!EquipmentOverlayBamImporter.isLayoutComplete(avatarLayout, resolver, EquipmentOverlayFamily.MONSTER)) {
+        continue;
+      }
+      final List<String> appearanceCodes = findAvailableSourceCodes(EquipmentOverlayFamily.MONSTER, decoder, resref,
+          targetType, attackKind, OverlaySlot.MAIN_HAND, resourceNames, resolver);
+      if (!appearanceCodes.isEmpty()) {
+        sources.add(new EquipmentSource(resref, appearanceCodes));
+      }
     }
-    if (sources.get(0).resref.equals(animationResref) || sources.size() == 1) {
-      return sources.get(0).resref;
+    if (sources.isEmpty()) {
+      throw new IOException(animationResref + " has no cycle-complete base avatar and weapon-overlay family "
+          + "compatible with the requested " + targetType.getLabel() + " pose.");
     }
 
     final String requestedCode = normalizeSourceOverride(sourceCodeOverride,
@@ -459,7 +479,14 @@ public final class EquipmentOverlayReference {
         }
       }
       if (matches.size() == 1) {
-        return matches.get(0).resref;
+        return matches.get(0);
+      }
+      if (matches.size() > 1 && matches.get(0).resref.equals(animationResref)) {
+        return matches.get(0);
+      }
+      if (matches.size() > 1) {
+        throw new IOException("Source layer " + requestedCode + " exists in several cycle-complete equipment "
+            + "families: " + joinEquipmentSourceResrefs(matches) + ".");
       }
     }
 
@@ -472,8 +499,25 @@ public final class EquipmentOverlayReference {
         }
       }
       if (matches.size() == 1) {
-        return matches.get(0).resref;
+        return matches.get(0);
       }
+      if (matches.size() > 1 && matches.get(0).resref.equals(animationResref)) {
+        return matches.get(0);
+      }
+      if (matches.size() > 1) {
+        throw new IOException("The requested " + sourceType.getLabel()
+            + " source exists in several cycle-complete equipment families: "
+            + joinEquipmentSourceResrefs(matches) + ".");
+      }
+    }
+
+    for (final EquipmentSource source : sources) {
+      if (source.resref.equals(animationResref)) {
+        return source;
+      }
+    }
+    if (sources.size() == 1) {
+      return sources.get(0);
     }
 
     final List<String> descriptions = new ArrayList<>();
@@ -484,9 +528,17 @@ public final class EquipmentOverlayReference {
         + String.join("; ", descriptions) + ". Enter an explicit source layer code to disambiguate them.");
   }
 
-  private static List<String> findAvailableSourceCodes(EquipmentOverlayFamily family, SpriteDecoder decoder,
+  private static String joinEquipmentSourceResrefs(List<EquipmentSource> sources) {
+    final List<String> result = new ArrayList<>();
+    for (final EquipmentSource source : sources) {
+      result.add(source.resref);
+    }
+    return String.join(", ", result);
+  }
+
+  static List<String> findAvailableSourceCodes(EquipmentOverlayFamily family, SpriteDecoder decoder,
       String resourcePrefix, WeaponType targetEquipment, AttackKind attackKind, OverlaySlot slot,
-      Iterable<String> resourceNames) {
+      Iterable<String> resourceNames, ResourceResolver resolver) {
     final Set<String> candidates = new TreeSet<>();
     if (family == EquipmentOverlayFamily.MONSTER_LAYERED
         || family == EquipmentOverlayFamily.MONSTER_LAYERED_SPELL) {
@@ -520,7 +572,8 @@ public final class EquipmentOverlayReference {
     for (final String code : candidates) {
       final FamilyLayout layout =
           family.createOverlayLayout(resourcePrefix, toLayoutAppearanceCode(code), targetEquipment, attackKind, slot);
-      if (EquipmentOverlayBamImporter.resourceFilesExist(layout, resourceNames, family)) {
+      if (EquipmentOverlayBamImporter.resourceFilesExist(layout, resourceNames, family)
+          && EquipmentOverlayBamImporter.isLayoutComplete(layout, resolver, family)) {
         result.add(code);
       }
     }
@@ -539,11 +592,12 @@ public final class EquipmentOverlayReference {
     }
 
     final boolean firstCharacter = !family.usesFullAppearanceCodeInFileName();
+    final List<String> selectable = getAutomaticallySelectableSourceCodes(family, available, targetType);
     final WeaponType preferred = sourceType != null ? sourceType : targetType;
     if (preferred != null) {
       final String suggested = preferred.getSuggestedAppearanceCode();
       final String code = firstCharacter ? suggested.substring(0, 1) : suggested;
-      if (available.contains(code)
+      if (selectable.contains(code)
           && (family != EquipmentOverlayFamily.CHARACTER && family != EquipmentOverlayFamily.CHARACTER_OLD
               || sourceType == null || samePoseClass(sourceType, targetType))) {
         return code;
@@ -553,7 +607,7 @@ public final class EquipmentOverlayReference {
     if (!firstCharacter) {
       final Map<String, String> descriptions = Profile.getEquippedAppearanceMap();
       final List<CodeScore> scored = new ArrayList<>();
-      for (final String code : available) {
+      for (final String code : selectable) {
         final String description = descriptions.get(code);
         int score = scoreDescription(description, sourceType);
         final WeaponType described = findDescribedWeapon(description);
@@ -576,15 +630,37 @@ public final class EquipmentOverlayReference {
       }
     }
 
-    if (family == EquipmentOverlayFamily.MONSTER && available.contains("S1")) {
+    if (family == EquipmentOverlayFamily.MONSTER && selectable.contains("S1")) {
       return "S1";
     }
-    if (available.size() == 1 && family != EquipmentOverlayFamily.CHARACTER
-        && family != EquipmentOverlayFamily.CHARACTER_OLD) {
-      return available.get(0);
+    if (selectable.size() == 1) {
+      return selectable.get(0);
+    }
+    if (selectable.isEmpty() && (family == EquipmentOverlayFamily.CHARACTER
+        || family == EquipmentOverlayFamily.CHARACTER_OLD)) {
+      throw new IllegalArgumentException("None of the complete source layers (" + String.join(", ", available)
+          + ") is identified as a pose-compatible weapon by the active game's Equipped appearance metadata. "
+          + "Enter a verified source layer code explicitly.");
     }
     throw new IllegalArgumentException("A unique pose-compatible source could not be selected from "
-        + String.join(", ", available) + ". Name the original weapon more precisely or enter its source layer code.");
+        + String.join(", ", selectable)
+        + ". Name the original weapon more precisely or enter its source layer code.");
+  }
+
+  private static List<String> getAutomaticallySelectableSourceCodes(EquipmentOverlayFamily family,
+      List<String> available, WeaponType targetType) {
+    if (family != EquipmentOverlayFamily.CHARACTER && family != EquipmentOverlayFamily.CHARACTER_OLD) {
+      return available;
+    }
+    final Map<String, String> descriptions = Profile.getEquippedAppearanceMap();
+    final List<String> result = new ArrayList<>();
+    for (final String code : available) {
+      final WeaponType described = findDescribedWeapon(descriptions.get(code));
+      if (described != null && samePoseClass(described, targetType)) {
+        result.add(code);
+      }
+    }
+    return result;
   }
 
   private static String chooseTargetCode(EquipmentOverlayFamily family, SpriteDecoder decoder, String resourcePrefix,
