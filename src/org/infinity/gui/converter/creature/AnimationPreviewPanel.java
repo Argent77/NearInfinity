@@ -217,12 +217,7 @@ public final class AnimationPreviewPanel extends JPanel {
       final AnimationFrame offhand =
           selectFrame(preview.offhandOverlayFrames, frameIndex, preview.getFrameCount());
       final java.awt.Rectangle bounds = getSharedBounds(preview.mirrored, frame, offhand, overlay);
-      final double availableWidth = Math.max(1.0, getWidth() - 56.0);
-      final double availableHeight = Math.max(1.0, getHeight() - 56.0);
-      double fitScale = Math.min(availableWidth / Math.max(1, bounds.width),
-          availableHeight / Math.max(1, bounds.height));
-      fitScale = Math.max(0.1, Math.min(5.0, fitScale));
-      final double scale = fitScale * zoomPercent / 100.0;
+      final double scale = zoomPercent / 100.0;
       final int renderedWidth = Math.max(1, (int) Math.round(bounds.width * scale));
       final int renderedHeight = Math.max(1, (int) Math.round(bounds.height * scale));
       final int originX = (getWidth() - renderedWidth) / 2 - (int) Math.round(bounds.x * scale);

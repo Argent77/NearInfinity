@@ -55,6 +55,7 @@ public final class CreatureAnimationCoreTest {
 
   public static void main(String[] args) throws Exception {
     testCreatorSettingsAndPreviewControls();
+    testPreviewZoomUsesOriginalFrameSize();
     testProfileSlotCoverage();
     testAllFamilyLayouts();
     testClassicProfileExport();
@@ -178,6 +179,40 @@ public final class CreatureAnimationCoreTest {
       preferences.removeNode();
       Preferences.userRoot().flush();
       deleteTree(root);
+    }
+  }
+
+  private static void testPreviewZoomUsesOriginalFrameSize() {
+    final int frameColor = new Color(239, 17, 211, 255).getRGB();
+    final BufferedImage frameImage = new BufferedImage(80, 60, BufferedImage.TYPE_INT_ARGB);
+    final Graphics2D frameGraphics = frameImage.createGraphics();
+    try {
+      frameGraphics.setColor(new Color(frameColor, true));
+      frameGraphics.fillRect(0, 0, frameImage.getWidth(), frameImage.getHeight());
+    } finally {
+      frameGraphics.dispose();
+    }
+
+    final CreatureAnimationModel model = new CreatureAnimationModel();
+    model.replaceFrames(Sequence.WALK, Direction.S,
+        Collections.singletonList(new AnimationFrame(frameImage, new Point(40, 30), "preview-zoom-test")));
+
+    final AnimationPreviewPanel preview = new AnimationPreviewPanel();
+    try {
+      preview.setPlaying(false);
+      preview.setShowPivot(false);
+      preview.setModel(model);
+      preview.setZoomPercent(100);
+      final int smallPanelPixels = countPixels(renderPreview(preview, 200, 200), frameColor);
+      final int largePanelPixels = countPixels(renderPreview(preview, 400, 400), frameColor);
+      check(smallPanelPixels == 80 * 60 && largePanelPixels == 80 * 60,
+          "100% preview zoom must preserve the source frame's pixel size regardless of preview-panel dimensions");
+
+      preview.setZoomPercent(250);
+      check(countPixels(renderPreview(preview, 400, 400), frameColor) == 200 * 150,
+          "250% preview zoom must scale source dimensions by exactly 2.5");
+    } finally {
+      preview.setPlaying(false);
     }
   }
 
@@ -1525,6 +1560,30 @@ public final class CreatureAnimationCoreTest {
       }
     }
     return false;
+  }
+
+  private static BufferedImage renderPreview(AnimationPreviewPanel preview, int width, int height) {
+    preview.setSize(width, height);
+    final BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+    final Graphics2D graphics = image.createGraphics();
+    try {
+      preview.paint(graphics);
+    } finally {
+      graphics.dispose();
+    }
+    return image;
+  }
+
+  private static int countPixels(BufferedImage image, int color) {
+    int count = 0;
+    for (int y = 0; y < image.getHeight(); y++) {
+      for (int x = 0; x < image.getWidth(); x++) {
+        if (image.getRGB(x, y) == color) {
+          count++;
+        }
+      }
+    }
+    return count;
   }
 
   private static Path createTestDirectory(String prefix) throws IOException {

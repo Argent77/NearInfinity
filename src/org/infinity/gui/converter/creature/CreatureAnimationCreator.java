@@ -493,7 +493,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
     gbc.gridx = 4;
     controls.add(new JLabel("Zoom:"), gbc);
     gbc.gridx = 5;
-    zoomSpinner.setToolTipText("Percentage of the fitted preview size");
+    zoomSpinner.setToolTipText("100% displays source frames at their original pixel size");
     zoomSpinner.getAccessibleContext().setAccessibleName("Preview zoom percentage");
     controls.add(zoomSpinner, gbc);
     gbc.gridx = 6;
