@@ -58,6 +58,8 @@ public final class AnimationPreviewPanel extends JPanel {
   private CreatureAnimationModel easternModel;
   private CreatureAnimationModel overlayModel;
   private CreatureAnimationModel overlayEasternModel;
+  private CreatureAnimationModel offhandOverlayModel;
+  private CreatureAnimationModel offhandOverlayEasternModel;
   private Sequence sequence = Sequence.WALK;
   private int directionIndex;
   private int frameIndex;
@@ -100,6 +102,21 @@ public final class AnimationPreviewPanel extends JPanel {
   /** Sets optional canonicalized eastern frames for the synchronized layer. */
   public void setOverlayEasternModel(CreatureAnimationModel overlayEasternModel) {
     this.overlayEasternModel = overlayEasternModel;
+    frameIndex = 0;
+    repaint();
+  }
+
+  /** Sets an optional shield or left-handed weapon layer rendered before the main-hand overlay. */
+  public void setOffhandOverlayModel(CreatureAnimationModel offhandOverlayModel) {
+    this.offhandOverlayModel = offhandOverlayModel;
+    offhandOverlayEasternModel = null;
+    frameIndex = 0;
+    repaint();
+  }
+
+  /** Sets optional canonicalized eastern frames for the off-hand layer. */
+  public void setOffhandOverlayEasternModel(CreatureAnimationModel offhandOverlayEasternModel) {
+    this.offhandOverlayEasternModel = offhandOverlayEasternModel;
     frameIndex = 0;
     repaint();
   }
@@ -178,7 +195,9 @@ public final class AnimationPreviewPanel extends JPanel {
         : "";
     return sequence.getCode() + " / " + PREVIEW_DIRECTIONS[directionIndex] + " - "
         + (frameIndex % preview.getFrameCount() + 1) + "/" + preview.getFrameCount()
-        + (!preview.overlayFrames.isEmpty() ? " + equipment overlay" : "") + fallback;
+        + (!preview.overlayFrames.isEmpty() || !preview.offhandOverlayFrames.isEmpty()
+            ? " + equipment overlay" : "")
+        + fallback;
   }
 
   @Override
@@ -195,7 +214,9 @@ public final class AnimationPreviewPanel extends JPanel {
 
       final AnimationFrame frame = selectFrame(preview.frames, frameIndex, preview.getFrameCount());
       final AnimationFrame overlay = selectFrame(preview.overlayFrames, frameIndex, preview.getFrameCount());
-      final java.awt.Rectangle bounds = getSharedBounds(frame, overlay, preview.mirrored);
+      final AnimationFrame offhand =
+          selectFrame(preview.offhandOverlayFrames, frameIndex, preview.getFrameCount());
+      final java.awt.Rectangle bounds = getSharedBounds(preview.mirrored, frame, offhand, overlay);
       final double availableWidth = Math.max(1.0, getWidth() - 56.0);
       final double availableHeight = Math.max(1.0, getHeight() - 56.0);
       double fitScale = Math.min(availableWidth / Math.max(1, bounds.width),
@@ -211,6 +232,7 @@ public final class AnimationPreviewPanel extends JPanel {
           scale >= 1.0 ? RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
               : RenderingHints.VALUE_INTERPOLATION_BILINEAR);
       drawFrame(g, frame, originX, originY, scale, preview.mirrored);
+      drawFrame(g, offhand, originX, originY, scale, preview.mirrored);
       drawFrame(g, overlay, originX, originY, scale, preview.mirrored);
 
       if (showPivot) {
@@ -271,7 +293,14 @@ public final class AnimationPreviewPanel extends JPanel {
         overlay != null ? overlay.resolveFrames(sequence, storedDirection) : null;
     final List<AnimationFrame> overlayFrames = overlayResolved != null ? overlayResolved.getFrames()
         : Collections.<AnimationFrame>emptyList();
-    return new PreviewFrames(resolved, frames, overlayFrames, mirrored);
+    final CreatureAnimationModel offhandOverlay = mirrored && offhandOverlayEasternModel != null
+        && offhandOverlayEasternModel.hasFrames(sequence, storedDirection)
+            ? offhandOverlayEasternModel : offhandOverlayModel;
+    final ResolvedFrames offhandResolved =
+        offhandOverlay != null ? offhandOverlay.resolveFrames(sequence, storedDirection) : null;
+    final List<AnimationFrame> offhandOverlayFrames = offhandResolved != null ? offhandResolved.getFrames()
+        : Collections.<AnimationFrame>emptyList();
+    return new PreviewFrames(resolved, frames, overlayFrames, offhandOverlayFrames, mirrored);
   }
 
   private static AnimationFrame selectFrame(List<AnimationFrame> frames, int index, int timelineCount) {
@@ -286,12 +315,12 @@ public final class AnimationPreviewPanel extends JPanel {
     return frames.get(Math.max(0, Math.min(frames.size() - 1, mapped)));
   }
 
-  private static java.awt.Rectangle getSharedBounds(AnimationFrame first, AnimationFrame second, boolean mirrored) {
+  private static java.awt.Rectangle getSharedBounds(boolean mirrored, AnimationFrame... frames) {
     int minimumX = Integer.MAX_VALUE;
     int minimumY = Integer.MAX_VALUE;
     int maximumX = Integer.MIN_VALUE;
     int maximumY = Integer.MIN_VALUE;
-    for (final AnimationFrame frame : new AnimationFrame[] { first, second }) {
+    for (final AnimationFrame frame : frames) {
       if (frame == null) {
         continue;
       }
@@ -352,18 +381,20 @@ public final class AnimationPreviewPanel extends JPanel {
     private final ResolvedFrames resolved;
     private final List<AnimationFrame> frames;
     private final List<AnimationFrame> overlayFrames;
+    private final List<AnimationFrame> offhandOverlayFrames;
     private final boolean mirrored;
 
     private PreviewFrames(ResolvedFrames resolved, List<AnimationFrame> frames, List<AnimationFrame> overlayFrames,
-        boolean mirrored) {
+        List<AnimationFrame> offhandOverlayFrames, boolean mirrored) {
       this.resolved = resolved;
       this.frames = frames;
       this.overlayFrames = overlayFrames;
+      this.offhandOverlayFrames = offhandOverlayFrames;
       this.mirrored = mirrored;
     }
 
     private int getFrameCount() {
-      return Math.max(frames.size(), overlayFrames.size());
+      return Math.max(Math.max(frames.size(), overlayFrames.size()), offhandOverlayFrames.size());
     }
   }
 }

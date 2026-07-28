@@ -231,7 +231,12 @@ public class CharacterDecoder extends CharacterBaseDecoder {
 
   /** Returns the decoder's exact avatar suffix and cycle schema for the active split mode. */
   public Map<Sequence, Couple<String, Integer>> getAvatarSequenceMap() {
-    return Collections.unmodifiableMap(getSuffixMap());
+    return getSequenceMap(isSplittedBams());
+  }
+
+  /** Returns the canonical character suffix and cycle schema for the requested split mode. */
+  public static Map<Sequence, Couple<String, Integer>> getSequenceMap(boolean splitBams) {
+    return Collections.unmodifiableMap(splitBams ? SUFFIX_MAP_SPLIT : SUFFIX_MAP_UNSPLIT);
   }
 
   /** Returns whether animations are spread over various subfiles. */

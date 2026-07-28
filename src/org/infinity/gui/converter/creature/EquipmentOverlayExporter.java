@@ -23,6 +23,8 @@ import org.infinity.gui.converter.creature.CreatureAnimationFamily.CyclePlan;
 import org.infinity.gui.converter.creature.CreatureAnimationFamily.FamilyLayout;
 import org.infinity.gui.converter.creature.CreatureAnimationFamily.ResourcePlan;
 import org.infinity.gui.converter.creature.CreatureAnimationModel.AnimationFrame;
+import org.infinity.gui.converter.creature.EquipmentOverlayFamily.AttackKind;
+import org.infinity.gui.converter.creature.EquipmentOverlayFamily.OverlaySlot;
 import org.infinity.gui.converter.creature.EquipmentOverlayGenerator.WeaponType;
 import org.infinity.gui.converter.creature.MonsterAnimationLayout.BamFormat;
 import org.infinity.resource.Profile;
@@ -42,6 +44,9 @@ public final class EquipmentOverlayExporter {
     private String resourcePrefix = "";
     private String appearanceCode = "";
     private WeaponType weaponType = WeaponType.SWORD;
+    private String offhandResourcePrefix = "";
+    private String offhandAppearanceCode = "";
+    private WeaponType offhandType;
     private Path outputDirectory;
     private BamFormat bamFormat = BamFormat.BAM_V1;
     private boolean compressedBam = true;
@@ -101,6 +106,44 @@ public final class EquipmentOverlayExporter {
       return this;
     }
 
+    public String getOffhandResourcePrefix() {
+      return offhandResourcePrefix;
+    }
+
+    public Config setOffhandResourcePrefix(String value) {
+      offhandResourcePrefix = value != null ? value.trim().toUpperCase(Locale.ENGLISH) : "";
+      return this;
+    }
+
+    public String getOffhandAppearanceCode() {
+      return offhandAppearanceCode;
+    }
+
+    public Config setOffhandAppearanceCode(String value) {
+      offhandAppearanceCode = value != null ? value.trim().toUpperCase(Locale.ENGLISH) : "";
+      return this;
+    }
+
+    public WeaponType getOffhandType() {
+      return offhandType;
+    }
+
+    public Config setOffhandType(WeaponType value) {
+      offhandType = value;
+      return this;
+    }
+
+    public boolean hasOffhand() {
+      return offhandType != null;
+    }
+
+    public Config clearOffhand() {
+      offhandResourcePrefix = "";
+      offhandAppearanceCode = "";
+      offhandType = null;
+      return this;
+    }
+
     public Path getOutputDirectory() {
       return outputDirectory;
     }
@@ -155,6 +198,11 @@ public final class EquipmentOverlayExporter {
   }
 
   public static ValidationReport validate(EquipmentOverlayModel model, Config config) {
+    return validate(model, null, config);
+  }
+
+  public static ValidationReport validate(EquipmentOverlayModel model, EquipmentOverlayModel offhandModel,
+      Config config) {
     final ValidationReport report = new ValidationReport();
     if (config == null) {
       report.add(Severity.ERROR, "No equipment-overlay export configuration was supplied.");
@@ -167,7 +215,7 @@ public final class EquipmentOverlayExporter {
       report.add(Severity.ERROR, "Equipment overlay export requires a recognized Infinity Engine game profile.");
     }
     if (!RESOURCE_PREFIX.matcher(config.resourcePrefix).matches()) {
-      report.add(Severity.ERROR, "The weapon-overlay resource prefix must contain 1-8 ASCII letters, digits or "
+      report.add(Severity.ERROR, "The main-hand overlay resource prefix must contain 1-8 ASCII letters, digits or "
           + "underscores.");
     }
     if (!APPEARANCE_CODE.matcher(config.appearanceCode).matches()) {
@@ -175,7 +223,22 @@ public final class EquipmentOverlayExporter {
           + "underscores.");
     }
     if (config.weaponType == null) {
-      report.add(Severity.ERROR, "No target weapon type was selected.");
+      report.add(Severity.ERROR, "No target main-hand equipment type was selected.");
+    }
+    if (config.hasOffhand()) {
+      if (!RESOURCE_PREFIX.matcher(config.offhandResourcePrefix).matches()) {
+        report.add(Severity.ERROR, "The off-hand overlay resource prefix must contain 1-8 ASCII letters, digits or "
+            + "underscores.");
+      }
+      if (!APPEARANCE_CODE.matcher(config.offhandAppearanceCode).matches()) {
+        report.add(Severity.ERROR, "The off-hand equipped appearance code must contain exactly two ASCII letters, "
+            + "digits or underscores.");
+      }
+      if (offhandModel == null || offhandModel.isEmpty()) {
+        report.add(Severity.ERROR, "No generated off-hand overlay is loaded.");
+      }
+    } else if (offhandModel != null && !offhandModel.isEmpty()) {
+      report.add(Severity.ERROR, "An off-hand overlay is loaded without an off-hand export definition.");
     }
     if (config.outputDirectory == null) {
       report.add(Severity.ERROR, "No output directory was selected.");
@@ -192,53 +255,69 @@ public final class EquipmentOverlayExporter {
           getGameTitle(config.game) + " does not support BAMC-compressed BAM V1 resources.");
     }
     if (model == null || model.isEmpty()) {
-      report.add(Severity.ERROR, "No generated equipment overlay is loaded.");
+      report.add(Severity.ERROR, "No generated main-hand equipment overlay is loaded.");
       return report;
+    }
+    AttackKind attackKind = null;
+    if (config.family != null && config.weaponType != null) {
+      try {
+        config.family.validateLoadout(config.weaponType, config.offhandType);
+        attackKind = config.family.getAttackKind(config.weaponType, config.offhandType);
+      } catch (IllegalArgumentException e) {
+        report.add(Severity.ERROR, e.getMessage());
+      }
     }
     if (report.hasErrors()) {
       return report;
     }
 
-    final FamilyLayout layout;
+    final List<PlannedLayer> layers;
     try {
-      layout = createLayout(config);
+      layers = createLayers(model, offhandModel, config, attackKind);
     } catch (IllegalArgumentException e) {
       report.add(Severity.ERROR, e.getMessage());
       return report;
     }
 
-    final Map<CyclePlan, Integer> occurrences = EquipmentOverlayModel.getOccurrenceIndices(layout);
     final java.util.Set<String> reportedCells = new java.util.HashSet<>();
-    for (final ResourcePlan resource : layout.getResources().values()) {
-      for (final CyclePlan cycle : resource.getCycles()) {
-        final Integer occurrence = occurrences.get(cycle);
-        if (occurrence == null) {
-          report.add(Severity.ERROR, "No cycle occurrence was planned for " + resource.getFileName() + " cycle "
-              + cycle.getCycleIndex() + ".");
-          continue;
+    final java.util.Set<String> resourceNames = new java.util.HashSet<>();
+    for (final PlannedLayer layer : layers) {
+      final Map<CyclePlan, Integer> occurrences = EquipmentOverlayModel.getOccurrenceIndices(layer.layout);
+      for (final ResourcePlan resource : layer.layout.getResources().values()) {
+        if (!resourceNames.add(resource.getFileName())) {
+          report.add(Severity.ERROR, "Main-hand and off-hand plans both target " + resource.getFileName() + ".");
         }
-        final String cellKey =
-            cycle.getSequence().name() + "/" + cycle.getDirectionIndex() + "/" + occurrence;
-        final List<AnimationFrame> frames =
-            model.getFrames(cycle.getSequence(), cycle.getDirectionIndex(), occurrence);
-        if (frames.isEmpty()) {
-          if (reportedCells.add(cellKey)) {
-            report.add(Severity.ERROR, "The generated overlay is missing synchronized "
-                + cycle.getSequence().getCode() + " frames for direction index " + cycle.getDirectionIndex()
-                + ", cycle occurrence " + occurrence + ".");
+        for (final CyclePlan cycle : resource.getCycles()) {
+          final Integer occurrence = occurrences.get(cycle);
+          if (occurrence == null) {
+            report.add(Severity.ERROR, "No cycle occurrence was planned for " + resource.getFileName() + " cycle "
+                + cycle.getCycleIndex() + ".");
+            continue;
           }
-          continue;
-        }
-        for (final AnimationFrame frame : frames) {
-          final BufferedImage image = frame.getImage();
-          final Point center = frame.getCenter();
-          if (image.getWidth() <= 0 || image.getWidth() > 65535 || image.getHeight() <= 0
-              || image.getHeight() > 65535) {
-            report.add(Severity.ERROR, "An equipment frame has dimensions outside the BAM range.");
+          final String cellKey = layer.slot + "/" + cycle.getSequence().name() + "/"
+              + cycle.getDirectionIndex() + "/" + occurrence;
+          final List<AnimationFrame> frames =
+              layer.model.getFrames(cycle.getSequence(), cycle.getDirectionIndex(), occurrence);
+          if (frames.isEmpty()) {
+            if (reportedCells.add(cellKey)) {
+              report.add(Severity.ERROR, "The generated " + getSlotLabel(layer.slot)
+                  + " overlay is missing synchronized " + cycle.getSequence().getCode()
+                  + " frames for direction index " + cycle.getDirectionIndex()
+                  + ", cycle occurrence " + occurrence + ".");
+            }
+            continue;
           }
-          if (center.x < Short.MIN_VALUE || center.x > Short.MAX_VALUE || center.y < Short.MIN_VALUE
-              || center.y > Short.MAX_VALUE) {
-            report.add(Severity.ERROR, "An equipment frame center is outside the signed 16-bit BAM range.");
+          for (final AnimationFrame frame : frames) {
+            final BufferedImage image = frame.getImage();
+            final Point center = frame.getCenter();
+            if (image.getWidth() <= 0 || image.getWidth() > 65535 || image.getHeight() <= 0
+                || image.getHeight() > 65535) {
+              report.add(Severity.ERROR, "An equipment frame has dimensions outside the BAM range.");
+            }
+            if (center.x < Short.MIN_VALUE || center.x > Short.MAX_VALUE || center.y < Short.MIN_VALUE
+                || center.y > Short.MAX_VALUE) {
+              report.add(Severity.ERROR, "An equipment frame center is outside the signed 16-bit BAM range.");
+            }
           }
         }
       }
@@ -252,21 +331,31 @@ public final class EquipmentOverlayExporter {
           + config.family.getFileCode(config.appearanceCode) + " will share this generated layer.");
     }
     report.add(Severity.INFO, "Use " + config.family.getActivationSummary(config.appearanceCode)
-        + " on the equipped ITM to activate the generated " + config.family + " weapon overlay.");
+        + " on the main-hand ITM to activate the generated " + config.family + " weapon overlay.");
+    if (config.hasOffhand()) {
+      report.add(Severity.INFO, "Use " + config.family.getActivationSummary(config.offhandAppearanceCode)
+          + " on the " + (config.offhandType.isShield() ? "shield" : "left-handed weapon")
+          + " ITM in the shield slot to activate the generated off-hand overlay.");
+    }
     return report;
   }
 
   public static List<Path> getExistingTargets(Config config) {
     if (config == null || config.outputDirectory == null || config.family == null
         || !RESOURCE_PREFIX.matcher(config.resourcePrefix).matches()
-        || !APPEARANCE_CODE.matcher(config.appearanceCode).matches() || config.weaponType == null) {
+        || !APPEARANCE_CODE.matcher(config.appearanceCode).matches() || config.weaponType == null
+        || config.hasOffhand() && (!RESOURCE_PREFIX.matcher(config.offhandResourcePrefix).matches()
+            || !APPEARANCE_CODE.matcher(config.offhandAppearanceCode).matches())) {
       return Collections.emptyList();
     }
     final List<Path> result = new ArrayList<>();
-    for (final String fileName : createLayout(config).getResources().keySet()) {
-      final Path target = config.outputDirectory.resolve(fileName);
-      if (Files.exists(target)) {
-        result.add(target);
+    final AttackKind attackKind = config.family.getAttackKind(config.weaponType, config.offhandType);
+    for (final FamilyLayout layout : createLayouts(config, attackKind)) {
+      for (final String fileName : layout.getResources().keySet()) {
+        final Path target = config.outputDirectory.resolve(fileName);
+        if (Files.exists(target)) {
+          result.add(target);
+        }
       }
     }
     return result;
@@ -277,7 +366,12 @@ public final class EquipmentOverlayExporter {
   }
 
   public static ExportResult export(EquipmentOverlayModel model, Config config, boolean overwrite) throws Exception {
-    final ValidationReport report = validate(model, config);
+    return export(model, null, config, overwrite);
+  }
+
+  public static ExportResult export(EquipmentOverlayModel model, EquipmentOverlayModel offhandModel, Config config,
+      boolean overwrite) throws Exception {
+    final ValidationReport report = validate(model, offhandModel, config);
     if (report.hasErrors()) {
       throw new IllegalArgumentException("Equipment overlay validation failed: "
           + report.getMessages(Severity.ERROR).get(0).getText());
@@ -291,37 +385,43 @@ public final class EquipmentOverlayExporter {
     final Path staging = Files.createTempDirectory(config.outputDirectory, ".ni-equipment-overlay-");
     boolean installed = false;
     try {
-      final FamilyLayout layout = createLayout(config);
-      final Map<CyclePlan, Integer> occurrences = EquipmentOverlayModel.getOccurrenceIndices(layout);
+      final AttackKind attackKind = config.family.getAttackKind(config.weaponType, config.offhandType);
+      final List<PlannedLayer> layers = createLayers(model, offhandModel, config, attackKind);
       int pvrzIndex = config.bamFormat == BamFormat.BAM_V2
           ? CreatureAnimationExporter.findPvrzStartIndex(config.outputDirectory) : 0;
       final Map<String, Integer> expectedCycles = new LinkedHashMap<>();
-      for (final ResourcePlan resource : layout.getResources().values()) {
-        final String fileName = resource.getFileName();
-        final PseudoBamDecoder source = CreatureAnimationExporter.createBam(model, resource, occurrences);
-        expectedCycles.put(fileName, resource.getCycleCount());
-        try {
-          if (config.bamFormat == BamFormat.BAM_V1) {
-            final PseudoBamDecoder paletted = CreatureAnimationExporter.convertToPalettedBam(source);
-            paletted.setOption(PseudoBamDecoder.OPTION_INT_RLEINDEX, 0);
-            paletted.setOption(PseudoBamDecoder.OPTION_BOOL_COMPRESSED, config.compressedBam);
-            try {
-              if (!paletted.exportBamV1(staging.resolve(fileName), null, 0)) {
-                throw new IOException("BAM V1 encoder produced no output for " + fileName + ".");
-              }
-            } finally {
-              if (paletted != source) {
-                paletted.close();
-              }
-            }
-          } else {
-            if (!source.exportBamV2(staging.resolve(fileName), DxtEncoder.DxtType.DXT5, pvrzIndex, false, null, 0)) {
-              throw new IOException("BAM V2 encoder produced no output for " + fileName + ".");
-            }
-            pvrzIndex = CreatureAnimationExporter.findPvrzStartIndex(staging);
+      for (final PlannedLayer layer : layers) {
+        final Map<CyclePlan, Integer> occurrences = EquipmentOverlayModel.getOccurrenceIndices(layer.layout);
+        for (final ResourcePlan resource : layer.layout.getResources().values()) {
+          final String fileName = resource.getFileName();
+          final PseudoBamDecoder source =
+              CreatureAnimationExporter.createBam(layer.model, resource, occurrences);
+          if (expectedCycles.put(fileName, resource.getCycleCount()) != null) {
+            throw new IOException("More than one equipment layer targets " + fileName + ".");
           }
-        } finally {
-          source.close();
+          try {
+            if (config.bamFormat == BamFormat.BAM_V1) {
+              final PseudoBamDecoder paletted = CreatureAnimationExporter.convertToPalettedBam(source);
+              paletted.setOption(PseudoBamDecoder.OPTION_INT_RLEINDEX, 0);
+              paletted.setOption(PseudoBamDecoder.OPTION_BOOL_COMPRESSED, config.compressedBam);
+              try {
+                if (!paletted.exportBamV1(staging.resolve(fileName), null, 0)) {
+                  throw new IOException("BAM V1 encoder produced no output for " + fileName + ".");
+                }
+              } finally {
+                if (paletted != source) {
+                  paletted.close();
+                }
+              }
+            } else {
+              if (!source.exportBamV2(staging.resolve(fileName), DxtEncoder.DxtType.DXT5, pvrzIndex, false, null, 0)) {
+                throw new IOException("BAM V2 encoder produced no output for " + fileName + ".");
+              }
+              pvrzIndex = CreatureAnimationExporter.findPvrzStartIndex(staging);
+            }
+          } finally {
+            source.close();
+          }
         }
       }
 
@@ -337,8 +437,41 @@ public final class EquipmentOverlayExporter {
     }
   }
 
-  private static FamilyLayout createLayout(Config config) {
-    return config.family.createOverlayLayout(config.resourcePrefix, config.appearanceCode, config.weaponType);
+  private static List<FamilyLayout> createLayouts(Config config, AttackKind attackKind) {
+    final List<FamilyLayout> result = new ArrayList<>();
+    result.add(config.family.createOverlayLayout(config.resourcePrefix, config.appearanceCode, config.weaponType,
+        attackKind, OverlaySlot.MAIN_HAND));
+    if (config.hasOffhand()) {
+      final OverlaySlot slot = config.offhandType.isShield() ? OverlaySlot.SHIELD : OverlaySlot.OFF_HAND_WEAPON;
+      result.add(config.family.createOverlayLayout(config.offhandResourcePrefix, config.offhandAppearanceCode,
+          config.offhandType, attackKind, slot));
+    }
+    return result;
+  }
+
+  private static List<PlannedLayer> createLayers(EquipmentOverlayModel model, EquipmentOverlayModel offhandModel,
+      Config config, AttackKind attackKind) {
+    final List<FamilyLayout> layouts = createLayouts(config, attackKind);
+    final List<PlannedLayer> result = new ArrayList<>();
+    result.add(new PlannedLayer(OverlaySlot.MAIN_HAND, model, layouts.get(0)));
+    if (config.hasOffhand()) {
+      final OverlaySlot slot = config.offhandType.isShield() ? OverlaySlot.SHIELD : OverlaySlot.OFF_HAND_WEAPON;
+      result.add(new PlannedLayer(slot, offhandModel, layouts.get(1)));
+    }
+    return result;
+  }
+
+  private static String getSlotLabel(OverlaySlot slot) {
+    switch (slot) {
+      case MAIN_HAND:
+        return "main-hand";
+      case SHIELD:
+        return "shield";
+      case OFF_HAND_WEAPON:
+        return "left-handed weapon";
+      default:
+        throw new IllegalStateException("Unsupported equipment overlay slot: " + slot);
+    }
   }
 
   private static String getGameTitle(Profile.Game game) {
@@ -371,6 +504,18 @@ public final class EquipmentOverlayExporter {
       if (config.bamFormat == BamFormat.BAM_V2) {
         CreatureAnimationExporter.validatePvrzReferences(staging, path);
       }
+    }
+  }
+
+  private static final class PlannedLayer {
+    private final OverlaySlot slot;
+    private final EquipmentOverlayModel model;
+    private final FamilyLayout layout;
+
+    private PlannedLayer(OverlaySlot slot, EquipmentOverlayModel model, FamilyLayout layout) {
+      this.slot = slot;
+      this.model = model;
+      this.layout = layout;
     }
   }
 }

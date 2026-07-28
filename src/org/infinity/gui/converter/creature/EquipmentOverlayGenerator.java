@@ -14,6 +14,7 @@ import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -39,39 +40,71 @@ public final class EquipmentOverlayGenerator {
   private static final int WORK_ORIGIN = WORK_SIZE / 2;
   private static final int ALPHA_THRESHOLD = 16;
 
-  /** Weapon silhouettes supported by the offline overlay renderer. */
+  /** Engine attack-resource classes used by procedural equipment. */
+  public enum AttackStyle {
+    ONE_HANDED,
+    TWO_HANDED,
+    BOW,
+    CROSSBOW,
+    SLING,
+    SHIELD
+  }
+
+  /** Equipment silhouettes supported by the offline overlay renderer. */
   public enum WeaponType {
-    SICKLE("sickle", "SK", 0.88, false, "sickle", "hand sickle", "kama"),
-    SCYTHE("scythe", "SY", 1.28, true, "scythe", "war scythe"),
-    SWORD("sword", "S1", 1.0, false, "sword", "longsword", "long sword", "blade"),
-    GREATSWORD("greatsword", "S2", 1.24, true, "greatsword", "great sword", "two handed sword",
+    SICKLE("sickle", "SK", 0.88, AttackStyle.ONE_HANDED, "sickle", "hand sickle", "kama"),
+    SCYTHE("scythe", "SY", 1.28, AttackStyle.TWO_HANDED, "scythe", "war scythe"),
+    SWORD("sword", "S1", 1.0, AttackStyle.ONE_HANDED, "sword", "longsword", "long sword", "blade"),
+    SCIMITAR("scimitar", "SC", 1.0, AttackStyle.ONE_HANDED, "scimitar", "scimitars"),
+    WAKIZASHI("wakizashi", null, 0.82, AttackStyle.ONE_HANDED, "wakizashi", "wakizashis"),
+    NINJATO("ninjato", null, 0.94, AttackStyle.ONE_HANDED, "ninjato", "ninjatō", "ninjatos", "ninjatōs",
+        "ninja sword"),
+    KATANA("katana", "S3", 1.08, AttackStyle.ONE_HANDED, "katana", "katanas"),
+    GREATSWORD("greatsword", "S2", 1.24, AttackStyle.TWO_HANDED, "greatsword", "great sword",
+        "two handed sword",
         "two-handed sword", "zweihander"),
-    DAGGER("dagger", "DD", 0.62, false, "dagger", "knife", "dirk"),
-    AXE("axe", "AX", 0.96, false, "axe", "hatchet"),
-    BATTLEAXE("battleaxe", "BA", 1.15, true, "battleaxe", "battle axe", "greataxe", "great axe"),
-    MACE("mace", "MC", 0.9, false, "mace", "morning star", "morningstar"),
-    HAMMER("war hammer", "WH", 0.94, false, "war hammer", "warhammer", "hammer", "maul"),
-    SPEAR("spear", "SP", 1.28, true, "spear", "pike", "lance"),
-    HALBERD("halberd", "HB", 1.28, true, "halberd", "poleaxe", "pole axe"),
-    GLAIVE("glaive", "GL", 1.24, true, "glaive", "naginata", "polearm"),
-    TRIDENT("trident", "TR", 1.25, true, "trident", "trishula"),
-    STAFF("staff", "QS", 1.2, true, "quarterstaff", "quarter staff", "staff", "rod"),
-    CLUB("club", "CL", 0.88, false, "club", "cudgel"),
-    FLAIL("flail", "FL", 0.98, false, "flail"),
-    BOW("bow", "BW", 1.12, true, "longbow", "long bow", "shortbow", "short bow", "bow"),
-    WHIP("whip", "WP", 1.15, false, "whip", "lash");
+    DAGGER("dagger", "DD", 0.62, AttackStyle.ONE_HANDED, "dagger", "knife", "dirk"),
+    AXE("axe", "AX", 0.96, AttackStyle.ONE_HANDED, "axe", "hatchet"),
+    BATTLEAXE("battleaxe", "BA", 1.15, AttackStyle.TWO_HANDED, "battleaxe", "battle axe", "greataxe",
+        "great axe"),
+    MACE("mace", "MC", 0.9, AttackStyle.ONE_HANDED, "mace", "morning star", "morningstar"),
+    HAMMER("war hammer", "WH", 0.94, AttackStyle.ONE_HANDED, "war hammer", "warhammer", "hammer", "maul"),
+    ONE_HANDED_SPEAR("one-handed spear", "SP", 1.02, AttackStyle.ONE_HANDED, "one handed spear",
+        "one-handed spear", "short spear"),
+    SPEAR("spear", "SP", 1.28, AttackStyle.TWO_HANDED, "two handed spear", "two-handed spear", "spear",
+        "pike", "lance"),
+    HALBERD("halberd", "HB", 1.28, AttackStyle.TWO_HANDED, "halberd", "poleaxe", "pole axe"),
+    GLAIVE("glaive", "GL", 1.24, AttackStyle.TWO_HANDED, "glaive", "naginata", "polearm"),
+    TRIDENT("trident", "TR", 1.25, AttackStyle.TWO_HANDED, "trident", "trishula"),
+    STAFF("staff", "QS", 1.2, AttackStyle.TWO_HANDED, "quarterstaff", "quarter staff", "staff", "rod"),
+    CLUB("club", "CL", 0.88, AttackStyle.ONE_HANDED, "club", "cudgel"),
+    FLAIL("flail", "FL", 0.98, AttackStyle.ONE_HANDED, "flail"),
+    SHORTBOW("shortbow", "BS", 0.94, AttackStyle.BOW, "shortbow", "short bow"),
+    LONGBOW("longbow", "BW", 1.16, AttackStyle.BOW, "longbow", "long bow"),
+    BOW("bow", "BW", 1.08, AttackStyle.BOW, "bow"),
+    LIGHT_CROSSBOW("light crossbow", "CB", 1.0, AttackStyle.CROSSBOW, "light crossbow"),
+    HEAVY_CROSSBOW("heavy crossbow", "CB", 1.16, AttackStyle.CROSSBOW, "heavy crossbow"),
+    CROSSBOW("crossbow", "CB", 1.08, AttackStyle.CROSSBOW, "crossbow"),
+    SLING("sling", "SL", 0.86, AttackStyle.SLING, "sling"),
+    WHIP("whip", "WP", 1.15, AttackStyle.ONE_HANDED, "whip", "lash"),
+    BUCKLER("buckler", "D1", 0.72, AttackStyle.SHIELD, "buckler", "bucklers"),
+    SMALL_SHIELD("small shield", "D2", 0.86, AttackStyle.SHIELD, "small shield", "small shields"),
+    MEDIUM_SHIELD("medium shield", "D3", 1.0, AttackStyle.SHIELD, "medium shield", "medium shields",
+        "shield"),
+    LARGE_SHIELD("large shield", "D4", 1.16, AttackStyle.SHIELD, "large shield", "large shields",
+        "tower shield");
 
     private final String label;
     private final String appearanceCode;
     private final double lengthScale;
-    private final boolean twoHanded;
+    private final AttackStyle attackStyle;
     private final List<String> aliases;
 
-    WeaponType(String label, String appearanceCode, double lengthScale, boolean twoHanded, String... aliases) {
+    WeaponType(String label, String appearanceCode, double lengthScale, AttackStyle attackStyle, String... aliases) {
       this.label = label;
       this.appearanceCode = appearanceCode;
       this.lengthScale = lengthScale;
-      this.twoHanded = twoHanded;
+      this.attackStyle = attackStyle;
       this.aliases = Collections.unmodifiableList(Arrays.asList(aliases));
     }
 
@@ -80,11 +113,28 @@ public final class EquipmentOverlayGenerator {
     }
 
     public String getSuggestedAppearanceCode() {
-      return appearanceCode;
+      return appearanceCode != null ? appearanceCode : deriveAppearanceCode(label);
     }
 
     public boolean isTwoHanded() {
-      return twoHanded;
+      return attackStyle == AttackStyle.TWO_HANDED || attackStyle == AttackStyle.BOW
+          || attackStyle == AttackStyle.CROSSBOW;
+    }
+
+    public boolean isShield() {
+      return attackStyle == AttackStyle.SHIELD;
+    }
+
+    public boolean isOneHandedMelee() {
+      return attackStyle == AttackStyle.ONE_HANDED;
+    }
+
+    public boolean allowsShield() {
+      return attackStyle == AttackStyle.ONE_HANDED || attackStyle == AttackStyle.SLING;
+    }
+
+    public AttackStyle getAttackStyle() {
+      return attackStyle;
     }
 
     public List<String> getAliases() {
@@ -102,6 +152,7 @@ public final class EquipmentOverlayGenerator {
     private final String prompt;
     private final WeaponType sourceWeapon;
     private final WeaponType targetWeapon;
+    private final WeaponType targetOffhand;
     private final Color metalColor;
     private final Color accentColor;
     private final Color glowColor;
@@ -109,11 +160,12 @@ public final class EquipmentOverlayGenerator {
     private final boolean ornate;
     private final double scale;
 
-    private PromptSpec(String prompt, WeaponType sourceWeapon, WeaponType targetWeapon, Color metalColor,
-        Color accentColor, Color glowColor, boolean glowing, boolean ornate, double scale) {
+    private PromptSpec(String prompt, WeaponType sourceWeapon, WeaponType targetWeapon, WeaponType targetOffhand,
+        Color metalColor, Color accentColor, Color glowColor, boolean glowing, boolean ornate, double scale) {
       this.prompt = prompt;
       this.sourceWeapon = sourceWeapon;
       this.targetWeapon = targetWeapon;
+      this.targetOffhand = targetOffhand;
       this.metalColor = metalColor;
       this.accentColor = accentColor;
       this.glowColor = glowColor;
@@ -132,6 +184,18 @@ public final class EquipmentOverlayGenerator {
 
     public WeaponType getTargetWeapon() {
       return targetWeapon;
+    }
+
+    public WeaponType getTargetOffhand() {
+      return targetOffhand;
+    }
+
+    public boolean hasOffhand() {
+      return targetOffhand != null;
+    }
+
+    public boolean isTwoWeaponLoadout() {
+      return targetOffhand != null && !targetOffhand.isShield();
     }
 
     public Color getMetalColor() {
@@ -160,8 +224,17 @@ public final class EquipmentOverlayGenerator {
 
     public String getSummary() {
       final String source = sourceWeapon != null ? sourceWeapon.getLabel() : "auto-detected source";
-      return source + " → " + targetWeapon.getLabel() + (glowing ? " • glowing" : "")
+      final String target = targetWeapon.getLabel()
+          + (targetOffhand != null ? " + " + targetOffhand.getLabel() + " (off-hand)" : "");
+      return source + " → " + target + (glowing ? " • glowing" : "")
           + (ornate ? " • ornate" : "") + " • scale " + String.format(Locale.ENGLISH, "%.2f", scale);
+    }
+
+    public PromptSpec forTarget(WeaponType target) {
+      if (target == null) {
+        throw new IllegalArgumentException("A target equipment type is required.");
+      }
+      return new PromptSpec(prompt, null, target, null, metalColor, accentColor, glowColor, glowing, ornate, scale);
     }
   }
 
@@ -180,15 +253,60 @@ public final class EquipmentOverlayGenerator {
     final String normalized = normalizeWords(original);
     final List<WeaponMatch> weaponMatches = findWeaponMatches(normalized);
     if (weaponMatches.isEmpty()) {
-      throw new IllegalArgumentException("The equipment prompt must name a supported weapon, such as sickle, scythe, "
-          + "sword, axe, mace, hammer, spear, halberd, staff, flail, bow or whip.");
+      throw new IllegalArgumentException("The equipment prompt must name supported equipment, such as a sword, "
+          + "crossbow, sling, spear, bow or shield.");
     }
 
     WeaponType source = null;
-    WeaponType target = weaponMatches.get(weaponMatches.size() - 1).type;
-    if (weaponMatches.size() > 1) {
-      source = weaponMatches.get(0).type;
+    WeaponType target;
+    WeaponType offhand = null;
+    if (hasHandQualifier(normalized)) {
+      final List<WeaponMatch> unassigned = new ArrayList<>();
+      WeaponMatch mainMatch = null;
+      WeaponMatch offhandMatch = null;
+      for (final WeaponMatch match : weaponMatches) {
+        final Hand hand = findNearestHand(normalized, match);
+        if (hand == Hand.MAIN) {
+          if (mainMatch != null) {
+            throw new IllegalArgumentException("The prompt names more than one main-hand target. "
+                + "Describe exactly one main-hand item and at most one off-hand item.");
+          }
+          mainMatch = match;
+        } else if (hand == Hand.OFF) {
+          if (offhandMatch != null) {
+            throw new IllegalArgumentException("The prompt names more than one off-hand target.");
+          }
+          offhandMatch = match;
+        } else {
+          unassigned.add(match);
+        }
+      }
+      if (mainMatch == null && unassigned.size() == 1) {
+        mainMatch = unassigned.remove(0);
+      }
+      if (mainMatch == null) {
+        throw new IllegalArgumentException("A dual-item request must name exactly one main-hand item.");
+      }
+      if (!unassigned.isEmpty()) {
+        if (unassigned.size() == 1 && unassigned.get(0).index < mainMatch.index) {
+          source = unassigned.get(0).type;
+        } else {
+          throw new IllegalArgumentException("The equipment roles are ambiguous. Qualify each requested item with "
+              + "\"main hand\" or \"offhand\".");
+        }
+      }
+      target = mainMatch.type;
+      offhand = offhandMatch != null ? offhandMatch.type : null;
+    } else {
+      if (weaponMatches.size() > 2) {
+        throw new IllegalArgumentException("The prompt names several equipment types without assigning hand roles.");
+      }
+      target = weaponMatches.get(weaponMatches.size() - 1).type;
+      if (weaponMatches.size() > 1) {
+        source = weaponMatches.get(0).type;
+      }
     }
+    validateLoadout(target, offhand);
 
     final List<ColorMatch> colors = findColorMatches(normalized);
     final Color metal = !colors.isEmpty() ? colors.get(0).color : new Color(202, 210, 220);
@@ -198,17 +316,18 @@ public final class EquipmentOverlayGenerator {
         " enchanted ", " magical ");
     final boolean ornate = containsAny(normalized, " ornate ", " runed ", " engraved ", " jeweled ", " jewelled ",
         " ceremonial ");
+    final String modifiers = removeEquipmentPhrases(normalized, weaponMatches);
     double scale = 1.0;
-    if (containsAny(normalized, " huge ", " massive ", " enormous ", " oversized ")) {
+    if (containsAny(modifiers, " huge ", " massive ", " enormous ", " oversized ")) {
       scale = 1.22;
-    } else if (containsAny(normalized, " large ", " long ", " heavy ")) {
+    } else if (containsAny(modifiers, " large ", " long ", " heavy ")) {
       scale = 1.1;
-    } else if (containsAny(normalized, " tiny ", " miniature ")) {
+    } else if (containsAny(modifiers, " tiny ", " miniature ")) {
       scale = 0.72;
-    } else if (containsAny(normalized, " small ", " short ", " light ")) {
+    } else if (containsAny(modifiers, " small ", " short ", " light ")) {
       scale = 0.86;
     }
-    return new PromptSpec(original, source, target, metal, accent, glow, glowing, ornate, scale);
+    return new PromptSpec(original, source, target, offhand, metal, accent, glow, glowing, ornate, scale);
   }
 
   /**
@@ -495,6 +614,18 @@ public final class EquipmentOverlayGenerator {
       case GREATSWORD:
         drawSword(graphics, prompt, length, prompt.targetWeapon == WeaponType.GREATSWORD);
         break;
+      case SCIMITAR:
+        drawCurvedSword(graphics, prompt, length, 0.2, false);
+        break;
+      case WAKIZASHI:
+        drawCurvedSword(graphics, prompt, length, 0.12, true);
+        break;
+      case KATANA:
+        drawCurvedSword(graphics, prompt, length, 0.09, false);
+        break;
+      case NINJATO:
+        drawNinjato(graphics, prompt, length);
+        break;
       case DAGGER:
         drawSword(graphics, prompt, length, false);
         break;
@@ -512,6 +643,7 @@ public final class EquipmentOverlayGenerator {
         drawHandle(graphics, handle, -length * 0.12, length * 0.84, handleWidth);
         drawHammerHead(graphics, outline, prompt.metalColor, highlight, length * 0.86, length * 0.14);
         break;
+      case ONE_HANDED_SPEAR:
       case SPEAR:
       case GLAIVE:
       case HALBERD:
@@ -531,15 +663,31 @@ public final class EquipmentOverlayGenerator {
       case FLAIL:
         drawFlail(graphics, outline, handle, prompt.metalColor, length, handleWidth);
         break;
+      case SHORTBOW:
+      case LONGBOW:
       case BOW:
         drawBow(graphics, outline, handle, length, handleWidth);
+        break;
+      case LIGHT_CROSSBOW:
+      case HEAVY_CROSSBOW:
+      case CROSSBOW:
+        drawCrossbow(graphics, outline, handle, prompt.metalColor, length, handleWidth,
+            prompt.targetWeapon == WeaponType.HEAVY_CROSSBOW);
+        break;
+      case SLING:
+        drawSling(graphics, outline, handle, length, handleWidth);
         break;
       case WHIP:
         drawWhip(graphics, outline, handle, length, handleWidth);
         break;
-      default:
-        drawSword(graphics, prompt, length, false);
+      case BUCKLER:
+      case SMALL_SHIELD:
+      case MEDIUM_SHIELD:
+      case LARGE_SHIELD:
+        drawShield(graphics, prompt, length);
         break;
+      default:
+        throw new IllegalStateException("Unsupported procedural equipment type: " + prompt.targetWeapon);
     }
 
     if (prompt.ornate) {
@@ -638,6 +786,54 @@ public final class EquipmentOverlayGenerator {
         BasicStroke.JOIN_ROUND));
     graphics.draw(new Line2D.Double(bladeStart - halfWidth * 0.15, -halfWidth * 1.35,
         bladeStart - halfWidth * 0.15, halfWidth * 1.35));
+  }
+
+  private static void drawCurvedSword(Graphics2D graphics, PromptSpec prompt, double length, double curvature,
+      boolean compactGuard) {
+    final double handleLength = length * 0.2;
+    final double bladeStart = length * 0.08;
+    final double halfWidth = clamp(length * 0.052, 2.4, 6.5);
+    drawHandle(graphics, prompt.accentColor, -handleLength, bladeStart,
+        (float) clamp(length * 0.052, 2.2, 4.8));
+
+    final Path2D blade = new Path2D.Double();
+    final double bend = length * curvature;
+    blade.moveTo(bladeStart, -halfWidth);
+    blade.curveTo(length * 0.45, -halfWidth - bend * 0.32, length * 0.82, -halfWidth - bend * 0.82,
+        length, -bend);
+    blade.curveTo(length * 0.84, halfWidth * 0.42 - bend * 0.7, length * 0.45,
+        halfWidth - bend * 0.22, bladeStart, halfWidth);
+    blade.closePath();
+    graphics.setColor(darken(prompt.metalColor, 0.58));
+    graphics.setStroke(new BasicStroke(2.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+    graphics.draw(blade);
+    graphics.setColor(prompt.metalColor);
+    graphics.fill(blade);
+    graphics.setColor(lighten(prompt.metalColor, 0.48));
+    graphics.setStroke(new BasicStroke(1.15f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+    graphics.draw(new java.awt.geom.QuadCurve2D.Double(bladeStart + 2.0, -halfWidth * 0.4,
+        length * 0.62, -bend * 0.55, length * 0.94, -bend + 1.0));
+
+    graphics.setColor(lighten(prompt.accentColor, 0.3));
+    if (compactGuard) {
+      graphics.setStroke(new BasicStroke((float) Math.max(2.0, halfWidth * 0.5), BasicStroke.CAP_ROUND,
+          BasicStroke.JOIN_ROUND));
+      graphics.draw(new Line2D.Double(bladeStart - halfWidth * 0.12, -halfWidth,
+          bladeStart - halfWidth * 0.12, halfWidth));
+    } else {
+      graphics.fill(new Ellipse2D.Double(bladeStart - halfWidth * 0.72, -halfWidth * 1.16,
+          halfWidth * 1.12, halfWidth * 2.32));
+    }
+  }
+
+  private static void drawNinjato(Graphics2D graphics, PromptSpec prompt, double length) {
+    drawSword(graphics, prompt, length, false);
+    final double guardX = length * 0.07;
+    final double guardSize = clamp(length * 0.075, 3.4, 7.5);
+    graphics.setColor(darken(prompt.accentColor, 0.28));
+    graphics.setStroke(new BasicStroke(1.8f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER));
+    graphics.draw(new java.awt.geom.Rectangle2D.Double(guardX - guardSize * 0.45, -guardSize,
+        guardSize * 0.9, guardSize * 2.0));
   }
 
   private static void drawAxeHead(Graphics2D graphics, Color outline, Color metal, Color highlight, double root,
@@ -808,6 +1004,92 @@ public final class EquipmentOverlayGenerator {
     graphics.draw(new Line2D.Double(-length * 0.08, -length * 0.36, -length * 0.08, length * 0.36));
   }
 
+  private static void drawCrossbow(Graphics2D graphics, Color outline, Color wood, Color metal, double length,
+      float width, boolean heavy) {
+    final double stockEnd = length * 0.92;
+    drawHandle(graphics, wood, -length * 0.16, stockEnd, width * (heavy ? 1.25f : 1.0f));
+    final double limbX = length * 0.64;
+    final double limbHalf = length * (heavy ? 0.34 : 0.28);
+    final Path2D limb = new Path2D.Double();
+    limb.moveTo(limbX, -limbHalf);
+    limb.quadTo(limbX + length * 0.12, 0.0, limbX, limbHalf);
+    graphics.setColor(outline);
+    graphics.setStroke(new BasicStroke(width + 1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+    graphics.draw(limb);
+    graphics.setColor(wood);
+    graphics.setStroke(new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+    graphics.draw(limb);
+    graphics.setColor(lighten(metal, 0.35));
+    graphics.setStroke(new BasicStroke(1.1f));
+    graphics.draw(new Line2D.Double(limbX, -limbHalf, limbX - length * 0.08, 0.0));
+    graphics.draw(new Line2D.Double(limbX - length * 0.08, 0.0, limbX, limbHalf));
+    graphics.setColor(metal);
+    graphics.setStroke(new BasicStroke(Math.max(1.2f, width * 0.35f), BasicStroke.CAP_ROUND,
+        BasicStroke.JOIN_ROUND));
+    graphics.draw(new Line2D.Double(-length * 0.02, 0.0, length, 0.0));
+  }
+
+  private static void drawSling(Graphics2D graphics, Color outline, Color leather, double length, float width) {
+    drawHandle(graphics, leather, -length * 0.12, length * 0.18, width * 0.95f);
+    final Path2D cords = new Path2D.Double();
+    cords.moveTo(length * 0.16, -width * 0.2);
+    cords.curveTo(length * 0.48, -length * 0.18, length * 0.72, -length * 0.12, length * 0.88, 0.0);
+    cords.moveTo(length * 0.16, width * 0.2);
+    cords.curveTo(length * 0.48, length * 0.18, length * 0.72, length * 0.12, length * 0.88, 0.0);
+    graphics.setColor(outline);
+    graphics.setStroke(new BasicStroke(Math.max(1.5f, width * 0.45f), BasicStroke.CAP_ROUND,
+        BasicStroke.JOIN_ROUND));
+    graphics.draw(cords);
+    graphics.setColor(leather);
+    graphics.setStroke(new BasicStroke(Math.max(1.0f, width * 0.22f), BasicStroke.CAP_ROUND,
+        BasicStroke.JOIN_ROUND));
+    graphics.draw(cords);
+    final double pouchWidth = length * 0.18;
+    final double pouchHeight = Math.max(width * 1.6, length * 0.07);
+    graphics.setColor(outline);
+    graphics.fill(new Ellipse2D.Double(length * 0.88 - pouchWidth / 2.0, -pouchHeight / 2.0,
+        pouchWidth, pouchHeight));
+    graphics.setColor(leather);
+    graphics.fill(new Ellipse2D.Double(length * 0.88 - pouchWidth * 0.42, -pouchHeight * 0.36,
+        pouchWidth * 0.84, pouchHeight * 0.72));
+  }
+
+  private static void drawShield(Graphics2D graphics, PromptSpec prompt, double length) {
+    final boolean buckler = prompt.targetWeapon == WeaponType.BUCKLER;
+    final boolean large = prompt.targetWeapon == WeaponType.LARGE_SHIELD;
+    final double width = length * (buckler ? 0.72 : large ? 0.9 : 0.82);
+    final double height = length * (buckler ? 0.72
+        : prompt.targetWeapon == WeaponType.SMALL_SHIELD ? 0.84 : large ? 1.18 : 1.0);
+    final double centerX = length * 0.36;
+    final double halfWidth = width / 2.0;
+    final double halfHeight = height / 2.0;
+    final Path2D shield = new Path2D.Double();
+    if (buckler) {
+      shield.append(new Ellipse2D.Double(centerX - halfWidth, -halfHeight, width, height), false);
+    } else {
+      shield.moveTo(centerX - halfWidth, -halfHeight * 0.72);
+      shield.quadTo(centerX, -halfHeight * 1.12, centerX + halfWidth, -halfHeight * 0.72);
+      shield.lineTo(centerX + halfWidth * 0.82, halfHeight * 0.38);
+      shield.quadTo(centerX, halfHeight * 1.12, centerX - halfWidth * 0.82, halfHeight * 0.38);
+      shield.closePath();
+    }
+    graphics.setColor(darken(prompt.metalColor, 0.62));
+    graphics.setStroke(new BasicStroke(3.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+    graphics.draw(shield);
+    graphics.setColor(prompt.accentColor);
+    graphics.fill(shield);
+    graphics.setColor(prompt.metalColor);
+    graphics.setStroke(new BasicStroke(Math.max(1.5f, (float) (width * 0.055)), BasicStroke.CAP_ROUND,
+        BasicStroke.JOIN_ROUND));
+    graphics.draw(shield);
+    final double bossRadius = Math.max(2.5, Math.min(width, height) * 0.14);
+    graphics.setColor(darken(prompt.metalColor, 0.42));
+    graphics.fill(new Ellipse2D.Double(centerX - bossRadius - 1.2, -bossRadius - 1.2,
+        bossRadius * 2.0 + 2.4, bossRadius * 2.0 + 2.4));
+    graphics.setColor(lighten(prompt.metalColor, 0.18));
+    graphics.fill(new Ellipse2D.Double(centerX - bossRadius, -bossRadius, bossRadius * 2.0, bossRadius * 2.0));
+  }
+
   private static void drawWhip(Graphics2D graphics, Color outline, Color leather, double length, float width) {
     drawHandle(graphics, leather, -length * 0.12, length * 0.24, width * 1.15f);
     final Path2D lash = new Path2D.Double();
@@ -878,6 +1160,74 @@ public final class EquipmentOverlayGenerator {
     return deduplicated;
   }
 
+  public static void validateLoadout(WeaponType mainHand, WeaponType offhand) {
+    if (mainHand == null) {
+      throw new IllegalArgumentException("A main-hand equipment type is required.");
+    }
+    if (mainHand.isShield()) {
+      throw new IllegalArgumentException("Shields must be assigned to the offhand together with a main-hand item.");
+    }
+    if (offhand == null) {
+      return;
+    }
+    if (offhand.isShield()) {
+      if (!mainHand.allowsShield()) {
+        throw new IllegalArgumentException(mainHand.getLabel()
+            + " cannot be combined with a shield because its decoder pose occupies both hands.");
+      }
+      return;
+    }
+    if (!mainHand.isOneHandedMelee() || !offhand.isOneHandedMelee()) {
+      throw new IllegalArgumentException("Two-weapon fighting requires one one-handed melee weapon in each hand.");
+    }
+  }
+
+  private static boolean hasHandQualifier(String normalized) {
+    return containsAny(normalized, " main hand ", " off hand ", " offhand ");
+  }
+
+  private static Hand findNearestHand(String normalized, WeaponMatch equipment) {
+    Hand result = null;
+    int bestDistance = Integer.MAX_VALUE;
+    final String[] markers = { " main hand ", " off hand ", " offhand " };
+    final Hand[] hands = { Hand.MAIN, Hand.OFF, Hand.OFF };
+    for (int markerIndex = 0; markerIndex < markers.length; markerIndex++) {
+      final String marker = markers[markerIndex];
+      int index = normalized.indexOf(marker);
+      while (index >= 0) {
+        final int equipmentEnd = equipment.index + equipment.length;
+        final int markerEnd = index + marker.length();
+        final int distance = equipmentEnd < index ? index - equipmentEnd
+            : markerEnd < equipment.index ? equipment.index - markerEnd : 0;
+        final int betweenStart = Math.min(equipmentEnd, markerEnd);
+        final int betweenEnd = Math.max(equipment.index, index);
+        final String between = betweenEnd > betweenStart
+            ? normalized.substring(betweenStart, betweenEnd) : "";
+        final boolean crossesConjunction = (" " + between.trim() + " ").contains(" and ");
+        if (!crossesConjunction && distance <= 28 && distance < bestDistance) {
+          result = hands[markerIndex];
+          bestDistance = distance;
+        } else if (!crossesConjunction && distance <= 28 && distance == bestDistance
+            && result != hands[markerIndex]) {
+          result = null;
+        }
+        index = normalized.indexOf(marker, index + 1);
+      }
+    }
+    return result;
+  }
+
+  private static String removeEquipmentPhrases(String normalized, List<WeaponMatch> matches) {
+    final StringBuilder result = new StringBuilder(normalized);
+    for (final WeaponMatch match : matches) {
+      final int end = Math.min(result.length(), match.index + match.length);
+      for (int index = Math.max(0, match.index); index < end; index++) {
+        result.setCharAt(index, ' ');
+      }
+    }
+    return result.toString();
+  }
+
   private static List<ColorMatch> findColorMatches(String normalized) {
     final List<ColorMatch> result = new ArrayList<>();
     for (final Map.Entry<String, Color> entry : NAMED_COLORS.entrySet()) {
@@ -916,8 +1266,17 @@ public final class EquipmentOverlayGenerator {
   }
 
   private static String normalizeWords(String value) {
-    final String text = value != null ? value.toLowerCase(Locale.ENGLISH) : "";
+    final String original = value != null ? value.toLowerCase(Locale.ENGLISH) : "";
+    final String text = Normalizer.normalize(original, Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
     return " " + text.replaceAll("[^a-z0-9]+", " ").trim().replaceAll("\\s+", " ") + " ";
+  }
+
+  private static String deriveAppearanceCode(String label) {
+    final String normalized = normalizeWords(label).replace(" ", "").toUpperCase(Locale.ENGLISH);
+    if (normalized.length() < 2) {
+      throw new IllegalArgumentException("Equipment labels must provide at least two ASCII code characters.");
+    }
+    return normalized.substring(0, 2);
   }
 
   private static boolean containsAny(String value, String... candidates) {
@@ -1000,5 +1359,10 @@ public final class EquipmentOverlayGenerator {
       this.index = index;
       this.color = color;
     }
+  }
+
+  private enum Hand {
+    MAIN,
+    OFF
   }
 }

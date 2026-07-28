@@ -14,6 +14,7 @@ import java.util.Set;
 
 import org.infinity.gui.converter.creature.CreatureAnimationFamily.FamilyLayout;
 import org.infinity.gui.converter.creature.CreatureAnimationFamily.LayoutBuilder;
+import org.infinity.gui.converter.creature.EquipmentOverlayGenerator.AttackStyle;
 import org.infinity.gui.converter.creature.EquipmentOverlayGenerator.WeaponType;
 import org.infinity.gui.converter.creature.MonsterAnimationLayout.OutputSlot;
 import org.infinity.gui.converter.creature.MonsterAnimationLayout.Sequence;
@@ -25,9 +26,11 @@ import org.infinity.resource.cre.decoder.MonsterLayeredDecoder;
 import org.infinity.resource.cre.decoder.MonsterLayeredSpellDecoder;
 import org.infinity.resource.cre.decoder.SpriteDecoder;
 import org.infinity.resource.cre.decoder.util.AnimationInfo;
+import org.infinity.resource.cre.decoder.util.SegmentDef;
+import org.infinity.util.tuples.Couple;
 
 /**
- * Declarative weapon-overlay layouts for every Near Infinity decoder that emits weapon sprite segments.
+ * Declarative equipment-overlay layouts for every Near Infinity decoder that emits weapon sprite segments.
  */
 public enum EquipmentOverlayFamily {
   CHARACTER(AnimationInfo.Type.CHARACTER, CreatureAnimationFamily.CHARACTER, "character", CodeMode.FULL),
@@ -46,10 +49,19 @@ public enum EquipmentOverlayFamily {
     FIRST_CHARACTER
   }
 
-  private enum AttackKind {
+  public enum AttackKind {
     ONE_HANDED,
     TWO_HANDED,
-    BOW
+    TWO_WEAPON,
+    BOW,
+    CROSSBOW,
+    SLING
+  }
+
+  public enum OverlaySlot {
+    MAIN_HAND,
+    SHIELD,
+    OFF_HAND_WEAPON
   }
 
   private static final int[] FULL_W = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
@@ -117,11 +129,23 @@ public enum EquipmentOverlayFamily {
    * @param monsterResref resolved solid-layer resref for type {@code 0x7000}; ignored by other families
    */
   public String getOverlayResourcePrefix(SpriteDecoder decoder, String monsterResref) {
+    return getOverlayResourcePrefix(decoder, monsterResref, OverlaySlot.MAIN_HAND);
+  }
+
+  /**
+   * Returns the exact BAM prefix used by the requested equipment slot.
+   */
+  public String getOverlayResourcePrefix(SpriteDecoder decoder, String monsterResref, OverlaySlot slot) {
     if (decoder == null || decoder.getAnimationType() != animationType) {
       throw new IllegalArgumentException("The decoder does not belong to " + label + ".");
     }
+    if (slot == null) {
+      throw new IllegalArgumentException("An equipment overlay slot is required.");
+    }
     final String value;
-    if (this == CHARACTER || this == CHARACTER_OLD) {
+    if (this == CHARACTER && slot != OverlaySlot.MAIN_HAND) {
+      value = ((CharacterDecoder) decoder).getShieldHeightCode();
+    } else if (this == CHARACTER || this == CHARACTER_OLD) {
       value = ((CharacterBaseDecoder) decoder).getHeightCode();
     } else if (this == MONSTER && monsterResref != null && !monsterResref.trim().isEmpty()) {
       value = monsterResref;
@@ -130,7 +154,8 @@ public enum EquipmentOverlayFamily {
     }
     final String normalized = normalizePrefix(value);
     if (normalized.isEmpty()) {
-      throw new IllegalArgumentException(label + " does not define a usable weapon-overlay resource prefix.");
+      throw new IllegalArgumentException(label + " does not define a usable " + getSlotLabel(slot)
+          + " overlay resource prefix.");
     }
     return normalized;
   }
@@ -194,34 +219,51 @@ public enum EquipmentOverlayFamily {
   }
 
   public void validateDecoder(SpriteDecoder decoder, WeaponType targetWeapon) {
+    validateDecoder(decoder, targetWeapon, null);
+  }
+
+  public void validateDecoder(SpriteDecoder decoder, WeaponType mainHand, WeaponType offhand) {
     if (decoder == null || decoder.getAnimationType() != animationType) {
       throw new IllegalArgumentException("The selected reference does not use " + label + ".");
     }
+    validateLoadout(mainHand, offhand);
     if (this == CHARACTER_OLD && ((CharacterOldDecoder) decoder).isWeaponsHidden()) {
-      throw new IllegalArgumentException("The selected character_old definition suppresses weapon overlays.");
+      throw new IllegalArgumentException("The selected character_old definition suppresses equipment overlays.");
     }
     if ((this == CHARACTER || this == CHARACTER_OLD)
         && normalizeOptional(((CharacterBaseDecoder) decoder).getHeightCode()).isEmpty()) {
       throw new IllegalArgumentException("The selected " + label + " definition has no weapon height code.");
     }
     if ((this == MONSTER_LAYERED || this == MONSTER_LAYERED_SPELL)
-        && getRequiredSourceLayerCode(decoder, targetWeapon).isEmpty()) {
+        && getRequiredSourceLayerCode(decoder, mainHand).isEmpty()) {
       throw new IllegalArgumentException("The selected " + label + " definition has no "
-          + (targetWeapon.isTwoHanded() ? "two-handed" : "one-handed") + " weapon-overlay prefix.");
+          + (mainHand.isTwoHanded() ? "two-handed" : "one-handed") + " weapon-overlay prefix.");
+    }
+    if (offhand != null) {
+      final OverlaySlot slot = offhand.isShield() ? OverlaySlot.SHIELD : OverlaySlot.OFF_HAND_WEAPON;
+      getOverlayResourcePrefix(decoder, null, slot);
     }
   }
 
   public FamilyLayout createOverlayLayout(String resourcePrefix, String appearanceCode, WeaponType weaponType) {
+    return createOverlayLayout(resourcePrefix, appearanceCode, weaponType, getAttackKind(weaponType, null),
+        OverlaySlot.MAIN_HAND);
+  }
+
+  public FamilyLayout createOverlayLayout(String resourcePrefix, String appearanceCode, WeaponType equipmentType,
+      AttackKind attackKind, OverlaySlot slot) {
+    validateLayer(equipmentType, attackKind, slot);
     final String prefix = normalizePrefix(resourcePrefix);
     final String appearance = normalizeAppearanceCode(appearanceCode);
     final String fileCode = codeMode == CodeMode.FULL ? appearance : appearance.substring(0, 1);
+    final String offhandSuffix = slot == OverlaySlot.OFF_HAND_WEAPON ? "O" : "";
     final LayoutBuilder builder = new LayoutBuilder();
     switch (this) {
       case CHARACTER:
-        buildCharacter(builder, prefix + fileCode, false, weaponType);
+        buildCharacter(builder, prefix + fileCode + offhandSuffix, false, attackKind);
         break;
       case CHARACTER_OLD:
-        buildCharacterOld(builder, prefix + fileCode, weaponType);
+        buildCharacterOld(builder, prefix + fileCode, attackKind);
         break;
       case MONSTER:
         buildMonsterOverlay(builder, prefix, fileCode);
@@ -237,14 +279,21 @@ public enum EquipmentOverlayFamily {
   }
 
   public FamilyLayout createAvatarLayout(String resourcePrefix, boolean splitBams, WeaponType weaponType) {
+    return createAvatarLayout(resourcePrefix, splitBams, getAttackKind(weaponType, null));
+  }
+
+  public FamilyLayout createAvatarLayout(String resourcePrefix, boolean splitBams, AttackKind attackKind) {
+    if (attackKind == null) {
+      throw new IllegalArgumentException("An equipment attack kind is required.");
+    }
     final String prefix = normalizePrefix(resourcePrefix);
     final LayoutBuilder builder = new LayoutBuilder();
     switch (this) {
       case CHARACTER:
-        buildCharacter(builder, prefix, splitBams, weaponType);
+        buildCharacter(builder, prefix, splitBams, attackKind);
         break;
       case CHARACTER_OLD:
-        buildCharacterOld(builder, prefix, weaponType);
+        buildCharacterOld(builder, prefix, attackKind);
         break;
       case MONSTER:
         return checkedLayout(CreatureAnimationFamily.MONSTER.createLayout(prefix, splitBams, 1, 1));
@@ -256,6 +305,38 @@ public enum EquipmentOverlayFamily {
         throw new IllegalStateException("Unsupported equipment-overlay family: " + this);
     }
     return checkedLayout(builder.build());
+  }
+
+  public AttackKind getAttackKind(WeaponType mainHand, WeaponType offhand) {
+    EquipmentOverlayGenerator.validateLoadout(mainHand, offhand);
+    if (offhand != null && !offhand.isShield()) {
+      return AttackKind.TWO_WEAPON;
+    }
+    final AttackStyle style = mainHand.getAttackStyle();
+    switch (style) {
+      case ONE_HANDED:
+        return AttackKind.ONE_HANDED;
+      case TWO_HANDED:
+        return AttackKind.TWO_HANDED;
+      case BOW:
+        return AttackKind.BOW;
+      case CROSSBOW:
+        return AttackKind.CROSSBOW;
+      case SLING:
+        return AttackKind.SLING;
+      default:
+        throw new IllegalArgumentException(mainHand + " cannot be used as main-hand equipment.");
+    }
+  }
+
+  public void validateLoadout(WeaponType mainHand, WeaponType offhand) {
+    EquipmentOverlayGenerator.validateLoadout(mainHand, offhand);
+    if (offhand != null && this != CHARACTER && this != CHARACTER_OLD) {
+      throw new IllegalArgumentException(label + " does not emit shield or left-handed weapon sprite segments.");
+    }
+    if (offhand != null && !offhand.isShield() && this != CHARACTER) {
+      throw new IllegalArgumentException(label + " does not define two-weapon attack resources.");
+    }
   }
 
   public String getFileCode(String appearanceCode) {
@@ -282,89 +363,145 @@ public enum EquipmentOverlayFamily {
   }
 
   private static void buildCharacter(LayoutBuilder builder, String prefix, boolean splitBams,
-      WeaponType weaponType) {
-    addCharacterAttacks(builder, prefix, weaponType, false);
+      AttackKind attackKind) {
+    addCharacterAttacks(builder, prefix, attackKind, false);
     addCharacterCasting(builder, prefix, false);
-    final AttackKind attackKind = getAttackKind(weaponType);
-    if (!splitBams) {
-      addCharacterMisc(builder, prefix + "G1.BAM", attackKind);
-    } else {
-      builder.addBlock(prefix + (attackKind == AttackKind.TWO_HANDED ? "G13.BAM" : "G1.BAM"),
-          attackKind == AttackKind.TWO_HANDED ? 27 : 9, Sequence.STANCE, FULL_W);
-      builder.addBlock(prefix + "G11.BAM", 0, Sequence.WALK, FULL_W);
-      builder.addBlock(prefix + "G12.BAM", 18, Sequence.STAND, FULL_W);
-      builder.addBlock(prefix + "G15.BAM", 36, Sequence.GET_HIT, FULL_W);
-      builder.addBlock(prefix + "G15.BAM", 45, Sequence.DIE, FULL_W);
-      builder.addBlock(prefix + "G16.BAM", 54, Sequence.TWITCH, FULL_W);
-      builder.addBlock(prefix + "G17.BAM", 63, Sequence.STAND, FULL_W);
-      builder.addBlock(prefix + "G18.BAM", 72, Sequence.STAND, FULL_W);
-      builder.addBlock(prefix + "G19.BAM", 81, Sequence.SLEEP, FULL_W);
-      builder.addBlock(prefix + "G19.BAM", 90, Sequence.SLEEP, FULL_W);
-    }
+    addModernSequence(builder, prefix, splitBams, org.infinity.resource.cre.decoder.util.Sequence.WALK,
+        Sequence.WALK);
+    addModernSequence(builder, prefix, splitBams,
+        attackKind == AttackKind.TWO_HANDED
+            ? org.infinity.resource.cre.decoder.util.Sequence.STANCE2
+            : org.infinity.resource.cre.decoder.util.Sequence.STANCE,
+        Sequence.STANCE);
+    addModernSequence(builder, prefix, splitBams, org.infinity.resource.cre.decoder.util.Sequence.STAND,
+        Sequence.STAND);
+    addModernSequence(builder, prefix, splitBams, org.infinity.resource.cre.decoder.util.Sequence.GET_HIT,
+        Sequence.GET_HIT);
+    addModernSequence(builder, prefix, splitBams, org.infinity.resource.cre.decoder.util.Sequence.DIE,
+        Sequence.DIE);
+    addModernSequence(builder, prefix, splitBams, org.infinity.resource.cre.decoder.util.Sequence.TWITCH,
+        Sequence.TWITCH);
+    addModernSequence(builder, prefix, splitBams, org.infinity.resource.cre.decoder.util.Sequence.STAND2,
+        Sequence.STAND);
+    addModernSequence(builder, prefix, splitBams, org.infinity.resource.cre.decoder.util.Sequence.STAND3,
+        Sequence.STAND);
+    addModernSequence(builder, prefix, splitBams, org.infinity.resource.cre.decoder.util.Sequence.SLEEP,
+        Sequence.SLEEP);
+    addModernSequence(builder, prefix, splitBams, org.infinity.resource.cre.decoder.util.Sequence.SLEEP2,
+        Sequence.SLEEP);
   }
 
-  private static void addCharacterMisc(LayoutBuilder builder, String fileName, AttackKind attackKind) {
-    builder.addBlock(fileName, 0, Sequence.WALK, FULL_W);
-    builder.addBlock(fileName, attackKind == AttackKind.TWO_HANDED ? 27 : 9, Sequence.STANCE, FULL_W);
-    builder.addBlock(fileName, 18, Sequence.STAND, FULL_W);
-    builder.addBlock(fileName, 36, Sequence.GET_HIT, FULL_W);
-    builder.addBlock(fileName, 45, Sequence.DIE, FULL_W);
-    builder.addBlock(fileName, 54, Sequence.TWITCH, FULL_W);
-    builder.addBlock(fileName, 63, Sequence.STAND, FULL_W);
-    builder.addBlock(fileName, 72, Sequence.STAND, FULL_W);
-    builder.addBlock(fileName, 81, Sequence.SLEEP, FULL_W);
-    builder.addBlock(fileName, 90, Sequence.SLEEP, FULL_W);
-  }
-
-  private static void addCharacterAttacks(LayoutBuilder builder, String prefix, WeaponType weaponType,
+  private static void addCharacterAttacks(LayoutBuilder builder, String prefix, AttackKind attackKind,
       boolean reduced) {
-    final AttackKind attackKind = getAttackKind(weaponType);
-    final String[] codes;
+    final org.infinity.resource.cre.decoder.util.Sequence[] engineSequences;
     final Sequence[] sequences;
     if (attackKind == AttackKind.BOW) {
-      codes = new String[] { "SA" };
+      engineSequences = new org.infinity.resource.cre.decoder.util.Sequence[] {
+          org.infinity.resource.cre.decoder.util.Sequence.ATTACK_BOW };
       sequences = new Sequence[] { Sequence.ATTACK_3 };
+    } else if (attackKind == AttackKind.CROSSBOW) {
+      engineSequences = new org.infinity.resource.cre.decoder.util.Sequence[] {
+          org.infinity.resource.cre.decoder.util.Sequence.ATTACK_CROSSBOW };
+      sequences = new Sequence[] { Sequence.ATTACK_3 };
+    } else if (attackKind == AttackKind.SLING) {
+      engineSequences = new org.infinity.resource.cre.decoder.util.Sequence[] {
+          reduced ? org.infinity.resource.cre.decoder.util.Sequence.ATTACK_SLASH_1H
+              : org.infinity.resource.cre.decoder.util.Sequence.ATTACK_SLING };
+      sequences = new Sequence[] { Sequence.ATTACK_1 };
+    } else if (attackKind == AttackKind.TWO_WEAPON) {
+      if (reduced) {
+        throw new IllegalArgumentException("character_old does not define two-weapon attack resources.");
+      }
+      engineSequences = new org.infinity.resource.cre.decoder.util.Sequence[] {
+          org.infinity.resource.cre.decoder.util.Sequence.ATTACK_2WEAPONS1,
+          org.infinity.resource.cre.decoder.util.Sequence.ATTACK_2WEAPONS2 };
+      sequences = new Sequence[] { Sequence.ATTACK_1, Sequence.ATTACK_2 };
     } else if (attackKind == AttackKind.TWO_HANDED) {
-      codes = new String[] { "A2", "A4", "A6" };
+      engineSequences = new org.infinity.resource.cre.decoder.util.Sequence[] {
+          org.infinity.resource.cre.decoder.util.Sequence.ATTACK_SLASH_2H,
+          org.infinity.resource.cre.decoder.util.Sequence.ATTACK_BACKSLASH_2H,
+          org.infinity.resource.cre.decoder.util.Sequence.ATTACK_JAB_2H };
       sequences = new Sequence[] { Sequence.ATTACK_1, Sequence.ATTACK_2, Sequence.ATTACK_3 };
     } else {
-      codes = new String[] { "A1", "A3", "A5" };
+      engineSequences = new org.infinity.resource.cre.decoder.util.Sequence[] {
+          org.infinity.resource.cre.decoder.util.Sequence.ATTACK_SLASH_1H,
+          org.infinity.resource.cre.decoder.util.Sequence.ATTACK_BACKSLASH_1H,
+          org.infinity.resource.cre.decoder.util.Sequence.ATTACK_JAB_1H };
       sequences = new Sequence[] { Sequence.ATTACK_1, Sequence.ATTACK_2, Sequence.ATTACK_3 };
     }
-    for (int i = 0; i < codes.length; i++) {
+    for (int i = 0; i < engineSequences.length; i++) {
       if (reduced) {
-        addReducedPair(builder, prefix + codes[i], 0, sequences[i]);
+        addLegacySequence(builder, prefix, engineSequences[i], sequences[i]);
       } else {
-        builder.addBlock(prefix + codes[i] + ".BAM", 0, sequences[i], FULL_W);
+        addModernSequence(builder, prefix, false, engineSequences[i], sequences[i]);
       }
     }
   }
 
   private static void addCharacterCasting(LayoutBuilder builder, String prefix, boolean reduced) {
-    for (int variant = 0; variant < 4; variant++) {
+    final org.infinity.resource.cre.decoder.util.Sequence[] conjure = {
+        org.infinity.resource.cre.decoder.util.Sequence.SPELL,
+        org.infinity.resource.cre.decoder.util.Sequence.SPELL2,
+        org.infinity.resource.cre.decoder.util.Sequence.SPELL3,
+        org.infinity.resource.cre.decoder.util.Sequence.SPELL4
+    };
+    final org.infinity.resource.cre.decoder.util.Sequence[] cast = {
+        org.infinity.resource.cre.decoder.util.Sequence.CAST,
+        org.infinity.resource.cre.decoder.util.Sequence.CAST2,
+        org.infinity.resource.cre.decoder.util.Sequence.CAST3,
+        org.infinity.resource.cre.decoder.util.Sequence.CAST4
+    };
+    for (int variant = 0; variant < conjure.length; variant++) {
       if (reduced) {
-        addReducedPair(builder, prefix + "CA", variant * 16, Sequence.CONJURE);
-        addReducedPair(builder, prefix + "CA", variant * 16 + 8, Sequence.CAST);
+        addLegacySequence(builder, prefix, conjure[variant], Sequence.CONJURE);
+        addLegacySequence(builder, prefix, cast[variant], Sequence.CAST);
       } else {
-        builder.addBlock(prefix + "CA.BAM", variant * 18, Sequence.CONJURE, FULL_W);
-        builder.addBlock(prefix + "CA.BAM", variant * 18 + 9, Sequence.CAST, FULL_W);
+        addModernSequence(builder, prefix, false, conjure[variant], Sequence.CONJURE);
+        addModernSequence(builder, prefix, false, cast[variant], Sequence.CAST);
       }
     }
   }
 
-  private static void buildCharacterOld(LayoutBuilder builder, String prefix, WeaponType weaponType) {
-    addCharacterAttacks(builder, prefix, weaponType, true);
+  private static void buildCharacterOld(LayoutBuilder builder, String prefix, AttackKind attackKind) {
+    addCharacterAttacks(builder, prefix, attackKind, true);
     addCharacterCasting(builder, prefix, true);
-    final AttackKind attackKind = getAttackKind(weaponType);
-    addReducedPair(builder, prefix + "G1", 0, Sequence.WALK);
-    addReducedPair(builder, prefix + "G1", attackKind == AttackKind.TWO_HANDED ? 24 : 8, Sequence.STANCE);
-    addReducedPair(builder, prefix + "G1", 16, Sequence.STAND);
-    addReducedPair(builder, prefix + "G1", 32, Sequence.STAND);
-    addReducedPair(builder, prefix + "G1", 40, Sequence.GET_HIT);
-    addReducedPair(builder, prefix + "G1", 48, Sequence.DIE);
-    addReducedPair(builder, prefix + "G1", 56, Sequence.TWITCH);
-    builder.addBlock(prefix + "W2.BAM", 0, Sequence.WALK, WALK_EXTRA_W);
-    builder.addBlock(prefix + "W2E.BAM", 5, Sequence.WALK, WALK_EXTRA_E);
+    addLegacySequence(builder, prefix, org.infinity.resource.cre.decoder.util.Sequence.WALK, Sequence.WALK);
+    addLegacySequence(builder, prefix,
+        attackKind == AttackKind.TWO_HANDED
+            ? org.infinity.resource.cre.decoder.util.Sequence.STANCE2
+            : org.infinity.resource.cre.decoder.util.Sequence.STANCE,
+        Sequence.STANCE);
+    addLegacySequence(builder, prefix, org.infinity.resource.cre.decoder.util.Sequence.STAND, Sequence.STAND);
+    addLegacySequence(builder, prefix, org.infinity.resource.cre.decoder.util.Sequence.STAND2, Sequence.STAND);
+    addLegacySequence(builder, prefix, org.infinity.resource.cre.decoder.util.Sequence.GET_HIT, Sequence.GET_HIT);
+    addLegacySequence(builder, prefix, org.infinity.resource.cre.decoder.util.Sequence.DIE, Sequence.DIE);
+    addLegacySequence(builder, prefix, org.infinity.resource.cre.decoder.util.Sequence.TWITCH, Sequence.TWITCH);
+    final Couple<String, Integer> walkExtra = CharacterOldDecoder.getAdditionalWalkSequence();
+    final String walkSuffix = SegmentDef.fixBehaviorSuffix(walkExtra.getValue0());
+    builder.addBlock(prefix + walkSuffix + ".BAM", walkExtra.getValue1(), Sequence.WALK, WALK_EXTRA_W);
+    builder.addBlock(prefix + walkSuffix + "E.BAM", walkExtra.getValue1() + REDUCED_W.length,
+        Sequence.WALK, WALK_EXTRA_E);
+  }
+
+  private static void addModernSequence(LayoutBuilder builder, String prefix, boolean splitBams,
+      org.infinity.resource.cre.decoder.util.Sequence engineSequence, Sequence sequence) {
+    final Couple<String, Integer> location = CharacterDecoder.getSequenceMap(splitBams).get(engineSequence);
+    if (location == null) {
+      throw new IllegalArgumentException("The character decoder has no resource mapping for " + engineSequence + ".");
+    }
+    final String suffix = SegmentDef.fixBehaviorSuffix(location.getValue0());
+    builder.addBlock(prefix + suffix + ".BAM", location.getValue1(), sequence, FULL_W);
+  }
+
+  private static void addLegacySequence(LayoutBuilder builder, String prefix,
+      org.infinity.resource.cre.decoder.util.Sequence engineSequence, Sequence sequence) {
+    final Couple<String, Integer> location = CharacterOldDecoder.getSequenceMap().get(engineSequence);
+    if (location == null) {
+      throw new IllegalArgumentException("The character_old decoder has no resource mapping for "
+          + engineSequence + ".");
+    }
+    final String suffix = SegmentDef.fixBehaviorSuffix(location.getValue0());
+    addReducedPair(builder, prefix + suffix, location.getValue1(), sequence);
   }
 
   private static void addReducedPair(LayoutBuilder builder, String baseName, int cycleOffset, Sequence sequence) {
@@ -372,14 +509,58 @@ public enum EquipmentOverlayFamily {
     builder.addBlock(baseName + "E.BAM", cycleOffset + REDUCED_W.length, sequence, REDUCED_E);
   }
 
-  private static AttackKind getAttackKind(WeaponType weaponType) {
-    if (weaponType == null) {
-      throw new IllegalArgumentException("A target weapon is required.");
+  private void validateLayer(WeaponType equipmentType, AttackKind attackKind, OverlaySlot slot) {
+    if (equipmentType == null || attackKind == null || slot == null) {
+      throw new IllegalArgumentException("Equipment type, attack kind and overlay slot are required.");
     }
-    if (weaponType == WeaponType.BOW) {
-      return AttackKind.BOW;
+    if (slot == OverlaySlot.MAIN_HAND && equipmentType.isShield()) {
+      throw new IllegalArgumentException("A shield cannot be exported as a main-hand overlay.");
     }
-    return weaponType.isTwoHanded() ? AttackKind.TWO_HANDED : AttackKind.ONE_HANDED;
+    if (slot == OverlaySlot.SHIELD && !equipmentType.isShield()) {
+      throw new IllegalArgumentException("The shield overlay slot requires a shield equipment type.");
+    }
+    if (slot == OverlaySlot.OFF_HAND_WEAPON && !equipmentType.isOneHandedMelee()) {
+      throw new IllegalArgumentException("The off-hand weapon overlay requires a one-handed melee weapon.");
+    }
+    if (slot == OverlaySlot.MAIN_HAND) {
+      final boolean validTwoWeapon =
+          attackKind == AttackKind.TWO_WEAPON && equipmentType.isOneHandedMelee();
+      final boolean validSingleWeapon =
+          attackKind != AttackKind.TWO_WEAPON && attackKind == getAttackKind(equipmentType, null);
+      if (!validTwoWeapon && !validSingleWeapon) {
+        throw new IllegalArgumentException(equipmentType.getLabel() + " is incompatible with the "
+            + attackKind.toString().toLowerCase(Locale.ENGLISH) + " attack layout.");
+      }
+    }
+    if (slot == OverlaySlot.SHIELD && attackKind != AttackKind.ONE_HANDED
+        && attackKind != AttackKind.SLING) {
+      throw new IllegalArgumentException("Shield resources require a one-handed melee or sling attack layout.");
+    }
+    if (slot != OverlaySlot.MAIN_HAND && this != CHARACTER && this != CHARACTER_OLD) {
+      throw new IllegalArgumentException(label + " has no decoder-backed off-hand overlay layout.");
+    }
+    if (slot == OverlaySlot.OFF_HAND_WEAPON && this != CHARACTER) {
+      throw new IllegalArgumentException(label + " has no decoder-backed two-weapon layout.");
+    }
+    if (slot == OverlaySlot.OFF_HAND_WEAPON && attackKind != AttackKind.TWO_WEAPON) {
+      throw new IllegalArgumentException("Off-hand weapon resources require the two-weapon attack layout.");
+    }
+    if (this == CHARACTER_OLD && attackKind == AttackKind.TWO_WEAPON) {
+      throw new IllegalArgumentException("character_old explicitly forbids two-weapon attack sequences.");
+    }
+  }
+
+  private static String getSlotLabel(OverlaySlot slot) {
+    switch (slot) {
+      case MAIN_HAND:
+        return "weapon";
+      case SHIELD:
+        return "shield";
+      case OFF_HAND_WEAPON:
+        return "left-handed weapon";
+      default:
+        throw new IllegalStateException("Unsupported equipment overlay slot: " + slot);
+    }
   }
 
   private static String normalizePrefix(String value) {

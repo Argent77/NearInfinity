@@ -33,6 +33,8 @@ import org.infinity.gui.converter.creature.CreatureAnimationFamily.FamilyLayout;
 import org.infinity.gui.converter.creature.CreatureAnimationFamily.LayoutBuilder;
 import org.infinity.gui.converter.creature.CreatureAnimationFamily.ResourcePlan;
 import org.infinity.gui.converter.creature.CreatureAnimationModel.AnimationFrame;
+import org.infinity.gui.converter.creature.EquipmentOverlayFamily.AttackKind;
+import org.infinity.gui.converter.creature.EquipmentOverlayFamily.OverlaySlot;
 import org.infinity.gui.converter.creature.EquipmentOverlayGenerator.WeaponType;
 import org.infinity.gui.converter.creature.MonsterAnimationLayout.BamFormat;
 import org.infinity.gui.converter.creature.MonsterAnimationLayout.Direction;
@@ -67,10 +69,13 @@ public final class CreatureAnimationCoreTest {
     testBamV2Export();
     testFamilyBamV2Export();
     testEquipmentPromptAndGeneration();
+    testExpandedEquipmentPromptAndGeneration();
     testEquipmentProfileFormats();
     testEquipmentReferenceResrefFallback();
     testEquipmentOverlayFamilyLayouts();
+    testEquipmentLoadoutLayouts();
     testAllEquipmentOverlayFamilyBamV1Exports();
+    testEquipmentLoadoutBamRoundTrips();
     testEquipmentExplicitEasternRoundTrip();
     testEquipmentOverlayBamRoundTrip();
     testEquipmentOverlayBamV2RoundTrip();
@@ -775,6 +780,85 @@ public final class CreatureAnimationCoreTest {
         "Families that mirror east must not retain independent eastern artwork that will not be exported");
   }
 
+  private static void testExpandedEquipmentPromptAndGeneration() {
+    final EquipmentOverlayGenerator.PromptSpec dual = EquipmentOverlayGenerator.parsePrompt(
+        "SOLAR wielding a longsword in the main hand and a mace in the offhand");
+    check(dual.getTargetWeapon() == WeaponType.SWORD,
+        "An explicitly assigned longsword must be parsed as the main-hand weapon");
+    check(dual.getTargetOffhand() == WeaponType.MACE && dual.isTwoWeaponLoadout(),
+        "An explicitly assigned mace must be parsed as a second weapon");
+
+    final EquipmentOverlayGenerator.PromptSpec spearAndShield = EquipmentOverlayGenerator.parsePrompt(
+        "SOLAR with a one-handed spear in the main hand and a large shield in the offhand");
+    check(spearAndShield.getTargetWeapon() == WeaponType.ONE_HANDED_SPEAR,
+        "The one-handed spear phrase must not collapse to the existing two-handed spear");
+    check(spearAndShield.getTargetOffhand() == WeaponType.LARGE_SHIELD,
+        "A qualified large shield must be parsed as off-hand equipment");
+
+    final EquipmentOverlayGenerator.PromptSpec unicode =
+        EquipmentOverlayGenerator.parsePrompt("replace the sword with a silver Ninjatō");
+    check(unicode.getTargetWeapon() == WeaponType.NINJATO,
+        "Unicode Ninjatō spelling must normalize to the procedural ninjato type");
+
+    final String[] prompts = {
+        "replace the sword with a light crossbow",
+        "replace the sword with a heavy crossbow",
+        "replace the sword with a shortbow",
+        "replace the sword with a longbow",
+        "replace the sword with a sling",
+        "replace the sword with a scimitar",
+        "replace the sword with a wakizashi",
+        "replace the sword with a ninjato",
+        "replace the sword with a katana",
+        "replace the sword with a one-handed spear"
+    };
+    final WeaponType[] expected = {
+        WeaponType.LIGHT_CROSSBOW,
+        WeaponType.HEAVY_CROSSBOW,
+        WeaponType.SHORTBOW,
+        WeaponType.LONGBOW,
+        WeaponType.SLING,
+        WeaponType.SCIMITAR,
+        WeaponType.WAKIZASHI,
+        WeaponType.NINJATO,
+        WeaponType.KATANA,
+        WeaponType.ONE_HANDED_SPEAR
+    };
+    for (int index = 0; index < prompts.length; index++) {
+      final EquipmentOverlayGenerator.PromptSpec prompt =
+          EquipmentOverlayGenerator.parsePrompt(prompts[index]);
+      check(prompt.getTargetWeapon() == expected[index],
+          prompts[index] + " should select " + expected[index]);
+      final CreatureAnimationModel generated = EquipmentOverlayGenerator.generate(
+          createCompleteEquipmentModel(false), createCompleteEquipmentModel(true), prompt, 150L + index, null);
+      check(hasVisiblePixel(generated.getFrames(Sequence.ATTACK_1, Direction.W).get(0).getImage()),
+          expected[index] + " must render visible synchronized artwork");
+    }
+
+    final WeaponType[] shields = {
+        WeaponType.BUCKLER,
+        WeaponType.SMALL_SHIELD,
+        WeaponType.MEDIUM_SHIELD,
+        WeaponType.LARGE_SHIELD
+    };
+    for (final WeaponType shield : shields) {
+      final CreatureAnimationModel generated = EquipmentOverlayGenerator.generate(
+          createCompleteEquipmentModel(false), createCompleteEquipmentModel(true),
+          spearAndShield.forTarget(shield), 211L + shield.ordinal(), null);
+      check(hasVisiblePixel(generated.getFrames(Sequence.STANCE, Direction.W).get(0).getImage()),
+          shield + " must render visible synchronized artwork");
+    }
+
+    boolean rejected = false;
+    try {
+      EquipmentOverlayGenerator.parsePrompt(
+          "a greatsword in the main hand and a buckler in the offhand");
+    } catch (IllegalArgumentException e) {
+      rejected = e.getMessage().contains("both hands");
+    }
+    check(rejected, "A two-handed main weapon plus off-hand shield must be rejected before resource discovery");
+  }
+
   private static void testEquipmentReferenceResrefFallback() {
     final List<String> resources = Arrays.asList(
         "MSOGG1.BAM", "MSOGG2.BAM",
@@ -883,6 +967,102 @@ public final class CreatureAnimationCoreTest {
     check(rejected, "Equipment layouts must reject filenames beyond the engine's eight-character resref budget");
   }
 
+  private static void testEquipmentLoadoutLayouts() {
+    final EquipmentOverlayFamily modern = EquipmentOverlayFamily.CHARACTER;
+    final AttackKind twoWeapon = modern.getAttackKind(WeaponType.SWORD, WeaponType.MACE);
+    check(twoWeapon == AttackKind.TWO_WEAPON,
+        "Two one-handed melee weapons must select the decoder's two-weapon attack kind");
+
+    FamilyLayout layout = modern.createOverlayLayout("WQL", "S1", WeaponType.SWORD, twoWeapon,
+        OverlaySlot.MAIN_HAND);
+    check(layout.getResources().size() == 4,
+        "A modern two-weapon main-hand layer must contain A7, A9, casting and movement resources");
+    checkResource(layout, "WQLS1A7.BAM", 9);
+    checkResource(layout, "WQLS1A9.BAM", 9);
+    checkResource(layout, "WQLS1CA.BAM", 72);
+    checkResource(layout, "WQLS1G1.BAM", 99);
+
+    layout = modern.createOverlayLayout("WQS", "MC", WeaponType.MACE, twoWeapon,
+        OverlaySlot.OFF_HAND_WEAPON);
+    check(layout.getResources().size() == 4,
+        "A modern left-handed weapon layer must mirror the exact two-weapon resource set");
+    checkResource(layout, "WQSMCOA7.BAM", 9);
+    checkResource(layout, "WQSMCOA9.BAM", 9);
+    checkResource(layout, "WQSMCOCA.BAM", 72);
+    checkResource(layout, "WQSMCOG1.BAM", 99);
+
+    final AttackKind spearShield =
+        modern.getAttackKind(WeaponType.ONE_HANDED_SPEAR, WeaponType.LARGE_SHIELD);
+    check(spearShield == AttackKind.ONE_HANDED,
+        "A one-handed spear plus shield must retain the one-handed attack layout");
+    layout = modern.createOverlayLayout("WQS", "D4", WeaponType.LARGE_SHIELD, spearShield,
+        OverlaySlot.SHIELD);
+    check(layout.getResources().size() == 5,
+        "A modern shield must contain the three one-handed attacks, casting and movement resources");
+    checkResource(layout, "WQSD4A1.BAM", 9);
+    checkResource(layout, "WQSD4A3.BAM", 9);
+    checkResource(layout, "WQSD4A5.BAM", 9);
+    checkResource(layout, "WQSD4CA.BAM", 72);
+    checkResource(layout, "WQSD4G1.BAM", 99);
+
+    layout = modern.createOverlayLayout("WQL", "CB", WeaponType.LIGHT_CROSSBOW);
+    check(layout.getResources().size() == 3,
+        "Modern crossbows must use SX plus casting and movement resources");
+    checkResource(layout, "WQLCBSX.BAM", 9);
+    checkResource(layout, "WQLCBCA.BAM", 72);
+    checkResource(layout, "WQLCBG1.BAM", 99);
+    check(layout.getResources().keySet().equals(
+        modern.createOverlayLayout("WQL", "CB", WeaponType.HEAVY_CROSSBOW).getResources().keySet()),
+        "Light and heavy crossbows must share the decoder's exact SX pose schema");
+
+    layout = modern.createOverlayLayout("WQL", "BS", WeaponType.SHORTBOW);
+    checkResource(layout, "WQLBSSA.BAM", 9);
+    check(layout.getResources().keySet().equals(
+        modern.createOverlayLayout("WQL", "BS", WeaponType.LONGBOW).getResources().keySet()),
+        "Shortbows and longbows must share the decoder's exact SA pose schema");
+
+    layout = modern.createOverlayLayout("WQL", "SL", WeaponType.SLING);
+    checkResource(layout, "WQLSLSS.BAM", 9);
+    check(layout.getResources().size() == 3,
+        "Modern slings must use SS plus casting and movement resources");
+
+    layout = EquipmentOverlayFamily.CHARACTER_OLD.createOverlayLayout("WPL", "SL", WeaponType.SLING);
+    checkResource(layout, "WPLSLA1.BAM", 5);
+    checkResource(layout, "WPLSLA1E.BAM", 8);
+    check(layout.getResources().size() == 8,
+        "Legacy slings must follow the decoder's one-handed slash fallback plus casting and movement pairs");
+
+    layout = EquipmentOverlayFamily.CHARACTER_OLD.createOverlayLayout("WPL", "D1",
+        WeaponType.BUCKLER, AttackKind.ONE_HANDED, OverlaySlot.SHIELD);
+    checkResource(layout, "WPLD1A1.BAM", 5);
+    checkResource(layout, "WPLD1A1E.BAM", 8);
+
+    boolean rejected = false;
+    try {
+      EquipmentOverlayFamily.CHARACTER_OLD.validateLoadout(WeaponType.SWORD, WeaponType.MACE);
+    } catch (IllegalArgumentException e) {
+      rejected = e.getMessage().contains("two-weapon");
+    }
+    check(rejected, "Legacy character definitions must reject two-weapon requests explicitly");
+
+    rejected = false;
+    try {
+      EquipmentOverlayFamily.MONSTER.validateLoadout(WeaponType.ONE_HANDED_SPEAR, WeaponType.BUCKLER);
+    } catch (IllegalArgumentException e) {
+      rejected = e.getMessage().contains("shield");
+    }
+    check(rejected, "Families without shield sprite segments must reject shield loadouts");
+
+    rejected = false;
+    try {
+      modern.createOverlayLayout("WQS", "D4", WeaponType.LARGE_SHIELD, AttackKind.TWO_WEAPON,
+          OverlaySlot.SHIELD);
+    } catch (IllegalArgumentException e) {
+      rejected = e.getMessage().contains("one-handed melee or sling");
+    }
+    check(rejected, "A shield layer must reject a mismatched two-weapon attack schema");
+  }
+
   private static void testEquipmentProfileFormats() throws Exception {
     final Path directory = createTestDirectory("ni-equipment-profile-test-");
     try {
@@ -973,6 +1153,62 @@ public final class CreatureAnimationCoreTest {
               "A missing Icewind eastern action must mirror the exact matching western action");
         }
       }
+    } finally {
+      deleteTree(directory);
+    }
+  }
+
+  private static void testEquipmentLoadoutBamRoundTrips() throws Exception {
+    final Path directory = createTestDirectory("ni-equipment-loadout-test-");
+    try {
+      final EquipmentOverlayModel source = createCompleteEquipmentOverlayModel(false);
+      final EquipmentOverlayModel avatar = createCompleteEquipmentOverlayModel(true);
+
+      final EquipmentOverlayGenerator.PromptSpec dual = EquipmentOverlayGenerator.parsePrompt(
+          "a longsword in the main hand and a mace in the offhand");
+      final EquipmentOverlayModel mainWeapon = EquipmentOverlayGenerator.generate(
+          source, avatar, dual.forTarget(dual.getTargetWeapon()), 301L, false, null);
+      final EquipmentOverlayModel offhandWeapon = EquipmentOverlayGenerator.generate(
+          source, avatar, dual.forTarget(dual.getTargetOffhand()), 302L, false, null);
+      final Path dualDirectory = directory.resolve("dual");
+      final EquipmentOverlayExporter.Config dualConfig = new EquipmentOverlayExporter.Config()
+          .setGame(Profile.Game.BG2EE).setFamily(EquipmentOverlayFamily.CHARACTER)
+          .setResourcePrefix("WQL").setAppearanceCode("Z1").setWeaponType(WeaponType.SWORD)
+          .setOffhandResourcePrefix("WQS").setOffhandAppearanceCode("Z2").setOffhandType(WeaponType.MACE)
+          .setOutputDirectory(dualDirectory).setBamFormat(BamFormat.BAM_V1).setCompressedBam(false);
+      check(!EquipmentOverlayExporter.validate(mainWeapon, offhandWeapon, dualConfig).hasErrors(),
+          "A complete modern two-weapon loadout must pass combined validation");
+      final EquipmentOverlayExporter.ExportResult dualResult =
+          EquipmentOverlayExporter.export(mainWeapon, offhandWeapon, dualConfig, false);
+      check(dualResult.getInstalledFiles().size() == 8,
+          "Two-weapon export must atomically install four main-hand and four off-hand BAMs");
+      checkBamCycles(dualDirectory.resolve("WQLZ1A7.BAM"), 9);
+      checkBamCycles(dualDirectory.resolve("WQLZ1A9.BAM"), 9);
+      checkBamCycles(dualDirectory.resolve("WQSZ2OA7.BAM"), 9);
+      checkBamCycles(dualDirectory.resolve("WQSZ2OA9.BAM"), 9);
+
+      final EquipmentOverlayGenerator.PromptSpec spearShield = EquipmentOverlayGenerator.parsePrompt(
+          "a one-handed spear in the main hand and a large shield in the offhand");
+      final EquipmentOverlayModel spear = EquipmentOverlayGenerator.generate(
+          source, avatar, spearShield.forTarget(spearShield.getTargetWeapon()), 311L, false, null);
+      final EquipmentOverlayModel shield = EquipmentOverlayGenerator.generate(
+          source, avatar, spearShield.forTarget(spearShield.getTargetOffhand()), 312L, false, null);
+      final Path shieldDirectory = directory.resolve("shield");
+      final EquipmentOverlayExporter.Config shieldConfig = new EquipmentOverlayExporter.Config()
+          .setGame(Profile.Game.BG2EE).setFamily(EquipmentOverlayFamily.CHARACTER)
+          .setResourcePrefix("WQL").setAppearanceCode("P1").setWeaponType(WeaponType.ONE_HANDED_SPEAR)
+          .setOffhandResourcePrefix("WQS").setOffhandAppearanceCode("D4")
+          .setOffhandType(WeaponType.LARGE_SHIELD)
+          .setOutputDirectory(shieldDirectory).setBamFormat(BamFormat.BAM_V1).setCompressedBam(false);
+      check(!EquipmentOverlayExporter.validate(spear, shield, shieldConfig).hasErrors(),
+          "A complete one-handed spear and shield loadout must pass combined validation");
+      final EquipmentOverlayExporter.ExportResult shieldResult =
+          EquipmentOverlayExporter.export(spear, shield, shieldConfig, false);
+      check(shieldResult.getInstalledFiles().size() == 10,
+          "Spear-and-shield export must atomically install two complete five-resource layers");
+      checkBamCycles(shieldDirectory.resolve("WQLP1A1.BAM"), 9);
+      checkBamCycles(shieldDirectory.resolve("WQSD4A1.BAM"), 9);
+      checkBamCycles(shieldDirectory.resolve("WQSD4G1.BAM"), 99);
     } finally {
       deleteTree(directory);
     }
@@ -1266,6 +1502,18 @@ public final class CreatureAnimationCoreTest {
     check(resource != null, "Missing planned equipment resource " + fileName);
     check(resource.getCycleCount() == cycleCount,
         fileName + " should contain " + cycleCount + " cycles, not " + resource.getCycleCount());
+  }
+
+  private static void checkBamCycles(Path path, int cycleCount) throws Exception {
+    check(Files.isRegularFile(path), "Missing exported equipment BAM " + path.getFileName());
+    final BamDecoder decoder = BamDecoder.loadBam(new FileResourceEntry(path));
+    check(decoder != null && decoder.isOpen(), path.getFileName() + " should reopen as a BAM");
+    try {
+      check(decoder.createControl().cycleCount() == cycleCount,
+          path.getFileName() + " should contain exactly " + cycleCount + " cycles");
+    } finally {
+      decoder.close();
+    }
   }
 
   private static boolean hasVisiblePixel(BufferedImage image) {

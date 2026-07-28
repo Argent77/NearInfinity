@@ -166,7 +166,17 @@ public class CharacterOldDecoder extends CharacterBaseDecoder {
 
   /** Returns the decoder's exact avatar suffix and cycle schema. */
   public Map<Sequence, Couple<String, Integer>> getAvatarSequenceMap() {
+    return getSequenceMap();
+  }
+
+  /** Returns the canonical legacy-character suffix and cycle schema. */
+  public static Map<Sequence, Couple<String, Integer>> getSequenceMap() {
     return Collections.unmodifiableMap(SUFFIX_MAP);
+  }
+
+  /** Returns the canonical legacy-character suffix and cycle offset for the additional walk directions. */
+  public static Couple<String, Integer> getAdditionalWalkSequence() {
+    return WALK_EXTRA;
   }
 
   /** Returns whether weapon animation overlays are suppressed. */

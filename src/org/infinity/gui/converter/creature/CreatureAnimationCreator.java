@@ -81,10 +81,12 @@ public final class CreatureAnimationCreator extends ChildFrame {
   private final JTextArea equipmentPromptArea = new JTextArea(6, 28);
   private final JTextField equipmentSourceCodeField = new JTextField("AUTO", 5);
   private final JTextField equipmentTargetCodeField = new JTextField("AUTO", 5);
+  private final JTextField equipmentOffhandSourceCodeField = new JTextField("AUTO", 5);
+  private final JTextField equipmentOffhandTargetCodeField = new JTextField("AUTO", 5);
   private final JSpinner equipmentSeedSpinner =
       new JSpinner(new SpinnerNumberModel(1, Integer.MIN_VALUE, Integer.MAX_VALUE, 1));
   private final JLabel equipmentDescriptionLabel = new JLabel(" ");
-  private final JButton equipmentGenerateButton = new JButton("Generate weapon overlay");
+  private final JButton equipmentGenerateButton = new JButton("Generate equipment overlay");
 
   private final JLabel headingLabel = new JLabel();
   private final JLabel gameLabel = new JLabel();
@@ -172,8 +174,8 @@ public final class CreatureAnimationCreator extends ChildFrame {
     equipmentPromptArea.setWrapStyleWord(true);
     equipmentPromptArea.setText("I want an animation similar to the existing SOLAR, but instead of wielding a "
         + "sword, it should wield an ornate silver scythe with a blue glow.");
-    equipmentPromptArea.setToolTipText("Name an ANIMATE.IDS reference, a compatible source weapon and the "
-        + "replacement. The last named weapon is treated as the requested result.");
+    equipmentPromptArea.setToolTipText("Name an ANIMATE.IDS reference and the requested equipment. For dual-item "
+        + "loadouts, explicitly assign one item to the main hand and one to the offhand.");
 
     final Path defaultOutput = getDefaultOutputDirectory();
     final CreatureAnimationCreatorSettings.State settings =
@@ -328,16 +330,23 @@ public final class CreatureAnimationCreator extends ChildFrame {
     promptConstraints.fill = GridBagConstraints.BOTH;
     panel.add(new JScrollPane(equipmentPromptArea), promptConstraints);
 
-    final JPanel codes = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-    codes.add(new JLabel("Source layer:"));
-    codes.add(equipmentSourceCodeField);
-    codes.add(new JLabel("New appearance:"));
-    codes.add(equipmentTargetCodeField);
-    addWide(panel, codes, gbc, row++);
+    final JPanel mainCodes = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+    mainCodes.add(new JLabel("Main source:"));
+    mainCodes.add(equipmentSourceCodeField);
+    mainCodes.add(new JLabel("New main appearance:"));
+    mainCodes.add(equipmentTargetCodeField);
+    addWide(panel, mainCodes, gbc, row++);
+
+    final JPanel offhandCodes = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+    offhandCodes.add(new JLabel("Off-hand source:"));
+    offhandCodes.add(equipmentOffhandSourceCodeField);
+    offhandCodes.add(new JLabel("New off-hand appearance:"));
+    offhandCodes.add(equipmentOffhandTargetCodeField);
+    addWide(panel, offhandCodes, gbc, row++);
 
     final JLabel codeHelp = new JLabel("<html>Use <code>AUTO</code> for resource-driven source discovery and "
-        + "collision-free target selection. Source layer codes are one or two characters according to the family; "
-        + "the target remains a two-character ITM <b>Equipped appearance</b> value.</html>");
+        + "collision-free target selection. Off-hand fields apply only when the prompt explicitly requests a shield "
+        + "or second weapon. Target values are two-character ITM <b>Equipped appearance</b> codes.</html>");
     codeHelp.setForeground(UIManager.getColor("Label.disabledForeground"));
     addWide(panel, codeHelp, gbc, row++);
 
@@ -354,14 +363,15 @@ public final class CreatureAnimationCreator extends ChildFrame {
         + "that defines weapon sprite segments: <code>character</code>, <code>character_old</code>, "
         + "<code>monster</code>, <code>monster_layered_spell</code>, <code>monster_layered</code>, and "
         + "<code>monster_icewind</code>. It follows that family's exact filenames, cycles, directions, height code "
-        + "and Equipped appearance semantics, while leaving avatar BAMs and animation definitions unchanged.</html>");
+        + "and Equipped appearance semantics, while leaving avatar BAMs and animation definitions unchanged. "
+        + "Decoder-backed shields and two-weapon resources are available for character families that emit them.</html>");
     mechanism.setBorder(BorderFactory.createEmptyBorder(9, 0, 8, 0));
     addWide(panel, mechanism, gbc, row++);
 
     final JLabel limitations = new JLabel("<html>A complete family-compatible weapon layer remains required because "
         + "avatar pixels alone do not provide a reliable grip axis or occlusion order. Explicit eastern resources are "
-        + "retained where the family stores them. Procedural sickles, scythes, swords, axes, maces, hammers, spears, "
-        + "polearms, staves, clubs, flails, bows and whips are supported.</html>");
+        + "retained where the family stores them. Procedural melee weapons, one- and two-handed spears, shortbows, "
+        + "longbows, crossbows, slings, shields and explicit main-hand/off-hand combinations are supported.</html>");
     limitations.setForeground(UIManager.getColor("Label.disabledForeground"));
     addWide(panel, limitations, gbc, row++);
 
@@ -576,7 +586,11 @@ public final class CreatureAnimationCreator extends ChildFrame {
         .addDocumentListener(new SimpleDocumentListener(this::equipmentGenerationInputChanged));
     equipmentSourceCodeField.getDocument()
         .addDocumentListener(new SimpleDocumentListener(this::equipmentGenerationInputChanged));
+    equipmentOffhandSourceCodeField.getDocument()
+        .addDocumentListener(new SimpleDocumentListener(this::equipmentGenerationInputChanged));
     equipmentTargetCodeField.getDocument()
+        .addDocumentListener(new SimpleDocumentListener(this::updateEquipmentDescriptionSummary));
+    equipmentOffhandTargetCodeField.getDocument()
         .addDocumentListener(new SimpleDocumentListener(this::updateEquipmentDescriptionSummary));
     equipmentSeedSpinner.addChangeListener(event -> equipmentGenerationInputChanged());
     updateDescriptionSummary();
@@ -629,12 +643,15 @@ public final class CreatureAnimationCreator extends ChildFrame {
     final String prompt = equipmentPromptArea.getText();
     final String sourceCode = equipmentSourceCodeField.getText();
     final String targetCode = equipmentTargetCodeField.getText();
+    final String offhandSourceCode = equipmentOffhandSourceCodeField.getText();
+    final String offhandTargetCode = equipmentOffhandTargetCodeField.getText();
     final long seed = ((Number) equipmentSeedSpinner.getValue()).longValue();
     final SwingWorker<EquipmentOverlayReference.Result, Void> worker =
         new SwingWorker<EquipmentOverlayReference.Result, Void>() {
           @Override
           protected EquipmentOverlayReference.Result doInBackground() throws Exception {
-            return EquipmentOverlayReference.generate(prompt, sourceCode, targetCode, seed,
+            return EquipmentOverlayReference.generate(prompt, sourceCode, targetCode, offhandSourceCode,
+                offhandTargetCode, seed,
                 (completed, total, sequence, direction) ->
                     setProgress((int) ((completed * 100L) / total)));
           }
@@ -647,14 +664,21 @@ public final class CreatureAnimationCreator extends ChildFrame {
               try {
                 equipmentSourceCodeField.setText(result.getSourceAppearanceCode());
                 equipmentTargetCodeField.setText(result.getTargetAppearanceCode());
+                equipmentOffhandSourceCodeField.setText(
+                    result.hasOffhandOverlay() ? result.getOffhandSourceAppearanceCode() : "AUTO");
+                equipmentOffhandTargetCodeField.setText(
+                    result.hasOffhandOverlay() ? result.getOffhandTargetAppearanceCode() : "AUTO");
               } finally {
                 updatingEquipmentFields = false;
               }
               setEquipmentResult(result);
               equipmentSourceCodeField.setToolTipText("Available complete compatible layers: "
                   + String.join(", ", result.getAvailableAppearanceCodes()));
-              operationLabel.setText("Synchronized " + result.getPrompt().getTargetWeapon().getLabel()
-                  + " overlay generated");
+              equipmentOffhandSourceCodeField.setToolTipText(result.hasOffhandOverlay()
+                  ? "Available complete compatible off-hand layers: "
+                      + String.join(", ", result.getAvailableOffhandAppearanceCodes())
+                  : "The current prompt does not request off-hand equipment.");
+              operationLabel.setText("Synchronized " + result.getPrompt().getSummary() + " generated");
             } catch (InterruptedException e) {
               Thread.currentThread().interrupt();
               showFailure("Equipment overlay generation was interrupted.", e);
@@ -845,7 +869,8 @@ public final class CreatureAnimationCreator extends ChildFrame {
     }
 
     final EquipmentOverlayModel overlay = equipmentResult.getOverlayAnimation();
-    final ValidationReport report = EquipmentOverlayExporter.validate(overlay, config);
+    final EquipmentOverlayModel offhandOverlay = equipmentResult.getOffhandOverlayAnimation();
+    final ValidationReport report = EquipmentOverlayExporter.validate(overlay, offhandOverlay, config);
     if (report.hasErrors()) {
       showReport(report, "Equipment overlay validation", JOptionPane.ERROR_MESSAGE);
       return;
@@ -877,7 +902,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
     new SwingWorker<EquipmentOverlayExporter.ExportResult, Void>() {
       @Override
       protected EquipmentOverlayExporter.ExportResult doInBackground() throws Exception {
-        return EquipmentOverlayExporter.export(overlay, config, overwrite);
+        return EquipmentOverlayExporter.export(overlay, offhandOverlay, config, overwrite);
       }
 
       @Override
@@ -889,11 +914,16 @@ public final class CreatureAnimationCreator extends ChildFrame {
           }
           operationLabel.setText(result.getInstalledFiles().size() + " equipment resource(s) installed");
           JOptionPane.showMessageDialog(CreatureAnimationCreator.this,
-              "The " + equipmentResult.getPrompt().getTargetWeapon().getLabel() + " overlay was installed for "
+              "The " + equipmentResult.getPrompt().getSummary() + " overlay was installed for "
                   + equipmentResult.getSymbol() + ".\n\n"
-                  + "Set the equipped test ITM to "
+                  + "Set the main-hand test ITM to "
                   + equipmentResult.getFamily().getActivationSummary(config.getAppearanceCode())
-                  + " and equip it on the creature.\n\nOutput: " + config.getOutputDirectory(),
+                  + (config.hasOffhand()
+                      ? " and the shield-slot ITM to "
+                          + equipmentResult.getFamily().getActivationSummary(config.getOffhandAppearanceCode())
+                      : "")
+                  + ", then equip the item" + (config.hasOffhand() ? "s" : "")
+                  + " on the creature.\n\nOutput: " + config.getOutputDirectory(),
               "Equipment overlay exported", JOptionPane.INFORMATION_MESSAGE);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
@@ -917,7 +947,8 @@ public final class CreatureAnimationCreator extends ChildFrame {
         return false;
       }
       final ValidationReport report =
-          EquipmentOverlayExporter.validate(equipmentResult.getOverlayAnimation(), config);
+          EquipmentOverlayExporter.validate(equipmentResult.getOverlayAnimation(),
+              equipmentResult.getOffhandOverlayAnimation(), config);
       final int messageType = report.hasErrors() ? JOptionPane.ERROR_MESSAGE
           : report.hasWarnings() ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE;
       showReport(report, "Equipment overlay validation", messageType);
@@ -1029,13 +1060,26 @@ public final class CreatureAnimationCreator extends ChildFrame {
           + " requires the target Equipped appearance to begin with "
           + equipmentResult.getFamily().getFileCode(equipmentResult.getTargetAppearanceCode()) + ".");
     }
-    return new EquipmentOverlayExporter.Config().setGame(Profile.getGame()).setFamily(equipmentResult.getFamily())
+    final EquipmentOverlayExporter.Config config =
+        new EquipmentOverlayExporter.Config().setGame(Profile.getGame()).setFamily(equipmentResult.getFamily())
         .setResourcePrefix(equipmentResult.getResourcePrefix())
         .setAppearanceCode(appearanceCode)
         .setWeaponType(equipmentResult.getPrompt().getTargetWeapon())
         .setOutputDirectory(Paths.get(outputText).toAbsolutePath().normalize())
         .setBamFormat((BamFormat) formatCombo.getSelectedItem())
         .setCompressedBam(compressedCheck.isSelected());
+    if (equipmentResult.hasOffhandOverlay()) {
+      final String offhandAppearanceCode =
+          equipmentOffhandTargetCodeField.getText().trim().toUpperCase(Locale.ENGLISH);
+      if (offhandAppearanceCode.equals(equipmentResult.getOffhandSourceAppearanceCode())) {
+        throw new IllegalArgumentException("The off-hand target appearance code must differ from source layer "
+            + equipmentResult.getOffhandSourceAppearanceCode() + ".");
+      }
+      config.setOffhandResourcePrefix(equipmentResult.getOffhandResourcePrefix())
+          .setOffhandAppearanceCode(offhandAppearanceCode)
+          .setOffhandType(equipmentResult.getPrompt().getTargetOffhand());
+    }
+    return config;
   }
 
   private void chooseOutputDirectory() {
@@ -1090,6 +1134,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
     this.model = (model != null) ? model : new CreatureAnimationModel();
     previewPanel.setModel(this.model);
     previewPanel.setOverlayModel(null);
+    previewPanel.setOffhandOverlayModel(null);
     updateModeUi();
     updateSourceUi();
   }
@@ -1101,6 +1146,9 @@ public final class CreatureAnimationCreator extends ChildFrame {
     previewPanel.setEasternModel(result != null ? result.getAvatarEasternModel() : null);
     previewPanel.setOverlayModel(result != null ? result.getOverlayModel() : null);
     previewPanel.setOverlayEasternModel(result != null ? result.getOverlayEasternModel() : null);
+    previewPanel.setOffhandOverlayModel(result != null ? result.getOffhandOverlayModel() : null);
+    previewPanel.setOffhandOverlayEasternModel(
+        result != null ? result.getOffhandOverlayEasternModel() : null);
     if (result != null) {
       familyCombo.setSelectedItem(result.getFamily().getCreatureFamily());
       slotField.setText(String.format(Locale.ENGLISH, "0x%04X", result.getAnimationId()));
@@ -1120,10 +1168,16 @@ public final class CreatureAnimationCreator extends ChildFrame {
     final CreatureAnimationModel editableModel = getEditableModel();
     if (equipmentResult != null) {
       final EquipmentOverlayModel equipment = equipmentResult.getOverlayAnimation();
+      final EquipmentOverlayModel offhand = equipmentResult.getOffhandOverlayAnimation();
+      final int frameCount = equipment.getFrameCount() + (offhand != null ? offhand.getFrameCount() : 0);
+      final int cellCount =
+          equipment.getPopulatedCellCount() + (offhand != null ? offhand.getPopulatedCellCount() : 0);
+      final int variantCount =
+          equipment.getPopulatedVariantCount() + (offhand != null ? offhand.getPopulatedVariantCount() : 0);
       sourceStatusLabel.setText(equipment.isEmpty() ? "No equipment frames loaded"
-          : "Equipment overlay • " + equipment.getFrameCount() + " frames • "
-              + equipment.getPopulatedCellCount() + " action/direction cells • "
-              + equipment.getPopulatedVariantCount() + " synchronized cycle variants");
+          : (offhand != null ? "Main-hand + off-hand overlays" : "Equipment overlay") + " • "
+              + frameCount + " frames • " + cellCount + " action/direction cells • "
+              + variantCount + " synchronized cycle variants");
     } else {
       final int cells = editableModel.getPopulatedCellCount();
       final int requiredCells = Sequence.values().length * Direction.values().length;
@@ -1185,7 +1239,9 @@ public final class CreatureAnimationCreator extends ChildFrame {
     try {
       if (equipmentResult != null) {
         equipmentDescriptionLabel.setText(equipmentResult.getSummary() + " • export target "
-            + equipmentTargetCodeField.getText().trim().toUpperCase(Locale.ENGLISH));
+            + equipmentTargetCodeField.getText().trim().toUpperCase(Locale.ENGLISH)
+            + (equipmentResult.hasOffhandOverlay() ? " + "
+                + equipmentOffhandTargetCodeField.getText().trim().toUpperCase(Locale.ENGLISH) + " off-hand" : ""));
         return;
       }
       final EquipmentOverlayGenerator.PromptSpec prompt =
@@ -1195,7 +1251,18 @@ public final class CreatureAnimationCreator extends ChildFrame {
       final String targetText = equipmentTargetCodeField.getText().trim();
       final String target = targetText.isEmpty() || "AUTO".equalsIgnoreCase(targetText)
           ? prompt.getTargetWeapon().getSuggestedAppearanceCode() + " (auto)" : targetText.toUpperCase(Locale.ENGLISH);
-      equipmentDescriptionLabel.setText(prompt.getSummary() + " • source " + source + " • target " + target);
+      final String offhandSourceText = equipmentOffhandSourceCodeField.getText().trim();
+      final String offhandTargetText = equipmentOffhandTargetCodeField.getText().trim();
+      final String offhand = prompt.hasOffhand()
+          ? " • off-hand source "
+              + (offhandSourceText.isEmpty() ? "AUTO" : offhandSourceText.toUpperCase(Locale.ENGLISH))
+              + " • off-hand target "
+              + (offhandTargetText.isEmpty() || "AUTO".equalsIgnoreCase(offhandTargetText)
+                  ? prompt.getTargetOffhand().getSuggestedAppearanceCode() + " (auto)"
+                  : offhandTargetText.toUpperCase(Locale.ENGLISH))
+          : "";
+      equipmentDescriptionLabel.setText(prompt.getSummary() + " • main source " + source
+          + " • main target " + target + offhand);
     } catch (Exception e) {
       equipmentDescriptionLabel.setText(e.getMessage());
     }
@@ -1409,15 +1476,22 @@ public final class CreatureAnimationCreator extends ChildFrame {
         + "pivot. Family-only actions use documented deterministic aliases; PST misc1-misc20 remain replaceable "
         + "custom sequences.\n\n"
         + "Equipment replacement\n\n"
-        + "Weapon replacement is available for the six decoder families that define weapon sprite segments: "
+        + "Main-hand weapon replacement is available for the six decoder families that define weapon sprite segments: "
         + "character, character_old, monster, monster_layered_spell, monster_layered and monster_icewind. Enter a "
         + "prompt such as: \"similar to SOLAR, but instead of a sword wielding an ornate silver scythe with blue "
-        + "glow.\" The creator resolves the ANIMATE.IDS symbol, uses the decoder's exact height code, appearance-code "
-        + "width, filenames, cycles and directions, and retains explicit eastern artwork where present. The target "
-        + "ITM must use the reported Equipped appearance code. Families that use only its first character will "
+        + "glow.\" Modern character animations additionally support their decoder-defined A7/A9 two-weapon layout "
+        + "and O-suffixed left-hand resources. Modern and legacy character animations support shield layers through "
+        + "their exact shield-height prefix; legacy character animations reject two-weapon requests because their "
+        + "decoder explicitly forbids those sequences. Assign dual items explicitly, for example \"a longsword in "
+        + "the main hand and a mace in the offhand\" or \"a one-handed spear in the main hand and a buckler in the "
+        + "offhand.\" The creator resolves the ANIMATE.IDS symbol, uses the decoder's exact height code, appearance-code "
+        + "width, filenames, cycles and directions, and retains explicit eastern artwork where present. Each target "
+        + "ITM must use its reported Equipped appearance code. Families that use only its first character will "
         + "report that shared-prefix behavior before export. Avatar BAMs and animation definitions are not modified. "
-        + "A complete compatible source layer remains required; avatar-only grip inference is intentionally rejected "
-        + "because it cannot preserve alignment and occlusion reliably.\n\n"
+        + "Every generated hand requires a complete pose-compatible source layer; avatar-only grip inference is "
+        + "intentionally rejected because it cannot preserve alignment and occlusion reliably. Supported procedural "
+        + "art includes shortbows, longbows, light and heavy crossbows, slings, curved sword variants, one-handed "
+        + "spears, bucklers, and small, medium and large shields.\n\n"
         + "Export safety\n\n"
         + "The creator validates slot ranges, source coverage, centers, dimensions, palettes and filenames. It writes "
         + "to a staging directory, reopens the BAMs, checks cycle counts and PVRZ references, and only then installs "
