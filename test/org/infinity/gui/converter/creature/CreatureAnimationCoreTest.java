@@ -22,7 +22,9 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.prefs.Preferences;
 
@@ -35,6 +37,8 @@ import org.infinity.gui.converter.creature.CreatureAnimationFamily.ResourcePlan;
 import org.infinity.gui.converter.creature.CreatureAnimationModel.AnimationFrame;
 import org.infinity.gui.converter.creature.EquipmentOverlayFamily.AttackKind;
 import org.infinity.gui.converter.creature.EquipmentOverlayFamily.OverlaySlot;
+import org.infinity.gui.converter.creature.EquipmentOverlayGenerator.EquipmentSize;
+import org.infinity.gui.converter.creature.EquipmentOverlayGenerator.EquipmentSpec;
 import org.infinity.gui.converter.creature.EquipmentOverlayGenerator.WeaponType;
 import org.infinity.gui.converter.creature.MonsterAnimationLayout.BamFormat;
 import org.infinity.gui.converter.creature.MonsterAnimationLayout.Direction;
@@ -61,7 +65,7 @@ public final class CreatureAnimationCoreTest {
     testClassicProfileExport();
     testResourceNameBudgets();
     testAllFamilyBamV1Exports();
-    testDescriptionAndGeneration();
+    testStructuredCreatureGeneration();
     testPngRoundTrip();
     testFalseColorPaletteRoundTrip();
     testFamilyPaletteTransforms();
@@ -69,8 +73,8 @@ public final class CreatureAnimationCoreTest {
     testSplitBamV1Export();
     testBamV2Export();
     testFamilyBamV2Export();
-    testEquipmentPromptAndGeneration();
-    testExpandedEquipmentPromptAndGeneration();
+    testStructuredEquipmentGeneration();
+    testExpandedStructuredEquipmentGeneration();
     testEquipmentProfileFormats();
     testEquipmentReferenceResrefFallback();
     testEquipmentOverlayFamilyLayouts();
@@ -627,23 +631,46 @@ public final class CreatureAnimationCoreTest {
     }
   }
 
-  private static void testDescriptionAndGeneration() {
-    final ProceduralCreatureGenerator.Description description =
-        ProceduralCreatureGenerator.parseDescription("huge red and gold winged horned dragon", 42L);
-    check(description.getArchetype() == ProceduralCreatureGenerator.Archetype.QUADRUPED,
-        "Dragon description should select the quadruped body plan");
-    check(description.getTraits().contains(ProceduralCreatureGenerator.Trait.WINGS), "Wings should be parsed");
-    check(description.getTraits().contains(ProceduralCreatureGenerator.Trait.HORNS), "Horns should be parsed");
-    check(description.getScale() > 1.0, "Huge should increase creature scale");
+  private static void testStructuredCreatureGeneration() {
+    final ProceduralCreatureGenerator.CreatureSpec specification =
+        new ProceduralCreatureGenerator.CreatureSpec(1234L, ProceduralCreatureGenerator.Archetype.ARACHNID,
+            EnumSet.of(ProceduralCreatureGenerator.Trait.ARMORED,
+                ProceduralCreatureGenerator.Trait.GLOWING),
+            new Color(61, 102, 157), new Color(189, 146, 49),
+            ProceduralCreatureGenerator.CreatureSize.SMALL);
+    check(specification.getArchetype() == ProceduralCreatureGenerator.Archetype.ARACHNID,
+        "The structured body-plan selection must remain exact");
+    check(specification.getTraits().contains(ProceduralCreatureGenerator.Trait.ARMORED),
+        "The structured trait selection must remain exact");
+    check(specification.getSize() == ProceduralCreatureGenerator.CreatureSize.SMALL
+        && specification.getScale() < 1.0, "The structured size selection must expose its deterministic scale");
+    check(specification.getSeed() == 1234L
+        && specification.getBodyColor().equals(new Color(61, 102, 157))
+        && specification.getAccentColor().equals(new Color(189, 146, 49)),
+        "The structured seed and color selections must remain exact");
 
-    final CreatureAnimationModel model =
-        ProceduralCreatureGenerator.generate("small blue armored spider", 1234L, null);
+    final CreatureAnimationModel model = ProceduralCreatureGenerator.generate(specification, null);
     check(model.getPopulatedCellCount() == Sequence.values().length * Direction.values().length,
         "Procedural generator must fill every action/direction cell");
     check(model.getFrameCount() > 500, "Procedural generator should create a complete animation family");
     final BufferedImage image = model.getFrames(Sequence.WALK, Direction.S).get(0).getImage();
     check(image.getWidth() == ProceduralCreatureGenerator.FRAME_SIZE, "Generated frame width should be stable");
     check(hasVisiblePixel(image), "Generated frame should contain actual drawing data");
+
+    check(!CreatureAnimationMessages.get(Locale.ENGLISH, "source.bodyPlan").isEmpty(),
+        "Structured editor labels must resolve through the localization bundle");
+    for (final ProceduralCreatureGenerator.Archetype archetype
+        : ProceduralCreatureGenerator.Archetype.values()) {
+      check(!archetype.toString().isEmpty(), "Every creature body plan must expose a localized label");
+    }
+    for (final ProceduralCreatureGenerator.CreatureSize size
+        : ProceduralCreatureGenerator.CreatureSize.values()) {
+      check(!size.toString().isEmpty(), "Every creature size must expose a localized label");
+    }
+    for (final ProceduralCreatureGenerator.Trait trait
+        : ProceduralCreatureGenerator.Trait.values()) {
+      check(!trait.toString().isEmpty(), "Every creature trait must expose a localized label");
+    }
   }
 
   private static void testPngRoundTrip() throws Exception {
@@ -785,20 +812,20 @@ public final class CreatureAnimationCoreTest {
     }
   }
 
-  private static void testEquipmentPromptAndGeneration() {
-    final EquipmentOverlayGenerator.PromptSpec prompt = EquipmentOverlayGenerator.parsePrompt(
-        "I want an animation similar to the existing SOLAR, but instead of wielding a sword, it should wield "
-            + "an ornate silver scythe with a blue glow.");
-    check(prompt.getSourceWeapon() == EquipmentOverlayGenerator.WeaponType.SWORD,
-        "The first weapon in a replacement prompt should be treated as the source");
-    check(prompt.getTargetWeapon() == EquipmentOverlayGenerator.WeaponType.SCYTHE,
-        "The last weapon in a replacement prompt should be treated as the target");
-    check("SY".equals(prompt.getTargetWeapon().getSuggestedAppearanceCode()),
+  private static void testStructuredEquipmentGeneration() {
+    final EquipmentSpec specification =
+        createEquipmentSpec(WeaponType.SWORD, WeaponType.SCYTHE, null, EquipmentSize.STANDARD, true, true);
+    check(specification.getSourceWeapon() == WeaponType.SWORD,
+        "The structured source-equipment selection must remain exact");
+    check(specification.getTargetWeapon() == WeaponType.SCYTHE,
+        "The structured target-equipment selection must remain exact");
+    check("SY".equals(specification.getTargetWeapon().getSuggestedAppearanceCode()),
         "Scythes should receive a stable automatic appearance code");
-    check(prompt.isGlowing() && prompt.isOrnate(), "Equipment prompt traits should be parsed");
+    check(specification.isGlowing() && specification.isOrnate(),
+        "Structured equipment effects must remain exact");
 
     final CreatureAnimationModel generated = EquipmentOverlayGenerator.generate(
-        createCompleteEquipmentModel(false), createCompleteEquipmentModel(true), prompt, 77L, null);
+        createCompleteEquipmentModel(false), createCompleteEquipmentModel(true), specification, 77L, null);
     check(generated.getPopulatedCellCount() == Sequence.values().length * Direction.values().length,
         "Equipment generation must preserve every synchronized action/direction cell");
     check(generated.getFrameCount() == Sequence.values().length * Direction.values().length,
@@ -810,52 +837,27 @@ public final class CreatureAnimationCoreTest {
 
     final EquipmentOverlayModel mirroredFamily = EquipmentOverlayGenerator.generate(
         EquipmentOverlayModel.fromWestern(createCompleteEquipmentModel(false)),
-        EquipmentOverlayModel.fromWestern(createCompleteEquipmentModel(true)), prompt, 77L, false, null);
+        EquipmentOverlayModel.fromWestern(createCompleteEquipmentModel(true)), specification, 77L, false, null);
     check(mirroredFamily.getEasternModel().isEmpty(),
         "Families that mirror east must not retain independent eastern artwork that will not be exported");
   }
 
-  private static void testExpandedEquipmentPromptAndGeneration() {
-    final EquipmentOverlayGenerator.PromptSpec dual = EquipmentOverlayGenerator.parsePrompt(
-        "SOLAR wielding a longsword in the main hand and a mace in the offhand");
+  private static void testExpandedStructuredEquipmentGeneration() {
+    final EquipmentSpec dual =
+        createEquipmentSpec(null, WeaponType.SWORD, WeaponType.MACE, EquipmentSize.STANDARD, false, false);
     check(dual.getTargetWeapon() == WeaponType.SWORD,
-        "An explicitly assigned longsword must be parsed as the main-hand weapon");
+        "The main-hand selector must retain a sword selection");
     check(dual.getTargetOffhand() == WeaponType.MACE && dual.isTwoWeaponLoadout(),
-        "An explicitly assigned mace must be parsed as a second weapon");
+        "The off-hand selector must retain a second one-handed weapon");
 
-    final EquipmentOverlayGenerator.PromptSpec spearAndShield = EquipmentOverlayGenerator.parsePrompt(
-        "SOLAR with a one-handed spear in the main hand and a large shield in the offhand");
+    final EquipmentSpec spearAndShield = createEquipmentSpec(null, WeaponType.ONE_HANDED_SPEAR,
+        WeaponType.LARGE_SHIELD, EquipmentSize.STANDARD, false, false);
     check(spearAndShield.getTargetWeapon() == WeaponType.ONE_HANDED_SPEAR,
-        "The one-handed spear phrase must not collapse to the existing two-handed spear");
+        "The one-handed spear selector must remain distinct from the two-handed spear");
     check(spearAndShield.getTargetOffhand() == WeaponType.LARGE_SHIELD,
-        "A qualified large shield must be parsed as off-hand equipment");
+        "The off-hand selector must retain a large shield");
 
-    final EquipmentOverlayGenerator.PromptSpec unicode =
-        EquipmentOverlayGenerator.parsePrompt("replace the sword with a silver Ninjatō");
-    check(unicode.getTargetWeapon() == WeaponType.NINJATO,
-        "Unicode Ninjatō spelling must normalize to the procedural ninjato type");
-
-    final EquipmentOverlayGenerator.PromptSpec animationEquipmentName =
-        EquipmentOverlayGenerator.parsePrompt(
-            "GOBLIN_AXE: replace the axe with a huge ornate blackened-steel halberd.", "GOBLIN_AXE");
-    check(animationEquipmentName.getSourceWeapon() == WeaponType.AXE,
-        "An equipment word inside the exact ANIMATE.IDS symbol must not be counted as source equipment");
-    check(animationEquipmentName.getTargetWeapon() == WeaponType.HALBERD,
-        "Equipment parsing must retain the replacement named after the ANIMATE.IDS symbol");
-
-    final String[] prompts = {
-        "replace the sword with a light crossbow",
-        "replace the sword with a heavy crossbow",
-        "replace the sword with a shortbow",
-        "replace the sword with a longbow",
-        "replace the sword with a sling",
-        "replace the sword with a scimitar",
-        "replace the sword with a wakizashi",
-        "replace the sword with a ninjato",
-        "replace the sword with a katana",
-        "replace the sword with a one-handed spear"
-    };
-    final WeaponType[] expected = {
+    final WeaponType[] renderTypes = {
         WeaponType.LIGHT_CROSSBOW,
         WeaponType.HEAVY_CROSSBOW,
         WeaponType.SHORTBOW,
@@ -867,15 +869,21 @@ public final class CreatureAnimationCoreTest {
         WeaponType.KATANA,
         WeaponType.ONE_HANDED_SPEAR
     };
-    for (int index = 0; index < prompts.length; index++) {
-      final EquipmentOverlayGenerator.PromptSpec prompt =
-          EquipmentOverlayGenerator.parsePrompt(prompts[index]);
-      check(prompt.getTargetWeapon() == expected[index],
-          prompts[index] + " should select " + expected[index]);
+    for (int index = 0; index < renderTypes.length; index++) {
+      final EquipmentSpec renderSpec = createEquipmentSpec(null, renderTypes[index], null,
+          EquipmentSize.STANDARD, false, false);
       final CreatureAnimationModel generated = EquipmentOverlayGenerator.generate(
-          createCompleteEquipmentModel(false), createCompleteEquipmentModel(true), prompt, 150L + index, null);
+          createCompleteEquipmentModel(false), createCompleteEquipmentModel(true), renderSpec, 150L + index, null);
       check(hasVisiblePixel(generated.getFrames(Sequence.ATTACK_1, Direction.W).get(0).getImage()),
-          expected[index] + " must render visible synchronized artwork");
+          renderTypes[index] + " must render visible synchronized artwork");
+    }
+    for (final WeaponType type : WeaponType.values()) {
+      check(!type.getLabel().isEmpty(), type.name() + " must expose a localized structured-editor label");
+      check(type.getSuggestedAppearanceCode().length() == 2,
+          type.name() + " must expose a localization-independent two-character appearance suggestion");
+    }
+    for (final EquipmentSize size : EquipmentSize.values()) {
+      check(!size.toString().isEmpty(), "Every equipment size must expose a localized label");
     }
 
     final WeaponType[] shields = {
@@ -894,8 +902,8 @@ public final class CreatureAnimationCoreTest {
 
     boolean rejected = false;
     try {
-      EquipmentOverlayGenerator.parsePrompt(
-          "a greatsword in the main hand and a buckler in the offhand");
+      createEquipmentSpec(null, WeaponType.GREATSWORD, WeaponType.BUCKLER,
+          EquipmentSize.STANDARD, false, false);
     } catch (IllegalArgumentException e) {
       rejected = e.getMessage().contains("both hands");
     }
@@ -1161,12 +1169,13 @@ public final class CreatureAnimationCoreTest {
   private static void testAllEquipmentOverlayFamilyBamV1Exports() throws Exception {
     final Path directory = createTestDirectory("ni-equipment-family-test-");
     try {
-      final EquipmentOverlayGenerator.PromptSpec prompt =
-          EquipmentOverlayGenerator.parsePrompt("replace the sword with an ornate silver scythe");
+      final EquipmentSpec specification =
+          createEquipmentSpec(WeaponType.SWORD, WeaponType.SCYTHE, null,
+              EquipmentSize.STANDARD, false, true);
       final EquipmentOverlayModel source = createCompleteEquipmentOverlayModel(false);
       final EquipmentOverlayModel avatar = createCompleteEquipmentOverlayModel(true);
       final EquipmentOverlayModel generated =
-          EquipmentOverlayGenerator.generate(source, avatar, prompt, 113L, null);
+          EquipmentOverlayGenerator.generate(source, avatar, specification, 113L, null);
       check(generated.getVariantCount(Sequence.CONJURE, 0) == 4,
           "Generation must preserve every distinct synchronized casting occurrence");
 
@@ -1233,8 +1242,9 @@ public final class CreatureAnimationCoreTest {
       final EquipmentOverlayModel source = createCompleteEquipmentOverlayModel(false);
       final EquipmentOverlayModel avatar = createCompleteEquipmentOverlayModel(true);
 
-      final EquipmentOverlayGenerator.PromptSpec dual = EquipmentOverlayGenerator.parsePrompt(
-          "a longsword in the main hand and a mace in the offhand");
+      final EquipmentSpec dual =
+          createEquipmentSpec(null, WeaponType.SWORD, WeaponType.MACE,
+              EquipmentSize.STANDARD, false, false);
       final EquipmentOverlayModel mainWeapon = EquipmentOverlayGenerator.generate(
           source, avatar, dual.forTarget(dual.getTargetWeapon()), 301L, false, null);
       final EquipmentOverlayModel offhandWeapon = EquipmentOverlayGenerator.generate(
@@ -1256,8 +1266,9 @@ public final class CreatureAnimationCoreTest {
       checkBamCycles(dualDirectory.resolve("WQSZ2OA7.BAM"), 9);
       checkBamCycles(dualDirectory.resolve("WQSZ2OA9.BAM"), 9);
 
-      final EquipmentOverlayGenerator.PromptSpec spearShield = EquipmentOverlayGenerator.parsePrompt(
-          "a one-handed spear in the main hand and a large shield in the offhand");
+      final EquipmentSpec spearShield =
+          createEquipmentSpec(null, WeaponType.ONE_HANDED_SPEAR, WeaponType.LARGE_SHIELD,
+              EquipmentSize.STANDARD, false, false);
       final EquipmentOverlayModel spear = EquipmentOverlayGenerator.generate(
           source, avatar, spearShield.forTarget(spearShield.getTargetWeapon()), 311L, false, null);
       final EquipmentOverlayModel shield = EquipmentOverlayGenerator.generate(
@@ -1291,10 +1302,11 @@ public final class CreatureAnimationCoreTest {
           Collections.singletonList(createLineFrame(false, "western-horizontal")));
       source.replaceFrames(Sequence.STANCE, 12,
           Collections.singletonList(createLineFrame(true, "eastern-vertical")));
-      final EquipmentOverlayGenerator.PromptSpec prompt =
-          EquipmentOverlayGenerator.parsePrompt("replace the sword with a silver sword");
+      final EquipmentSpec specification =
+          createEquipmentSpec(WeaponType.SWORD, WeaponType.SWORD, null,
+              EquipmentSize.STANDARD, false, false);
       final EquipmentOverlayModel generated =
-          EquipmentOverlayGenerator.generate(source, null, prompt, 127L, null);
+          EquipmentOverlayGenerator.generate(source, null, specification, 127L, null);
       final AnimationFrame generatedWest = generated.getFrames(Sequence.STANCE, 4).get(0);
       final AnimationFrame generatedEast = generated.getFrames(Sequence.STANCE, 12).get(0);
       check(generatedWest.getImage().getWidth() > generatedWest.getImage().getHeight(),
@@ -1330,10 +1342,11 @@ public final class CreatureAnimationCoreTest {
   private static void testEquipmentOverlayBamRoundTrip() throws Exception {
     final Path directory = createTestDirectory("ni-equipment-overlay-test-");
     try {
-      final EquipmentOverlayGenerator.PromptSpec prompt =
-          EquipmentOverlayGenerator.parsePrompt("replace the sword with a large silver sickle");
+      final EquipmentSpec specification =
+          createEquipmentSpec(WeaponType.SWORD, WeaponType.SICKLE, null,
+              EquipmentSize.LARGE, false, false);
       final CreatureAnimationModel generated = EquipmentOverlayGenerator.generate(
-          createCompleteEquipmentModel(false), createCompleteEquipmentModel(true), prompt, 91L, null);
+          createCompleteEquipmentModel(false), createCompleteEquipmentModel(true), specification, 91L, null);
       final EquipmentOverlayExporter.Config config = new EquipmentOverlayExporter.Config()
           .setGame(Profile.Game.BG2EE).setResref("MSOL")
           .setAppearanceCode("SK").setOutputDirectory(directory).setBamFormat(BamFormat.BAM_V1)
@@ -1372,10 +1385,11 @@ public final class CreatureAnimationCoreTest {
   private static void testEquipmentOverlayBamV2RoundTrip() throws Exception {
     final Path directory = createTestDirectory("ni-equipment-overlay-v2-test-");
     try {
-      final EquipmentOverlayGenerator.PromptSpec prompt =
-          EquipmentOverlayGenerator.parsePrompt("replace the sword with a glowing silver scythe");
+      final EquipmentSpec specification =
+          createEquipmentSpec(WeaponType.SWORD, WeaponType.SCYTHE, null,
+              EquipmentSize.STANDARD, true, false);
       final CreatureAnimationModel generated = EquipmentOverlayGenerator.generate(
-          createCompleteEquipmentModel(false), createCompleteEquipmentModel(true), prompt, 101L, null);
+          createCompleteEquipmentModel(false), createCompleteEquipmentModel(true), specification, 101L, null);
       final EquipmentOverlayExporter.Config config = new EquipmentOverlayExporter.Config()
           .setGame(Profile.Game.BG2EE).setResref("MSOL")
           .setAppearanceCode("SY").setOutputDirectory(directory).setBamFormat(BamFormat.BAM_V2)
@@ -1406,11 +1420,12 @@ public final class CreatureAnimationCoreTest {
   private static void testEquipmentOverlayFamilyBamV2RoundTrip() throws Exception {
     final Path directory = createTestDirectory("ni-equipment-family-v2-test-");
     try {
-      final EquipmentOverlayGenerator.PromptSpec prompt =
-          EquipmentOverlayGenerator.parsePrompt("replace the sword with a glowing silver scythe");
+      final EquipmentSpec specification =
+          createEquipmentSpec(WeaponType.SWORD, WeaponType.SCYTHE, null,
+              EquipmentSize.STANDARD, true, false);
       final EquipmentOverlayModel generated = EquipmentOverlayGenerator.generate(
           createCompleteEquipmentOverlayModel(false), createCompleteEquipmentOverlayModel(true),
-          prompt, 131L, true, null);
+          specification, 131L, true, null);
       final EquipmentOverlayExporter.Config config = new EquipmentOverlayExporter.Config()
           .setGame(Profile.Game.BG2EE)
           .setFamily(EquipmentOverlayFamily.MONSTER_LAYERED).setResourcePrefix("MLR")
@@ -1436,6 +1451,12 @@ public final class CreatureAnimationCoreTest {
   private static Config createConfig(Path output) {
     return new Config().setGame(Profile.Game.BG2EE).setAnimationId(0x7303).setResref("TST1")
         .setOutputDirectory(output).setSplitBams(false);
+  }
+
+  private static EquipmentSpec createEquipmentSpec(WeaponType source, WeaponType target, WeaponType offhand,
+      EquipmentSize size, boolean glowing, boolean ornate) {
+    return new EquipmentSpec(source, target, offhand, new Color(205, 214, 226),
+        new Color(91, 59, 36), new Color(54, 116, 211), glowing, ornate, size);
   }
 
   private static CreatureAnimationModel createMinimalModel() {

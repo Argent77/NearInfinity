@@ -15,12 +15,10 @@ import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 
 import org.infinity.gui.converter.creature.CreatureAnimationModel.AnimationFrame;
@@ -30,9 +28,10 @@ import org.infinity.gui.converter.creature.MonsterAnimationLayout.Sequence;
 /**
  * Deterministic, dependency-free creature draft renderer.
  *
- * <p>This is intentionally a constrained procedural illustrator rather than a generative-AI facade. A description is
- * mapped to a supported body plan, palette, proportions and visible traits. The result is coherent across every action
- * and orientation, reproducible from a seed, and suitable as an editable starting point for an artist pipeline.</p>
+ * <p>This is intentionally a constrained procedural illustrator rather than a generative-AI facade. A typed
+ * specification selects a supported body plan, palette, proportions and visible traits. The result is coherent across
+ * every action and orientation, reproducible from a seed, and suitable as an editable starting point for an artist
+ * pipeline.</p>
  */
 public final class ProceduralCreatureGenerator {
   public static final int FRAME_SIZE = 112;
@@ -43,57 +42,88 @@ public final class ProceduralCreatureGenerator {
   }
 
   public enum Archetype {
-    BIPED("Biped"),
-    QUADRUPED("Quadruped"),
-    ARACHNID("Arachnid"),
-    SERPENT("Serpent");
+    BIPED("creature.archetype.biped"),
+    QUADRUPED("creature.archetype.quadruped"),
+    ARACHNID("creature.archetype.arachnid"),
+    SERPENT("creature.archetype.serpent");
 
-    private final String label;
+    private final String messageKey;
 
-    Archetype(String label) {
-      this.label = label;
+    Archetype(String messageKey) {
+      this.messageKey = messageKey;
     }
 
     @Override
     public String toString() {
-      return label;
+      return CreatureAnimationMessages.get(messageKey);
     }
   }
 
   public enum Trait {
-    ARMORED,
-    GLOWING,
-    HORNS,
-    TAIL,
-    WINGS,
-    UNDEAD,
-    WEAPON,
-    FUR,
-    SPIKES
+    ARMORED("creature.trait.armored"),
+    GLOWING("creature.trait.glowing"),
+    HORNS("creature.trait.horns"),
+    TAIL("creature.trait.tail"),
+    WINGS("creature.trait.wings"),
+    UNDEAD("creature.trait.undead"),
+    WEAPON("creature.trait.weapon"),
+    FUR("creature.trait.fur"),
+    SPIKES("creature.trait.spikes");
+
+    private final String messageKey;
+
+    Trait(String messageKey) {
+      this.messageKey = messageKey;
+    }
+
+    @Override
+    public String toString() {
+      return CreatureAnimationMessages.get(messageKey);
+    }
   }
 
-  public static final class Description {
-    private final String prompt;
+  public enum CreatureSize {
+    TINY("creature.size.tiny", 0.68),
+    SMALL("creature.size.small", 0.82),
+    STANDARD("creature.size.standard", 1.0),
+    LARGE("creature.size.large", 1.1),
+    HUGE("creature.size.huge", 1.22);
+
+    private final String messageKey;
+    private final double scale;
+
+    CreatureSize(String messageKey, double scale) {
+      this.messageKey = messageKey;
+      this.scale = scale;
+    }
+
+    public double getScale() {
+      return scale;
+    }
+
+    @Override
+    public String toString() {
+      return CreatureAnimationMessages.get(messageKey);
+    }
+  }
+
+  /** Complete, language-independent input to the procedural renderer. */
+  public static final class CreatureSpec {
     private final long seed;
     private final Archetype archetype;
     private final EnumSet<Trait> traits;
     private final Color bodyColor;
     private final Color accentColor;
-    private final double scale;
+    private final CreatureSize size;
 
-    private Description(String prompt, long seed, Archetype archetype, EnumSet<Trait> traits, Color bodyColor,
-        Color accentColor, double scale) {
-      this.prompt = prompt;
+    public CreatureSpec(long seed, Archetype archetype, EnumSet<Trait> traits, Color bodyColor,
+        Color accentColor, CreatureSize size) {
       this.seed = seed;
-      this.archetype = archetype;
-      this.traits = traits;
-      this.bodyColor = bodyColor;
-      this.accentColor = accentColor;
-      this.scale = scale;
-    }
-
-    public String getPrompt() {
-      return prompt;
+      this.archetype = Objects.requireNonNull(archetype, "archetype");
+      this.traits = traits != null ? EnumSet.copyOf(traits) : EnumSet.noneOf(Trait.class);
+      this.bodyColor = Objects.requireNonNull(bodyColor, "bodyColor");
+      this.accentColor = Objects.requireNonNull(accentColor, "accentColor");
+      this.size = Objects.requireNonNull(size, "size");
     }
 
     public long getSeed() {
@@ -117,99 +147,19 @@ public final class ProceduralCreatureGenerator {
     }
 
     public double getScale() {
-      return scale;
+      return size.getScale();
     }
-  }
 
-  private static final Map<String, Color> NAMED_COLORS = new LinkedHashMap<>();
-  private static final List<Color> DEFAULT_COLORS = Arrays.asList(new Color(104, 138, 72), new Color(117, 78, 53),
-      new Color(95, 113, 145), new Color(137, 75, 102), new Color(120, 111, 93), new Color(79, 126, 124));
-
-  static {
-    NAMED_COLORS.put("black", new Color(38, 40, 43));
-    NAMED_COLORS.put("white", new Color(214, 213, 203));
-    NAMED_COLORS.put("gray", new Color(111, 116, 119));
-    NAMED_COLORS.put("grey", new Color(111, 116, 119));
-    NAMED_COLORS.put("silver", new Color(157, 165, 169));
-    NAMED_COLORS.put("red", new Color(151, 57, 48));
-    NAMED_COLORS.put("crimson", new Color(137, 39, 50));
-    NAMED_COLORS.put("orange", new Color(184, 96, 39));
-    NAMED_COLORS.put("gold", new Color(189, 146, 49));
-    NAMED_COLORS.put("yellow", new Color(190, 166, 52));
-    NAMED_COLORS.put("green", new Color(72, 131, 68));
-    NAMED_COLORS.put("emerald", new Color(47, 136, 94));
-    NAMED_COLORS.put("blue", new Color(61, 102, 157));
-    NAMED_COLORS.put("cyan", new Color(48, 151, 165));
-    NAMED_COLORS.put("purple", new Color(112, 69, 145));
-    NAMED_COLORS.put("violet", new Color(121, 76, 155));
-    NAMED_COLORS.put("brown", new Color(117, 78, 53));
-    NAMED_COLORS.put("tan", new Color(169, 131, 84));
-    NAMED_COLORS.put("pink", new Color(183, 100, 126));
+    public CreatureSize getSize() {
+      return size;
+    }
   }
 
   private ProceduralCreatureGenerator() {
   }
 
-  public static Description parseDescription(String prompt, long seed) {
-    final String text = (prompt != null) ? prompt.trim() : "";
-    final String normalized = " " + text.toLowerCase(Locale.ENGLISH).replaceAll("[^a-z0-9]+", " ") + " ";
-
-    final Archetype archetype;
-    if (containsAny(normalized, " spider ", " arachnid ", " scorpion ", " beetle ", " insect ")) {
-      archetype = Archetype.ARACHNID;
-    } else if (containsAny(normalized, " snake ", " serpent ", " worm ", " eel ", " naga ", " slug ")) {
-      archetype = Archetype.SERPENT;
-    } else if (containsAny(normalized, " wolf ", " dog ", " bear ", " lion ", " tiger ", " cat ", " boar ",
-        " horse ", " dragon ", " lizard ", " rat ", " quadruped ")) {
-      archetype = Archetype.QUADRUPED;
-    } else {
-      archetype = Archetype.BIPED;
-    }
-
-    final EnumSet<Trait> traits = EnumSet.noneOf(Trait.class);
-    addTraitIfPresent(traits, Trait.ARMORED, normalized, " armor ", " armored ", " plated ", " knight ");
-    addTraitIfPresent(traits, Trait.GLOWING, normalized, " glow ", " glowing ", " luminous ", " spectral ",
-        " magic ", " magical ");
-    addTraitIfPresent(traits, Trait.HORNS, normalized, " horn ", " horns ", " horned ", " demon ", " dragon ");
-    addTraitIfPresent(traits, Trait.TAIL, normalized, " tail ", " tailed ", " dragon ", " lizard ", " wolf ",
-        " dog ", " cat ", " lion ", " tiger ");
-    addTraitIfPresent(traits, Trait.WINGS, normalized, " wing ", " wings ", " winged ", " dragon ", " bat ",
-        " bird ");
-    addTraitIfPresent(traits, Trait.UNDEAD, normalized, " undead ", " zombie ", " skeleton ", " ghost ",
-        " ghoul ", " lich ");
-    addTraitIfPresent(traits, Trait.WEAPON, normalized, " sword ", " axe ", " mace ", " staff ", " spear ",
-        " weapon ", " knight ", " warrior ");
-    addTraitIfPresent(traits, Trait.FUR, normalized, " fur ", " furry ", " wolf ", " bear ", " cat ", " lion ",
-        " tiger ");
-    addTraitIfPresent(traits, Trait.SPIKES, normalized, " spike ", " spikes ", " spiked ", " thorn ",
-        " scorpion ");
-
-    double scale = 1.0;
-    if (containsAny(normalized, " tiny ", " miniature ")) {
-      scale = 0.68;
-    } else if (containsAny(normalized, " small ", " short ")) {
-      scale = 0.82;
-    } else if (containsAny(normalized, " huge ", " giant ", " massive ", " enormous ")) {
-      scale = 1.22;
-    } else if (containsAny(normalized, " large ", " tall ")) {
-      scale = 1.1;
-    }
-
-    final List<Color> colors = new ArrayList<>();
-    for (final Map.Entry<String, Color> entry : NAMED_COLORS.entrySet()) {
-      if (normalized.contains(" " + entry.getKey() + " ")) {
-        colors.add(entry.getValue());
-      }
-    }
-
-    final Random random = new Random(seed ^ text.hashCode());
-    final Color body = !colors.isEmpty() ? colors.get(0) : DEFAULT_COLORS.get(random.nextInt(DEFAULT_COLORS.size()));
-    final Color accent = colors.size() > 1 ? colors.get(1) : deriveAccent(body, random);
-    return new Description(text, seed, archetype, traits, body, accent, scale);
-  }
-
-  public static CreatureAnimationModel generate(String prompt, long seed, ProgressListener listener) {
-    final Description description = parseDescription(prompt, seed);
+  public static CreatureAnimationModel generate(CreatureSpec specification, ProgressListener listener) {
+    final CreatureSpec description = Objects.requireNonNull(specification, "specification");
     final CreatureAnimationModel model = new CreatureAnimationModel();
     int completed = 0;
     int total = 0;
@@ -237,7 +187,7 @@ public final class ProceduralCreatureGenerator {
     return model;
   }
 
-  private static BufferedImage render(Description description, Sequence sequence, Direction direction, int frameIndex,
+  private static BufferedImage render(CreatureSpec description, Sequence sequence, Direction direction, int frameIndex,
       int frameCount) {
     final int renderScale = 2;
     final int size = FRAME_SIZE * renderScale;
@@ -262,7 +212,7 @@ public final class ProceduralCreatureGenerator {
 
       final AffineTransform original = g.getTransform();
       g.translate(FRAME_CENTER.x, FRAME_CENTER.y);
-      g.scale(description.scale, description.scale);
+      g.scale(description.size.getScale(), description.size.getScale());
       g.translate(-FRAME_CENTER.x, -FRAME_CENTER.y);
       switch (description.archetype) {
         case QUADRUPED:
@@ -298,7 +248,7 @@ public final class ProceduralCreatureGenerator {
     return result;
   }
 
-  private static void drawShadow(Graphics2D g, Description description, Pose pose) {
+  private static void drawShadow(Graphics2D g, CreatureSpec description, Pose pose) {
     final int alpha = (int) (82 * (1.0 - pose.fade * 0.45));
     g.setColor(new Color(15, 15, 18, clamp(alpha)));
     final double width = (description.archetype == Archetype.SERPENT) ? 55.0 : 44.0;
@@ -306,7 +256,7 @@ public final class ProceduralCreatureGenerator {
     g.fill(new Ellipse2D.Double(FRAME_CENTER.x - width / 2.0, FRAME_CENTER.y - height / 2.0, width, height));
   }
 
-  private static void drawAura(Graphics2D g, Description description, Pose pose) {
+  private static void drawAura(Graphics2D g, CreatureSpec description, Pose pose) {
     final int alpha = clamp((int) (32 + 24 * Math.sin(pose.phase * Math.PI * 2.0)));
     g.setColor(withAlpha(lighten(description.accentColor, 0.35), alpha));
     final double radius = 28.0 + 4.0 * Math.sin(pose.phase * Math.PI * 2.0);
@@ -314,7 +264,7 @@ public final class ProceduralCreatureGenerator {
         radius * 2.0));
   }
 
-  private static void drawBiped(Graphics2D g, Description d, Pose p, double dx, double dy, Random random) {
+  private static void drawBiped(Graphics2D g, CreatureSpec d, Pose p, double dx, double dy, Random random) {
     final double ground = FRAME_CENTER.y - p.fall * 18.0;
     final double bodyX = FRAME_CENTER.x + p.lean * dx * 7.0;
     final double bodyY = ground - 38.0 + p.bob + p.fall * 24.0;
@@ -363,7 +313,7 @@ public final class ProceduralCreatureGenerator {
     }
   }
 
-  private static void drawQuadruped(Graphics2D g, Description d, Pose p, double dx, double dy, Random random) {
+  private static void drawQuadruped(Graphics2D g, CreatureSpec d, Pose p, double dx, double dy, Random random) {
     final double ground = FRAME_CENTER.y - p.fall * 13.0;
     final double bodyX = FRAME_CENTER.x + p.lean * dx * 7.0;
     final double bodyY = ground - 26.0 + p.bob + p.fall * 18.0;
@@ -408,7 +358,7 @@ public final class ProceduralCreatureGenerator {
     }
   }
 
-  private static void drawArachnid(Graphics2D g, Description d, Pose p, double dx, double dy, Random random) {
+  private static void drawArachnid(Graphics2D g, CreatureSpec d, Pose p, double dx, double dy, Random random) {
     final double ground = FRAME_CENTER.y - 4.0;
     final double bodyX = FRAME_CENTER.x + p.lean * dx * 6.0;
     final double bodyY = ground - 18.0 + p.bob + p.fall * 12.0;
@@ -454,7 +404,7 @@ public final class ProceduralCreatureGenerator {
     }
   }
 
-  private static void drawSerpent(Graphics2D g, Description d, Pose p, double dx, double dy, Random random) {
+  private static void drawSerpent(Graphics2D g, CreatureSpec d, Pose p, double dx, double dy, Random random) {
     final double ground = FRAME_CENTER.y - 5.0;
     final double bodyX = FRAME_CENTER.x + p.lean * dx * 8.0;
     final double bodyY = ground - 9.0 + p.fall * 5.0;
@@ -493,7 +443,7 @@ public final class ProceduralCreatureGenerator {
     }
   }
 
-  private static void drawHead(Graphics2D g, Description d, Pose p, double x, double y, double dx, double dy) {
+  private static void drawHead(Graphics2D g, CreatureSpec d, Pose p, double x, double y, double dx, double dy) {
     final Color outline = darken(d.bodyColor, 0.62);
     final double width = (d.archetype == Archetype.BIPED) ? 22.0 : 20.0;
     final double height = (d.archetype == Archetype.SERPENT) ? 16.0 : 20.0;
@@ -523,7 +473,7 @@ public final class ProceduralCreatureGenerator {
     drawEyes(g, d, x, y, dx, dy, 2);
   }
 
-  private static void drawEyes(Graphics2D g, Description d, double x, double y, double dx, double dy, int count) {
+  private static void drawEyes(Graphics2D g, CreatureSpec d, double x, double y, double dx, double dy, int count) {
     final Color eye = d.traits.contains(Trait.GLOWING) || d.traits.contains(Trait.UNDEAD)
         ? lighten(d.accentColor, 0.48) : new Color(235, 188, 68);
     g.setColor(eye);
@@ -537,7 +487,7 @@ public final class ProceduralCreatureGenerator {
     }
   }
 
-  private static void drawArm(Graphics2D g, Description d, Pose p, double bodyX, double bodyY, double dx, double dy,
+  private static void drawArm(Graphics2D g, CreatureSpec d, Pose p, double bodyX, double bodyY, double dx, double dy,
       boolean foreground) {
     final double side = foreground ? 1.0 : -1.0;
     final double shoulderX = bodyX + side * -dy * 8.0 + dx * 2.0;
@@ -579,7 +529,7 @@ public final class ProceduralCreatureGenerator {
     g.draw(limb);
   }
 
-  private static void drawTail(Graphics2D g, Description d, double x, double y, double dx, double dy, Pose p) {
+  private static void drawTail(Graphics2D g, CreatureSpec d, double x, double y, double dx, double dy, Pose p) {
     final Path2D tail = new Path2D.Double();
     tail.moveTo(x, y);
     tail.curveTo(x + dx * 12.0 - dy * 5.0, y + dy * 5.0, x + dx * 22.0 + dy * 7.0,
@@ -593,7 +543,7 @@ public final class ProceduralCreatureGenerator {
     g.draw(tail);
   }
 
-  private static void drawWings(Graphics2D g, Description d, double x, double y, double dx, Pose p) {
+  private static void drawWings(Graphics2D g, CreatureSpec d, double x, double y, double dx, Pose p) {
     final double flap = 9.0 + Math.sin(p.phase * Math.PI * 2.0) * 7.0 + p.magic * 7.0;
     final Path2D left = new Path2D.Double();
     left.moveTo(x - 5.0, y);
@@ -614,7 +564,7 @@ public final class ProceduralCreatureGenerator {
     g.draw(right);
   }
 
-  private static void drawSpikes(Graphics2D g, Description d, double x, double y, double dx, int count) {
+  private static void drawSpikes(Graphics2D g, CreatureSpec d, double x, double y, double dx, int count) {
     g.setColor(lighten(d.accentColor, 0.25));
     for (int i = 0; i < count; i++) {
       final double px = x - dx * (i - count / 2.0) * 5.0;
@@ -627,7 +577,7 @@ public final class ProceduralCreatureGenerator {
     }
   }
 
-  private static void drawFurMarks(Graphics2D g, double x, double y, Description d, Random random) {
+  private static void drawFurMarks(Graphics2D g, double x, double y, CreatureSpec d, Random random) {
     g.setColor(withAlpha(lighten(d.bodyColor, 0.25), 150));
     g.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
     for (int i = 0; i < 7; i++) {
@@ -637,7 +587,7 @@ public final class ProceduralCreatureGenerator {
     }
   }
 
-  private static void drawMagic(Graphics2D g, Description d, double x, double y, double intensity, double phase) {
+  private static void drawMagic(Graphics2D g, CreatureSpec d, double x, double y, double intensity, double phase) {
     final double radius = 4.0 + intensity * 6.0;
     g.setColor(withAlpha(lighten(d.accentColor, 0.45), clamp((int) (60 + intensity * 80))));
     g.fill(new Ellipse2D.Double(x - radius * 1.8, y - radius * 1.8, radius * 3.6, radius * 3.6));
@@ -747,27 +697,6 @@ public final class ProceduralCreatureGenerator {
   private static double smooth(double value) {
     final double clamped = Math.max(0.0, Math.min(1.0, value));
     return clamped * clamped * (3.0 - 2.0 * clamped);
-  }
-
-  private static void addTraitIfPresent(EnumSet<Trait> traits, Trait trait, String text, String... values) {
-    if (containsAny(text, values)) {
-      traits.add(trait);
-    }
-  }
-
-  private static boolean containsAny(String value, String... candidates) {
-    for (final String candidate : candidates) {
-      if (value.contains(candidate)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private static Color deriveAccent(Color body, Random random) {
-    final float[] hsb = Color.RGBtoHSB(body.getRed(), body.getGreen(), body.getBlue(), null);
-    final float hue = (hsb[0] + 0.34f + random.nextFloat() * 0.24f) % 1.0f;
-    return Color.getHSBColor(hue, Math.max(0.42f, hsb[1]), Math.min(0.92f, Math.max(0.58f, hsb[2] + 0.18f)));
   }
 
   private static Color lighten(Color color, double amount) {

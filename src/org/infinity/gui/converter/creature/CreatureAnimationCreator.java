@@ -70,22 +70,13 @@ import org.infinity.util.Logger;
 public final class CreatureAnimationCreator extends ChildFrame {
   private static final long serialVersionUID = 1L;
 
-  private final JTextArea promptArea = new JTextArea(5, 28);
-  private final JSpinner seedSpinner = new JSpinner(new SpinnerNumberModel(1, Integer.MIN_VALUE, Integer.MAX_VALUE, 1));
-  private final JLabel descriptionLabel = new JLabel(" ");
+  private final ProceduralCreatureEditor proceduralEditor = new ProceduralCreatureEditor();
   private final JButton generateButton = new JButton("Generate procedural draft");
   private final JButton importButton = new JButton("Import PNG folder...");
   private final JButton exportPngButton = new JButton("Export editable PNGs...");
   private final JButton clearButton = new JButton("Clear source");
 
-  private final JTextArea equipmentPromptArea = new JTextArea(6, 28);
-  private final JTextField equipmentSourceCodeField = new JTextField("AUTO", 5);
-  private final JTextField equipmentTargetCodeField = new JTextField("AUTO", 5);
-  private final JTextField equipmentOffhandSourceCodeField = new JTextField("AUTO", 5);
-  private final JTextField equipmentOffhandTargetCodeField = new JTextField("AUTO", 5);
-  private final JSpinner equipmentSeedSpinner =
-      new JSpinner(new SpinnerNumberModel(1, Integer.MIN_VALUE, Integer.MAX_VALUE, 1));
-  private final JLabel equipmentDescriptionLabel = new JLabel(" ");
+  private final EquipmentOverlayEditor equipmentEditor = new EquipmentOverlayEditor();
   private final JButton equipmentGenerateButton = new JButton("Generate equipment overlay");
 
   private final JLabel headingLabel = new JLabel();
@@ -139,7 +130,6 @@ public final class CreatureAnimationCreator extends ChildFrame {
   private ClassicAnimationDefinition classicDefinition;
   private Path lastSourceDirectory;
   private boolean busy;
-  private boolean updatingEquipmentFields;
   private boolean updatingDefinition;
 
   public CreatureAnimationCreator() {
@@ -153,6 +143,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
     updateSlotStatus();
     updatePreviewOptions();
     updateExportTooltip();
+    equipmentGenerateButton.setEnabled(equipmentEditor.hasAnimationReferences());
     setSize(new Dimension(1180, 760));
     setLocationRelativeTo(getParent());
   }
@@ -164,19 +155,6 @@ public final class CreatureAnimationCreator extends ChildFrame {
   }
 
   private void initializeDefaults() {
-    promptArea.setLineWrap(true);
-    promptArea.setWrapStyleWord(true);
-    promptArea.setText("armored emerald horned wolf with glowing gold eyes");
-    promptArea.setToolTipText("A deterministic offline description. Body plan, colors, scale and visible traits "
-        + "are parsed from the text.");
-
-    equipmentPromptArea.setLineWrap(true);
-    equipmentPromptArea.setWrapStyleWord(true);
-    equipmentPromptArea.setText("I want an animation similar to the existing SOLAR, but instead of wielding a "
-        + "sword, it should wield an ornate silver scythe with a blue glow.");
-    equipmentPromptArea.setToolTipText("Name an ANIMATE.IDS reference and the requested equipment. For dual-item "
-        + "loadouts, explicitly assign one item to the main hand and one to the offhand.");
-
     final Path defaultOutput = getDefaultOutputDirectory();
     final CreatureAnimationCreatorSettings.State settings =
         CreatureAnimationCreatorSettings.load(defaultOutput, Profile.getGameRoot());
@@ -237,9 +215,9 @@ public final class CreatureAnimationCreator extends ChildFrame {
     setContentPane(content);
 
     headingLabel.setFont(headingLabel.getFont().deriveFont(Font.BOLD, headingLabel.getFont().getSize2D() + 1.0f));
-    final JLabel boundary = new JLabel("<html>Generate a coherent offline procedural draft, or import artist-authored "
-        + "PNG sequences. Existing synchronized weapon layers can also be redrawn from a prompt while retaining the "
-        + "reference animation's timing and grip motion.</html>");
+    final JLabel boundary = new JLabel("<html>Generate a coherent offline procedural draft from structured controls, "
+        + "or import artist-authored PNG sequences. Existing synchronized weapon layers can also be redrawn from an "
+        + "exact animation reference while retaining its timing and grip motion.</html>");
     boundary.setForeground(UIManager.getColor("Label.disabledForeground"));
     final JPanel header = new JPanel(new BorderLayout(4, 3));
     header.add(headingLabel, BorderLayout.NORTH);
@@ -269,30 +247,16 @@ public final class CreatureAnimationCreator extends ChildFrame {
     panel.setBorder(BorderFactory.createEmptyBorder(9, 9, 9, 9));
     final GridBagConstraints gbc = baseConstraints();
 
-    addWide(panel, new JLabel("Creature description"), gbc, 0);
-    gbc.gridy = 1;
-    gbc.weighty = 0.35;
-    gbc.fill = GridBagConstraints.BOTH;
-    panel.add(new JScrollPane(promptArea), gbc);
-
-    final JPanel seedPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-    seedPanel.add(new JLabel("Seed: "));
-    seedPanel.add(seedSpinner);
-    addWide(panel, seedPanel, gbc, 2);
-
-    descriptionLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
-    addWide(panel, descriptionLabel, gbc, 3);
+    addWide(panel, proceduralEditor, gbc, 0);
 
     final JPanel generationButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
     generationButtons.add(generateButton);
     generationButtons.add(clearButton);
-    addWide(panel, generationButtons, gbc, 4);
+    addWide(panel, generationButtons, gbc, 1);
 
-    final JLabel offlineNote = new JLabel("<html><b>Offline renderer:</b> deterministic Java2D templates produce "
-        + "actual action/direction artwork without a model download. This is a coherent editable draft, not "
-        + "open-ended text-to-image AI.</html>");
+    final JLabel offlineNote = new JLabel(CreatureAnimationMessages.get("source.structuredNote"));
     offlineNote.setBorder(BorderFactory.createEmptyBorder(8, 0, 10, 0));
-    addWide(panel, offlineNote, gbc, 5);
+    addWide(panel, offlineNote, gbc, 2);
 
     final JPanel interchange = new JPanel(new GridBagLayout());
     interchange.setBorder(BorderFactory.createTitledBorder("Artist interchange"));
@@ -306,80 +270,60 @@ public final class CreatureAnimationCreator extends ChildFrame {
     igbc.weighty = 1.0;
     interchange.add(new JLabel("<html>Accepts <code>WK_S_000.png</code>, "
         + "<code>WK/S/000.png</code>, and exported <code>centers.csv</code> pivots.</html>"), igbc);
-    gbc.gridy = 6;
-    gbc.weighty = 0.65;
-    gbc.fill = GridBagConstraints.BOTH;
-    panel.add(interchange, gbc);
+    final GridBagConstraints interchangeConstraints = (GridBagConstraints) gbc.clone();
+    interchangeConstraints.gridy = 3;
+    interchangeConstraints.gridwidth = 2;
+    interchangeConstraints.weightx = 1.0;
+    interchangeConstraints.weighty = 1.0;
+    interchangeConstraints.fill = GridBagConstraints.BOTH;
+    panel.add(interchange, interchangeConstraints);
 
     sourceStatusLabel.setBorder(BorderFactory.createEmptyBorder(8, 2, 0, 2));
-    addWide(panel, sourceStatusLabel, gbc, 7);
+    addWide(panel, sourceStatusLabel, gbc, 4);
     return panel;
   }
 
   private JPanel createEquipmentPanel() {
-    final JPanel panel = new JPanel(new GridBagLayout());
+    final JPanel panel = new JPanel(new BorderLayout(0, 6));
     panel.setBorder(BorderFactory.createEmptyBorder(9, 9, 9, 9));
+    final JPanel editorPanel = new JPanel(new GridBagLayout());
     final GridBagConstraints gbc = baseConstraints();
     int row = 0;
 
-    addWide(panel, new JLabel("Reference-and-replace prompt"), gbc, row++);
-    final GridBagConstraints promptConstraints = (GridBagConstraints) gbc.clone();
-    promptConstraints.gridy = row++;
-    promptConstraints.gridwidth = 2;
-    promptConstraints.weighty = 0.38;
-    promptConstraints.fill = GridBagConstraints.BOTH;
-    panel.add(new JScrollPane(equipmentPromptArea), promptConstraints);
-
-    final JPanel mainCodes = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-    mainCodes.add(new JLabel("Main source:"));
-    mainCodes.add(equipmentSourceCodeField);
-    mainCodes.add(new JLabel("New main appearance:"));
-    mainCodes.add(equipmentTargetCodeField);
-    addWide(panel, mainCodes, gbc, row++);
-
-    final JPanel offhandCodes = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-    offhandCodes.add(new JLabel("Off-hand source:"));
-    offhandCodes.add(equipmentOffhandSourceCodeField);
-    offhandCodes.add(new JLabel("New off-hand appearance:"));
-    offhandCodes.add(equipmentOffhandTargetCodeField);
-    addWide(panel, offhandCodes, gbc, row++);
-
-    final JLabel codeHelp = new JLabel("<html>Use <code>AUTO</code> for resource-driven source discovery and "
-        + "collision-free target selection. Off-hand fields apply only when the prompt explicitly requests a shield "
-        + "or second weapon. Target values are two-character ITM <b>Equipped appearance</b> codes.</html>");
-    codeHelp.setForeground(UIManager.getColor("Label.disabledForeground"));
-    addWide(panel, codeHelp, gbc, row++);
-
-    final JPanel generation = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-    generation.add(equipmentGenerateButton);
-    generation.add(new JLabel("Seed:"));
-    generation.add(equipmentSeedSpinner);
-    addWide(panel, generation, gbc, row++);
-
-    equipmentDescriptionLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
-    addWide(panel, equipmentDescriptionLabel, gbc, row++);
+    addWide(editorPanel, equipmentEditor, gbc, row++);
 
     final JLabel mechanism = new JLabel("<html><b>How it works:</b> the creator accepts every Near Infinity decoder "
         + "that defines weapon sprite segments: <code>character</code>, <code>character_old</code>, "
         + "<code>monster</code>, <code>monster_layered_spell</code>, <code>monster_layered</code>, and "
         + "<code>monster_icewind</code>. It follows that family's exact filenames, cycles, directions, height code "
         + "and Equipped appearance semantics, while leaving avatar BAMs and animation definitions unchanged. "
-        + "Decoder-backed shields and two-weapon resources are available for character families that emit them.</html>");
+        + "Decoder-backed shields and two-weapon resources are available for character families that emit "
+        + "them.</html>");
     mechanism.setBorder(BorderFactory.createEmptyBorder(9, 0, 8, 0));
-    addWide(panel, mechanism, gbc, row++);
+    addWide(editorPanel, mechanism, gbc, row++);
 
     final JLabel limitations = new JLabel("<html>A complete family-compatible weapon layer remains required because "
         + "avatar pixels alone do not provide a reliable grip axis or occlusion order. Explicit eastern resources are "
         + "retained where the family stores them. Procedural melee weapons, one- and two-handed spears, shortbows, "
         + "longbows, crossbows, slings, shields and explicit main-hand/off-hand combinations are supported.</html>");
     limitations.setForeground(UIManager.getColor("Label.disabledForeground"));
-    addWide(panel, limitations, gbc, row++);
+    addWide(editorPanel, limitations, gbc, row++);
 
     final GridBagConstraints filler = (GridBagConstraints) gbc.clone();
     filler.gridy = row;
-    filler.weighty = 0.62;
+    filler.gridwidth = 2;
+    filler.weightx = 1.0;
+    filler.weighty = 1.0;
     filler.fill = GridBagConstraints.BOTH;
-    panel.add(new JPanel(), filler);
+    editorPanel.add(new JPanel(), filler);
+
+    final JScrollPane scrollPane = new JScrollPane(editorPanel);
+    scrollPane.setBorder(null);
+    scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+    panel.add(scrollPane, BorderLayout.CENTER);
+    final JPanel generation = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+    generation.add(equipmentGenerateButton);
+    panel.add(generation, BorderLayout.SOUTH);
     return panel;
   }
 
@@ -580,34 +524,20 @@ public final class CreatureAnimationCreator extends ChildFrame {
       updateSlotStatus();
       updateExportTooltip();
     }));
-    promptArea.getDocument().addDocumentListener(new SimpleDocumentListener(this::updateDescriptionSummary));
-    seedSpinner.addChangeListener(event -> updateDescriptionSummary());
-    equipmentPromptArea.getDocument()
-        .addDocumentListener(new SimpleDocumentListener(this::equipmentGenerationInputChanged));
-    equipmentSourceCodeField.getDocument()
-        .addDocumentListener(new SimpleDocumentListener(this::equipmentGenerationInputChanged));
-    equipmentOffhandSourceCodeField.getDocument()
-        .addDocumentListener(new SimpleDocumentListener(this::equipmentGenerationInputChanged));
-    equipmentTargetCodeField.getDocument()
-        .addDocumentListener(new SimpleDocumentListener(this::updateEquipmentDescriptionSummary));
-    equipmentOffhandTargetCodeField.getDocument()
-        .addDocumentListener(new SimpleDocumentListener(this::updateEquipmentDescriptionSummary));
-    equipmentSeedSpinner.addChangeListener(event -> equipmentGenerationInputChanged());
-    updateDescriptionSummary();
-    updateEquipmentDescriptionSummary();
+    equipmentEditor.addGenerationChangeListener(this::equipmentGenerationInputChanged);
+    equipmentEditor.addTargetChangeListener(this::updateExportTooltip);
   }
 
   private void generateDraft() {
     if (busy) {
       return;
     }
+    final ProceduralCreatureGenerator.CreatureSpec specification = proceduralEditor.getSpecification();
     setBusy(true, "Drawing procedural animation frames...", true);
-    final String prompt = promptArea.getText();
-    final long seed = ((Number) seedSpinner.getValue()).longValue();
     final SwingWorker<CreatureAnimationModel, Void> worker = new SwingWorker<CreatureAnimationModel, Void>() {
       @Override
       protected CreatureAnimationModel doInBackground() {
-        return ProceduralCreatureGenerator.generate(prompt, seed,
+        return ProceduralCreatureGenerator.generate(specification,
             (completed, total, sequence, direction) -> setProgress((int) ((completed * 100L) / total)));
       }
 
@@ -639,19 +569,38 @@ public final class CreatureAnimationCreator extends ChildFrame {
     if (busy) {
       return;
     }
+    final EquipmentOverlayReference.AnimationReference reference = equipmentEditor.getAnimationReference();
+    if (reference == null) {
+      showFailure("No animation reference is available.",
+          new IllegalArgumentException("ANIMATE.IDS has no selectable entries in the active game."));
+      return;
+    }
+    final EquipmentOverlayGenerator.EquipmentSpec specification;
+    final String sourceCode;
+    final String targetCode;
+    final String offhandSourceCode;
+    final String offhandTargetCode;
+    final long seed;
+    try {
+      specification = equipmentEditor.getSpecification();
+      sourceCode = equipmentEditor.getSourceCodeOverride();
+      targetCode = equipmentEditor.getTargetCodeOverride();
+      offhandSourceCode = specification.hasOffhand()
+          ? equipmentEditor.getOffhandSourceCodeOverride() : EquipmentOverlayReference.AUTOMATIC_CODE;
+      offhandTargetCode = specification.hasOffhand()
+          ? equipmentEditor.getOffhandTargetCodeOverride() : EquipmentOverlayReference.AUTOMATIC_CODE;
+      seed = equipmentEditor.getSeed();
+    } catch (RuntimeException e) {
+      showFailure("The structured equipment design is invalid.", e);
+      return;
+    }
     setBusy(true, "Resolving family layout and drawing synchronized equipment...", true);
-    final String prompt = equipmentPromptArea.getText();
-    final String sourceCode = equipmentSourceCodeField.getText();
-    final String targetCode = equipmentTargetCodeField.getText();
-    final String offhandSourceCode = equipmentOffhandSourceCodeField.getText();
-    final String offhandTargetCode = equipmentOffhandTargetCodeField.getText();
-    final long seed = ((Number) equipmentSeedSpinner.getValue()).longValue();
     final SwingWorker<EquipmentOverlayReference.Result, Void> worker =
         new SwingWorker<EquipmentOverlayReference.Result, Void>() {
           @Override
           protected EquipmentOverlayReference.Result doInBackground() throws Exception {
-            return EquipmentOverlayReference.generate(prompt, sourceCode, targetCode, offhandSourceCode,
-                offhandTargetCode, seed,
+            return EquipmentOverlayReference.generate(reference, specification, sourceCode, targetCode,
+                offhandSourceCode, offhandTargetCode, seed,
                 (completed, total, sequence, direction) ->
                     setProgress((int) ((completed * 100L) / total)));
           }
@@ -660,25 +609,9 @@ public final class CreatureAnimationCreator extends ChildFrame {
           protected void done() {
             try {
               final EquipmentOverlayReference.Result result = get();
-              updatingEquipmentFields = true;
-              try {
-                equipmentSourceCodeField.setText(result.getSourceAppearanceCode());
-                equipmentTargetCodeField.setText(result.getTargetAppearanceCode());
-                equipmentOffhandSourceCodeField.setText(
-                    result.hasOffhandOverlay() ? result.getOffhandSourceAppearanceCode() : "AUTO");
-                equipmentOffhandTargetCodeField.setText(
-                    result.hasOffhandOverlay() ? result.getOffhandTargetAppearanceCode() : "AUTO");
-              } finally {
-                updatingEquipmentFields = false;
-              }
+              equipmentEditor.applyResult(result);
               setEquipmentResult(result);
-              equipmentSourceCodeField.setToolTipText("Available complete compatible layers: "
-                  + String.join(", ", result.getAvailableAppearanceCodes()));
-              equipmentOffhandSourceCodeField.setToolTipText(result.hasOffhandOverlay()
-                  ? "Available complete compatible off-hand layers: "
-                      + String.join(", ", result.getAvailableOffhandAppearanceCodes())
-                  : "The current prompt does not request off-hand equipment.");
-              operationLabel.setText("Synchronized " + result.getPrompt().getSummary() + " generated");
+              operationLabel.setText("Synchronized " + result.getSpecification().getSummary() + " generated");
             } catch (InterruptedException e) {
               Thread.currentThread().interrupt();
               showFailure("Equipment overlay generation was interrupted.", e);
@@ -914,7 +847,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
           }
           operationLabel.setText(result.getInstalledFiles().size() + " equipment resource(s) installed");
           JOptionPane.showMessageDialog(CreatureAnimationCreator.this,
-              "The " + equipmentResult.getPrompt().getSummary() + " overlay was installed for "
+              "The " + equipmentResult.getSpecification().getSummary() + " overlay was installed for "
                   + equipmentResult.getSymbol() + ".\n\n"
                   + "Set the main-hand test ITM to "
                   + equipmentResult.getFamily().getActivationSummary(config.getAppearanceCode())
@@ -1047,7 +980,8 @@ public final class CreatureAnimationCreator extends ChildFrame {
     if (outputText.isEmpty()) {
       throw new IllegalArgumentException("Select an output directory.");
     }
-    final String appearanceCode = equipmentTargetCodeField.getText().trim().toUpperCase(Locale.ENGLISH);
+    final String appearanceCode =
+        equipmentEditor.getTargetAppearanceCode().trim().toUpperCase(Locale.ENGLISH);
     if (equipmentResult.getFamily().usesFullAppearanceCodeInFileName()
         && appearanceCode.equals(equipmentResult.getSourceAppearanceCode())) {
       throw new IllegalArgumentException("The target appearance code must differ from the source layer "
@@ -1064,20 +998,20 @@ public final class CreatureAnimationCreator extends ChildFrame {
         new EquipmentOverlayExporter.Config().setGame(Profile.getGame()).setFamily(equipmentResult.getFamily())
         .setResourcePrefix(equipmentResult.getResourcePrefix())
         .setAppearanceCode(appearanceCode)
-        .setWeaponType(equipmentResult.getPrompt().getTargetWeapon())
+        .setWeaponType(equipmentResult.getSpecification().getTargetWeapon())
         .setOutputDirectory(Paths.get(outputText).toAbsolutePath().normalize())
         .setBamFormat((BamFormat) formatCombo.getSelectedItem())
         .setCompressedBam(compressedCheck.isSelected());
     if (equipmentResult.hasOffhandOverlay()) {
       final String offhandAppearanceCode =
-          equipmentOffhandTargetCodeField.getText().trim().toUpperCase(Locale.ENGLISH);
+          equipmentEditor.getOffhandTargetAppearanceCode().trim().toUpperCase(Locale.ENGLISH);
       if (offhandAppearanceCode.equals(equipmentResult.getOffhandSourceAppearanceCode())) {
         throw new IllegalArgumentException("The off-hand target appearance code must differ from source layer "
             + equipmentResult.getOffhandSourceAppearanceCode() + ".");
       }
       config.setOffhandResourcePrefix(equipmentResult.getOffhandResourcePrefix())
           .setOffhandAppearanceCode(offhandAppearanceCode)
-          .setOffhandType(equipmentResult.getPrompt().getTargetOffhand());
+          .setOffhandType(equipmentResult.getSpecification().getTargetOffhand());
     }
     return config;
   }
@@ -1131,6 +1065,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
 
   private void setModel(CreatureAnimationModel model) {
     equipmentResult = null;
+    equipmentEditor.clearResult();
     this.model = (model != null) ? model : new CreatureAnimationModel();
     previewPanel.setModel(this.model);
     previewPanel.setOverlayModel(null);
@@ -1154,7 +1089,6 @@ public final class CreatureAnimationCreator extends ChildFrame {
       slotField.setText(String.format(Locale.ENGLISH, "0x%04X", result.getAnimationId()));
       resrefField.setText(result.getResref());
       splitCheck.setSelected(result.isSplitBams());
-      equipmentDescriptionLabel.setText(result.getSummary());
     }
     updateModeUi();
     updateSourceUi();
@@ -1228,52 +1162,11 @@ public final class CreatureAnimationCreator extends ChildFrame {
     }
   }
 
-  private void updateDescriptionSummary() {
-    final ProceduralCreatureGenerator.Description description = ProceduralCreatureGenerator.parseDescription(
-        promptArea.getText(), ((Number) seedSpinner.getValue()).longValue());
-    descriptionLabel.setText(description.getArchetype() + " • " + description.getTraits().toString().toLowerCase(
-        Locale.ENGLISH) + " • scale " + String.format(Locale.ENGLISH, "%.2f", description.getScale()));
-  }
-
-  private void updateEquipmentDescriptionSummary() {
-    try {
-      if (equipmentResult != null) {
-        equipmentDescriptionLabel.setText(equipmentResult.getSummary() + " • export target "
-            + equipmentTargetCodeField.getText().trim().toUpperCase(Locale.ENGLISH)
-            + (equipmentResult.hasOffhandOverlay() ? " + "
-                + equipmentOffhandTargetCodeField.getText().trim().toUpperCase(Locale.ENGLISH) + " off-hand" : ""));
-        return;
-      }
-      final EquipmentOverlayGenerator.PromptSpec prompt =
-          EquipmentOverlayGenerator.parsePrompt(equipmentPromptArea.getText());
-      final String source = equipmentSourceCodeField.getText().trim().isEmpty()
-          ? "AUTO" : equipmentSourceCodeField.getText().trim().toUpperCase(Locale.ENGLISH);
-      final String targetText = equipmentTargetCodeField.getText().trim();
-      final String target = targetText.isEmpty() || "AUTO".equalsIgnoreCase(targetText)
-          ? prompt.getTargetWeapon().getSuggestedAppearanceCode() + " (auto)" : targetText.toUpperCase(Locale.ENGLISH);
-      final String offhandSourceText = equipmentOffhandSourceCodeField.getText().trim();
-      final String offhandTargetText = equipmentOffhandTargetCodeField.getText().trim();
-      final String offhand = prompt.hasOffhand()
-          ? " • off-hand source "
-              + (offhandSourceText.isEmpty() ? "AUTO" : offhandSourceText.toUpperCase(Locale.ENGLISH))
-              + " • off-hand target "
-              + (offhandTargetText.isEmpty() || "AUTO".equalsIgnoreCase(offhandTargetText)
-                  ? prompt.getTargetOffhand().getSuggestedAppearanceCode() + " (auto)"
-                  : offhandTargetText.toUpperCase(Locale.ENGLISH))
-          : "";
-      equipmentDescriptionLabel.setText(prompt.getSummary() + " • main source " + source
-          + " • main target " + target + offhand);
-    } catch (Exception e) {
-      equipmentDescriptionLabel.setText(e.getMessage());
-    }
-  }
-
   private void equipmentGenerationInputChanged() {
-    if (!updatingEquipmentFields && equipmentResult != null) {
+    if (equipmentResult != null) {
       setModel(new CreatureAnimationModel());
-      operationLabel.setText("Equipment request changed • generate the synchronized overlay again");
+      operationLabel.setText("Equipment design changed • generate the synchronized overlay again");
     }
-    updateEquipmentDescriptionSummary();
   }
 
   private void updateModeUi() {
@@ -1429,8 +1322,10 @@ public final class CreatureAnimationCreator extends ChildFrame {
   private void setBusy(boolean busy, String text, boolean indeterminate) {
     this.busy = busy;
     setCursor(busy ? Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR) : Cursor.getDefaultCursor());
+    proceduralEditor.setEditorEnabled(!busy);
+    equipmentEditor.setEditorEnabled(!busy);
     generateButton.setEnabled(!busy);
-    equipmentGenerateButton.setEnabled(!busy);
+    equipmentGenerateButton.setEnabled(!busy && equipmentEditor.hasAnimationReferences());
     importButton.setEnabled(!busy);
     outputButton.setEnabled(!busy);
     validateButton.setEnabled(!busy);
@@ -1450,9 +1345,10 @@ public final class CreatureAnimationCreator extends ChildFrame {
 
   private void showHelp() {
     final String text = "Professional offline scope\n\n"
-        + "The built-in renderer actually draws a complete animation family from a description, but uses deterministic "
-        + "parametric body plans. It cannot invent arbitrary production art like a large diffusion model. Its purpose "
-        + "is coherent direction/action blocking that can be exported, painted over and imported again.\n\n"
+        + "The built-in renderer draws a complete animation family from an explicit body plan, size, palette and set "
+        + "of visible traits. These values are selected through localized structured controls; no natural-language "
+        + "input is interpreted. The deterministic parametric result is intended for coherent direction/action "
+        + "blocking that can be exported, painted over and imported again.\n\n"
         + "Engine profile behavior\n\n"
         + "Enhanced Edition profiles can create new animation definitions. Their family layout and editable engine "
         + "properties are written to a generated slot INI. Classic profiles cannot add animation definitions this "
@@ -1477,15 +1373,16 @@ public final class CreatureAnimationCreator extends ChildFrame {
         + "custom sequences.\n\n"
         + "Equipment replacement\n\n"
         + "Main-hand weapon replacement is available for the six decoder families that define weapon sprite segments: "
-        + "character, character_old, monster, monster_layered_spell, monster_layered and monster_icewind. Enter a "
-        + "prompt such as: \"similar to SOLAR, but instead of a sword wielding an ornate silver scythe with blue "
-        + "glow.\" Modern character animations additionally support their decoder-defined A7/A9 two-weapon layout "
+        + "character, character_old, monster, monster_layered_spell, monster_layered and monster_icewind. Select an "
+        + "exact ANIMATE.IDS reference, source and target equipment types, optional off-hand item, colors, size and "
+        + "effects in the structured editor. Modern character animations additionally support their decoder-defined "
+        + "A7/A9 two-weapon layout "
         + "and O-suffixed left-hand resources. Modern and legacy character animations support shield layers through "
         + "their exact shield-height prefix; legacy character animations reject two-weapon requests because their "
-        + "decoder explicitly forbids those sequences. Assign dual items explicitly, for example \"a longsword in "
-        + "the main hand and a mace in the offhand\" or \"a one-handed spear in the main hand and a buckler in the "
-        + "offhand.\" The creator resolves the ANIMATE.IDS symbol, uses the decoder's exact height code, appearance-code "
-        + "width, filenames, cycles and directions, and retains explicit eastern artwork where present. Each target "
+        + "decoder explicitly forbids those sequences. The separate main-hand and off-hand controls make every item "
+        + "assignment explicit. The creator uses the selected animation ID, the decoder's exact height code, "
+        + "appearance-code width, filenames, cycles and directions, and retains explicit eastern artwork where "
+        + "present. Each target "
         + "ITM must use its reported Equipped appearance code. Families that use only its first character will "
         + "report that shared-prefix behavior before export. Avatar BAMs and animation definitions are not modified. "
         + "Every generated hand requires a complete pose-compatible source layer; avatar-only grip inference is "
