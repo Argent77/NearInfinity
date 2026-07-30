@@ -70,6 +70,8 @@ import org.infinity.util.Logger;
 public final class CreatureAnimationCreator extends ChildFrame {
   private static final long serialVersionUID = 1L;
 
+  private final ReferenceImageCreatureEditor referenceImageEditor = new ReferenceImageCreatureEditor();
+  private final JButton generateReferenceButton = new JButton("Generate from reference image");
   private final ProceduralCreatureEditor proceduralEditor = new ProceduralCreatureEditor();
   private final JButton generateButton = new JButton("Generate procedural draft");
   private final JButton importButton = new JButton("Import PNG folder...");
@@ -215,9 +217,9 @@ public final class CreatureAnimationCreator extends ChildFrame {
     setContentPane(content);
 
     headingLabel.setFont(headingLabel.getFont().deriveFont(Font.BOLD, headingLabel.getFont().getSize2D() + 1.0f));
-    final JLabel boundary = new JLabel("<html>Generate a coherent offline procedural draft from structured controls, "
-        + "or import artist-authored PNG sequences. Existing synchronized weapon layers can also be redrawn from an "
-        + "exact animation reference while retaining its timing and grip motion.</html>");
+    final JLabel boundary = new JLabel("<html>Animate one supplied illustration with a bundled reference-free "
+        + "topology template, draw a procedural draft, or import artist-authored PNG sequences. Optional equipment "
+        + "uses the shared offline library; decoder-backed overlays remain available for installed animations.</html>");
     boundary.setForeground(UIManager.getColor("Label.disabledForeground"));
     final JPanel header = new JPanel(new BorderLayout(4, 3));
     header.add(headingLabel, BorderLayout.NORTH);
@@ -243,23 +245,29 @@ public final class CreatureAnimationCreator extends ChildFrame {
   }
 
   private JPanel createSourcePanel() {
-    final JPanel panel = new JPanel(new GridBagLayout());
+    final JPanel panel = new JPanel(new BorderLayout(0, 6));
     panel.setBorder(BorderFactory.createEmptyBorder(9, 9, 9, 9));
-    final GridBagConstraints gbc = baseConstraints();
+    final JTabbedPane sourceModes = new JTabbedPane();
 
-    addWide(panel, proceduralEditor, gbc, 0);
+    final JPanel referencePanel = new JPanel(new BorderLayout(0, 5));
+    final JScrollPane referenceScroll = new JScrollPane(referenceImageEditor);
+    referenceScroll.setBorder(null);
+    referenceScroll.getVerticalScrollBar().setUnitIncrement(16);
+    referencePanel.add(referenceScroll, BorderLayout.CENTER);
+    final JPanel referenceButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+    referenceButtons.add(generateReferenceButton);
+    referencePanel.add(referenceButtons, BorderLayout.SOUTH);
+    sourceModes.addTab("Reference image", referencePanel);
 
-    final JPanel generationButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-    generationButtons.add(generateButton);
-    generationButtons.add(clearButton);
-    addWide(panel, generationButtons, gbc, 1);
-
-    final JLabel offlineNote = new JLabel(CreatureAnimationMessages.get("source.structuredNote"));
-    offlineNote.setBorder(BorderFactory.createEmptyBorder(8, 0, 10, 0));
-    addWide(panel, offlineNote, gbc, 2);
+    final JPanel proceduralPanel = new JPanel(new BorderLayout(0, 5));
+    proceduralPanel.add(proceduralEditor, BorderLayout.NORTH);
+    final JPanel proceduralButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+    proceduralButtons.add(generateButton);
+    proceduralPanel.add(proceduralButtons, BorderLayout.SOUTH);
+    sourceModes.addTab("Procedural draft", proceduralPanel);
 
     final JPanel interchange = new JPanel(new GridBagLayout());
-    interchange.setBorder(BorderFactory.createTitledBorder("Artist interchange"));
+    interchange.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
     final GridBagConstraints igbc = baseConstraints();
     igbc.insets = new Insets(4, 5, 4, 5);
     igbc.fill = GridBagConstraints.HORIZONTAL;
@@ -270,16 +278,14 @@ public final class CreatureAnimationCreator extends ChildFrame {
     igbc.weighty = 1.0;
     interchange.add(new JLabel("<html>Accepts <code>WK_S_000.png</code>, "
         + "<code>WK/S/000.png</code>, and exported <code>centers.csv</code> pivots.</html>"), igbc);
-    final GridBagConstraints interchangeConstraints = (GridBagConstraints) gbc.clone();
-    interchangeConstraints.gridy = 3;
-    interchangeConstraints.gridwidth = 2;
-    interchangeConstraints.weightx = 1.0;
-    interchangeConstraints.weighty = 1.0;
-    interchangeConstraints.fill = GridBagConstraints.BOTH;
-    panel.add(interchange, interchangeConstraints);
+    sourceModes.addTab("PNG interchange", interchange);
+    panel.add(sourceModes, BorderLayout.CENTER);
 
-    sourceStatusLabel.setBorder(BorderFactory.createEmptyBorder(8, 2, 0, 2));
-    addWide(panel, sourceStatusLabel, gbc, 4);
+    final JPanel status = new JPanel(new BorderLayout(5, 0));
+    sourceStatusLabel.setBorder(BorderFactory.createEmptyBorder(4, 2, 0, 2));
+    status.add(sourceStatusLabel, BorderLayout.CENTER);
+    status.add(clearButton, BorderLayout.EAST);
+    panel.add(status, BorderLayout.SOUTH);
     return panel;
   }
 
@@ -474,6 +480,7 @@ public final class CreatureAnimationCreator extends ChildFrame {
   }
 
   private void initializeListeners() {
+    generateReferenceButton.addActionListener(event -> generateReferenceAnimation());
     generateButton.addActionListener(event -> generateDraft());
     equipmentGenerateButton.addActionListener(event -> generateEquipmentOverlay());
     importButton.addActionListener(event -> importPngDirectory());
@@ -526,6 +533,50 @@ public final class CreatureAnimationCreator extends ChildFrame {
     }));
     equipmentEditor.addGenerationChangeListener(this::equipmentGenerationInputChanged);
     equipmentEditor.addTargetChangeListener(this::updateExportTooltip);
+  }
+
+  private void generateReferenceAnimation() {
+    if (busy) {
+      return;
+    }
+    final ReferenceImageCreatureGenerator.ReferenceSpec specification;
+    try {
+      specification = referenceImageEditor.getSpecification();
+    } catch (Exception e) {
+      showFailure("The reference-image template request is invalid.", e);
+      return;
+    }
+    setBusy(true, "Fitting the image and rendering template animation frames...", true);
+    final SwingWorker<CreatureAnimationModel, Void> worker = new SwingWorker<CreatureAnimationModel, Void>() {
+      @Override
+      protected CreatureAnimationModel doInBackground() {
+        return ReferenceImageCreatureGenerator.generate(specification,
+            (completed, total, sequence, direction) -> setProgress((int) ((completed * 100L) / total)));
+      }
+
+      @Override
+      protected void done() {
+        try {
+          setModel(get());
+          operationLabel.setText("Reference-image animation generated from "
+              + specification.getTemplate().getLabel());
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          showFailure("Reference-image generation was interrupted.", e);
+        } catch (ExecutionException e) {
+          showFailure("Could not generate the reference-image animation.", e.getCause());
+        } finally {
+          setBusy(false, null, false);
+        }
+      }
+    };
+    worker.addPropertyChangeListener(event -> {
+      if ("progress".equals(event.getPropertyName())) {
+        progressBar.setIndeterminate(false);
+        progressBar.setValue((Integer) event.getNewValue());
+      }
+    });
+    worker.execute();
   }
 
   private void generateDraft() {
@@ -1322,8 +1373,10 @@ public final class CreatureAnimationCreator extends ChildFrame {
   private void setBusy(boolean busy, String text, boolean indeterminate) {
     this.busy = busy;
     setCursor(busy ? Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR) : Cursor.getDefaultCursor());
+    referenceImageEditor.setEditorEnabled(!busy);
     proceduralEditor.setEditorEnabled(!busy);
     equipmentEditor.setEditorEnabled(!busy);
+    generateReferenceButton.setEnabled(!busy);
     generateButton.setEnabled(!busy);
     equipmentGenerateButton.setEnabled(!busy && equipmentEditor.hasAnimationReferences());
     importButton.setEnabled(!busy);
@@ -1345,10 +1398,22 @@ public final class CreatureAnimationCreator extends ChildFrame {
 
   private void showHelp() {
     final String text = "Professional offline scope\n\n"
-        + "The built-in renderer draws a complete animation family from an explicit body plan, size, palette and set "
-        + "of visible traits. These values are selected through localized structured controls; no natural-language "
-        + "input is interpreted. The deterministic parametric result is intended for coherent direction/action "
-        + "blocking that can be exported, painted over and imported again.\n\n"
+        + "Reference image mode turns one supplied illustration into a complete animation family by applying an "
+        + "explicit reusable topology template. The bundled library contains 26 generic fantasy body plans and motion "
+        + "profiles; it deliberately contains no named creature presets, source artwork, palettes or default "
+        + "loadouts. The illustration supplies visible appearance while the selected template supplies sizing, "
+        + "directional projection, action timing and optional hand sockets. Automatic cleanup removes only "
+        + "border-connected background pixels so enclosed light details remain intact. The nine stored directions "
+        + "are deterministic template projections, not inferred views of hidden anatomy.\n\n"
+        + "The procedural-draft mode remains available for explicit body plan, size, palette and visible-trait "
+        + "controls. No natural-language input is interpreted. Both built-in renderers are intended for coherent "
+        + "direction/action production that can be previewed, exported, painted over and imported again.\n\n"
+        + "Shared equipment library\n\n"
+        + "Reference-image templates with declared hand sockets can bake a selected main-hand item and compatible "
+        + "off-hand weapon or shield into every action and direction. Torso finishes can be applied independently. "
+        + "The same validated shared catalogue supplies 29 hand weapons, four shields and ten torso armor definitions; "
+        + "it also reserves reusable head and back attachment metadata. No equipment is selected by default. "
+        + "Two-handed combinations and templates without the required sockets are rejected before rendering.\n\n"
         + "Engine profile behavior\n\n"
         + "Enhanced Edition profiles can create new animation definitions. Their family layout and editable engine "
         + "properties are written to a generated slot INI. Classic profiles cannot add animation definitions this "
@@ -1387,8 +1452,8 @@ public final class CreatureAnimationCreator extends ChildFrame {
         + "report that shared-prefix behavior before export. Avatar BAMs and animation definitions are not modified. "
         + "Every generated hand requires a complete pose-compatible source layer; avatar-only grip inference is "
         + "intentionally rejected because it cannot preserve alignment and occlusion reliably. Supported procedural "
-        + "art includes shortbows, longbows, light and heavy crossbows, slings, curved sword variants, one-handed "
-        + "spears, bucklers, and small, medium and large shields.\n\n"
+        + "art is loaded from the same shared catalogue used by reference-image templates, including bows, crossbows, "
+        + "slings, straight and curved blades, polearms, axes, impact weapons, bucklers and shields.\n\n"
         + "Export safety\n\n"
         + "The creator validates slot ranges, source coverage, centers, dimensions, palettes and filenames. It writes "
         + "to a staging directory, reopens the BAMs, checks cycle counts and PVRZ references, and only then installs "

@@ -23,9 +23,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.prefs.Preferences;
 
 import org.infinity.gui.converter.creature.CreatureAnimationExporter.Config;
@@ -66,6 +68,8 @@ public final class CreatureAnimationCoreTest {
     testResourceNameBudgets();
     testAllFamilyBamV1Exports();
     testStructuredCreatureGeneration();
+    testReferenceTemplateLibraries();
+    testReferenceImageGeneration();
     testPngRoundTrip();
     testFalseColorPaletteRoundTrip();
     testFamilyPaletteTransforms();
@@ -671,6 +675,116 @@ public final class CreatureAnimationCoreTest {
         : ProceduralCreatureGenerator.Trait.values()) {
       check(!trait.toString().isEmpty(), "Every creature trait must expose a localized label");
     }
+  }
+
+  private static void testReferenceTemplateLibraries() {
+    final List<CreatureTemplateLibrary.CreatureTemplate> templates = CreatureTemplateLibrary.getTemplates();
+    check(templates.size() >= 25 && templates.size() <= 30,
+        "The bundled library should expose approximately twenty-five reusable templates");
+    final Set<String> templateIds = new HashSet<>();
+    int equipmentTemplates = 0;
+    for (final CreatureTemplateLibrary.CreatureTemplate template : templates) {
+      check(templateIds.add(template.getId()), "Template ids must remain unique");
+      check(!template.getLabel().isEmpty(), template.getId() + " must expose a localized label");
+      check(template.getTargetWidth() > 0.0 && template.getTargetHeight() > 0.0,
+          template.getId() + " must expose validated silhouette dimensions");
+      check(template.getMotionProfile() != null && template.getTopology() != null,
+          template.getId() + " must expose explicit topology and motion data");
+      if (template.supportsEquipment()) {
+        equipmentTemplates++;
+        check(template.getMainHandSocket() != null,
+            template.getId() + " must expose an explicit main-hand attachment socket");
+      }
+    }
+    check(equipmentTemplates >= 6,
+        "Several reusable topologies must support shared hand equipment without creature presets");
+
+    final List<CreatureEquipmentLibrary.EquipmentAsset> equipment = CreatureEquipmentLibrary.getAssets();
+    check(equipment.size() >= 50, "The shared equipment library should contain at least fifty validated assets");
+    final Set<String> equipmentIds = new HashSet<>();
+    for (final CreatureEquipmentLibrary.EquipmentAsset asset : equipment) {
+      check(equipmentIds.add(asset.getId()), "Shared equipment ids must remain unique");
+      check(!asset.getLabel().isEmpty(), asset.getId() + " must expose a localized label");
+      check(asset.getRenderKind() != null && asset.getGripStyle() != null,
+          asset.getId() + " must expose complete render and attachment metadata");
+    }
+    check(CreatureEquipmentLibrary.getAssets(CreatureEquipmentLibrary.Slot.TORSO).size() >= 10,
+        "The shared library must include a substantial reusable torso-armor collection");
+    for (final WeaponType type : WeaponType.values()) {
+      check(type.getAsset() == CreatureEquipmentLibrary.getById(type.getAsset().getId()),
+          type + " must resolve through the shared equipment library");
+      check(type.getSuggestedAppearanceCode().matches("[A-Z0-9]{2}"),
+          type + " must retain an engine-compatible appearance suggestion");
+    }
+  }
+
+  private static void testReferenceImageGeneration() {
+    final BufferedImage source = new BufferedImage(96, 112, BufferedImage.TYPE_INT_ARGB);
+    final Graphics2D graphics = source.createGraphics();
+    try {
+      graphics.setColor(Color.WHITE);
+      graphics.fillRect(0, 0, source.getWidth(), source.getHeight());
+      graphics.setColor(new Color(37, 26, 42));
+      graphics.fillOval(31, 12, 34, 30);
+      graphics.setColor(new Color(91, 67, 123));
+      graphics.fillRoundRect(27, 35, 42, 48, 15, 18);
+      graphics.setStroke(new BasicStroke(8.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+      graphics.drawLine(34, 76, 24, 101);
+      graphics.drawLine(61, 76, 72, 101);
+      graphics.drawLine(30, 45, 11, 66);
+      graphics.drawLine(66, 45, 85, 66);
+      graphics.setColor(Color.WHITE);
+      graphics.fillOval(41, 23, 5, 5);
+    } finally {
+      graphics.dispose();
+    }
+
+    final BufferedImage isolated = ReferenceImageCreatureGenerator.isolateReferenceImage(source);
+    check(isolated.getWidth() < source.getWidth() && isolated.getHeight() < source.getHeight(),
+        "Automatic cleanup must crop the connected border background");
+    check((isolated.getRGB(0, 0) >>> 24) == 0,
+        "Automatic cleanup must preserve transparent padding around the isolated creature");
+    boolean opaqueWhiteDetail = false;
+    for (int y = 0; y < isolated.getHeight(); y++) {
+      for (int x = 0; x < isolated.getWidth(); x++) {
+        final int pixel = isolated.getRGB(x, y);
+        if ((pixel >>> 24) >= 192 && (pixel & 0x00ffffff) == 0x00ffffff) {
+          opaqueWhiteDetail = true;
+        }
+      }
+    }
+    check(opaqueWhiteDetail,
+        "Border-connected cleanup must not erase enclosed white foreground details");
+
+    final EquipmentSpec loadout = createEquipmentSpec(null, WeaponType.KATANA, WeaponType.WAKIZASHI,
+        EquipmentSize.STANDARD, false, true);
+    final ReferenceImageCreatureGenerator.ReferenceSpec specification =
+        new ReferenceImageCreatureGenerator.ReferenceSpec(source,
+            CreatureTemplateLibrary.getById("humanoid-balanced"), Direction.S,
+            ReferenceImageCreatureGenerator.BackgroundMode.AUTO,
+            ProceduralCreatureGenerator.CreatureSize.SMALL, loadout,
+            CreatureEquipmentLibrary.getById("chain-mail"), new Color(112, 121, 132), 4242L);
+    final CreatureAnimationModel model = ReferenceImageCreatureGenerator.generate(specification, null);
+    final int requiredCells = Sequence.values().length * Direction.values().length;
+    int requiredFrames = 0;
+    for (final Sequence sequence : Sequence.values()) {
+      requiredFrames += sequence.getSuggestedFrameCount() * Direction.values().length;
+    }
+    check(model.getPopulatedCellCount() == requiredCells,
+        "Reference-image generation must populate every action and stored direction");
+    check(model.getFrameCount() == requiredFrames,
+        "Reference-image generation must preserve the exact suggested action frame counts");
+    final AnimationFrame south = model.getFrames(Sequence.ATTACK_1, Direction.S).get(2);
+    check(south.getImage().getWidth() == ReferenceImageCreatureGenerator.FRAME_SIZE
+        && south.getImage().getHeight() == ReferenceImageCreatureGenerator.FRAME_SIZE,
+        "Reference-image frames must use the stable high-quality render canvas");
+    check(south.getCenter().equals(ReferenceImageCreatureGenerator.getFrameCenter(specification.getTemplate())),
+        "Every reference-image frame must use the template's stable ground pivot");
+    check(hasVisiblePixel(south.getImage()), "Reference-image attack frames must contain visible rendered artwork");
+    check(model.getFrames(Sequence.CAST, Direction.N).get(1).getSource().contains("humanoid-balanced"),
+        "Generated frame provenance must retain the exact selected template id");
+    check(!CreatureAnimationExporter.validate(model, createConfig(Paths.get(System.getProperty("java.io.tmpdir"))))
+        .hasErrors(), "A complete reference-image animation must pass the standard creature exporter validation");
   }
 
   private static void testPngRoundTrip() throws Exception {

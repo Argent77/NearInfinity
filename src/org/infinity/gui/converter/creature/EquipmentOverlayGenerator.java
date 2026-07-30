@@ -15,7 +15,6 @@ import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -49,95 +48,86 @@ public final class EquipmentOverlayGenerator {
 
   /** Equipment silhouettes supported by the offline overlay renderer. */
   public enum WeaponType {
-    SICKLE("equipment.weapon.sickle", "SK", 0.88, AttackStyle.ONE_HANDED, "sickle", "hand sickle", "kama"),
-    SCYTHE("equipment.weapon.scythe", "SY", 1.28, AttackStyle.TWO_HANDED, "scythe", "war scythe"),
-    SWORD("equipment.weapon.sword", "S1", 1.0, AttackStyle.ONE_HANDED, "sword", "longsword", "long sword", "blade"),
-    SCIMITAR("equipment.weapon.scimitar", "SC", 1.0, AttackStyle.ONE_HANDED, "scimitar", "scimitars"),
-    WAKIZASHI("equipment.weapon.wakizashi", "WA", 0.82, AttackStyle.ONE_HANDED, "wakizashi", "wakizashis"),
-    NINJATO("equipment.weapon.ninjato", "NI", 0.94, AttackStyle.ONE_HANDED, "ninjato", "ninjatō", "ninjatos",
-        "ninjatōs",
-        "ninja sword"),
-    KATANA("equipment.weapon.katana", "S3", 1.08, AttackStyle.ONE_HANDED, "katana", "katanas"),
-    GREATSWORD("equipment.weapon.greatsword", "S2", 1.24, AttackStyle.TWO_HANDED, "greatsword", "great sword",
-        "two handed sword",
-        "two-handed sword", "zweihander"),
-    DAGGER("equipment.weapon.dagger", "DD", 0.62, AttackStyle.ONE_HANDED, "dagger", "knife", "dirk"),
-    AXE("equipment.weapon.axe", "AX", 0.96, AttackStyle.ONE_HANDED, "axe", "hatchet"),
-    BATTLEAXE("equipment.weapon.battleaxe", "BA", 1.15, AttackStyle.TWO_HANDED, "battleaxe", "battle axe", "greataxe",
-        "great axe"),
-    MACE("equipment.weapon.mace", "MC", 0.9, AttackStyle.ONE_HANDED, "mace", "morning star", "morningstar"),
-    HAMMER("equipment.weapon.hammer", "WH", 0.94, AttackStyle.ONE_HANDED, "war hammer", "warhammer", "hammer", "maul"),
-    ONE_HANDED_SPEAR("equipment.weapon.oneHandedSpear", "SP", 1.02, AttackStyle.ONE_HANDED, "one handed spear",
-        "one-handed spear", "short spear"),
-    SPEAR("equipment.weapon.spear", "SP", 1.28, AttackStyle.TWO_HANDED, "two handed spear", "two-handed spear", "spear",
-        "pike", "lance"),
-    HALBERD("equipment.weapon.halberd", "HB", 1.28, AttackStyle.TWO_HANDED, "halberd", "poleaxe", "pole axe"),
-    GLAIVE("equipment.weapon.glaive", "GL", 1.24, AttackStyle.TWO_HANDED, "glaive", "naginata", "polearm"),
-    TRIDENT("equipment.weapon.trident", "TR", 1.25, AttackStyle.TWO_HANDED, "trident", "trishula"),
-    STAFF("equipment.weapon.staff", "QS", 1.2, AttackStyle.TWO_HANDED, "quarterstaff", "quarter staff", "staff", "rod"),
-    CLUB("equipment.weapon.club", "CL", 0.88, AttackStyle.ONE_HANDED, "club", "cudgel"),
-    FLAIL("equipment.weapon.flail", "FL", 0.98, AttackStyle.ONE_HANDED, "flail"),
-    SHORTBOW("equipment.weapon.shortbow", "BS", 0.94, AttackStyle.BOW, "shortbow", "short bow"),
-    LONGBOW("equipment.weapon.longbow", "BW", 1.16, AttackStyle.BOW, "longbow", "long bow"),
-    BOW("equipment.weapon.bow", "BW", 1.08, AttackStyle.BOW, "bow"),
-    LIGHT_CROSSBOW("equipment.weapon.lightCrossbow", "CB", 1.0, AttackStyle.CROSSBOW, "light crossbow"),
-    HEAVY_CROSSBOW("equipment.weapon.heavyCrossbow", "CB", 1.16, AttackStyle.CROSSBOW, "heavy crossbow"),
-    CROSSBOW("equipment.weapon.crossbow", "CB", 1.08, AttackStyle.CROSSBOW, "crossbow"),
-    SLING("equipment.weapon.sling", "SL", 0.86, AttackStyle.SLING, "sling"),
-    WHIP("equipment.weapon.whip", "WP", 1.15, AttackStyle.ONE_HANDED, "whip", "lash"),
-    BUCKLER("equipment.weapon.buckler", "D1", 0.72, AttackStyle.SHIELD, "buckler", "bucklers"),
-    SMALL_SHIELD("equipment.weapon.smallShield", "D2", 0.86, AttackStyle.SHIELD, "small shield", "small shields"),
-    MEDIUM_SHIELD("equipment.weapon.mediumShield", "D3", 1.0, AttackStyle.SHIELD, "medium shield", "medium shields",
-        "shield"),
-    LARGE_SHIELD("equipment.weapon.largeShield", "D4", 1.16, AttackStyle.SHIELD, "large shield", "large shields",
-        "tower shield");
+    SICKLE("sickle"),
+    SCYTHE("scythe"),
+    SWORD("sword"),
+    SCIMITAR("scimitar"),
+    WAKIZASHI("wakizashi"),
+    NINJATO("ninjato"),
+    KATANA("katana"),
+    GREATSWORD("greatsword"),
+    DAGGER("dagger"),
+    AXE("axe"),
+    BATTLEAXE("battleaxe"),
+    MACE("mace"),
+    HAMMER("hammer"),
+    ONE_HANDED_SPEAR("one-handed-spear"),
+    SPEAR("spear"),
+    HALBERD("halberd"),
+    GLAIVE("glaive"),
+    TRIDENT("trident"),
+    STAFF("staff"),
+    CLUB("club"),
+    FLAIL("flail"),
+    SHORTBOW("shortbow"),
+    LONGBOW("longbow"),
+    BOW("bow"),
+    LIGHT_CROSSBOW("light-crossbow"),
+    HEAVY_CROSSBOW("heavy-crossbow"),
+    CROSSBOW("crossbow"),
+    SLING("sling"),
+    WHIP("whip"),
+    BUCKLER("buckler"),
+    SMALL_SHIELD("small-shield"),
+    MEDIUM_SHIELD("medium-shield"),
+    LARGE_SHIELD("large-shield");
 
-    private final String messageKey;
-    private final String appearanceCode;
-    private final double lengthScale;
-    private final AttackStyle attackStyle;
-    private final List<String> aliases;
+    private final String assetId;
 
-    WeaponType(String messageKey, String appearanceCode, double lengthScale, AttackStyle attackStyle,
-        String... aliases) {
-      this.messageKey = messageKey;
-      this.appearanceCode = appearanceCode;
-      this.lengthScale = lengthScale;
-      this.attackStyle = attackStyle;
-      this.aliases = Collections.unmodifiableList(Arrays.asList(aliases));
+    WeaponType(String assetId) {
+      this.assetId = assetId;
+    }
+
+    public CreatureEquipmentLibrary.EquipmentAsset getAsset() {
+      return CreatureEquipmentLibrary.getById(assetId);
     }
 
     public String getLabel() {
-      return CreatureAnimationMessages.get(messageKey);
+      return getAsset().getLabel();
     }
 
     public String getSuggestedAppearanceCode() {
-      return appearanceCode;
+      return getAsset().getAppearanceCode();
+    }
+
+    public double getLengthScale() {
+      return getAsset().getLengthScale();
     }
 
     public boolean isTwoHanded() {
-      return attackStyle == AttackStyle.TWO_HANDED || attackStyle == AttackStyle.BOW
-          || attackStyle == AttackStyle.CROSSBOW;
+      final AttackStyle style = getAttackStyle();
+      return style == AttackStyle.TWO_HANDED || style == AttackStyle.BOW || style == AttackStyle.CROSSBOW;
     }
 
     public boolean isShield() {
-      return attackStyle == AttackStyle.SHIELD;
+      return getAttackStyle() == AttackStyle.SHIELD;
     }
 
     public boolean isOneHandedMelee() {
-      return attackStyle == AttackStyle.ONE_HANDED;
+      return getAttackStyle() == AttackStyle.ONE_HANDED;
     }
 
     public boolean allowsShield() {
-      return attackStyle == AttackStyle.ONE_HANDED || attackStyle == AttackStyle.SLING;
+      final AttackStyle style = getAttackStyle();
+      return style == AttackStyle.ONE_HANDED || style == AttackStyle.SLING;
     }
 
     public AttackStyle getAttackStyle() {
-      return attackStyle;
+      return AttackStyle.valueOf(getAsset().getGripStyle().name());
     }
 
     public List<String> getAliases() {
-      return aliases;
+      return getAsset().getAliases();
     }
 
     @Override
@@ -380,8 +370,30 @@ public final class EquipmentOverlayGenerator {
       final BufferedImage blank = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
       return new AnimationFrame(blank, new Point(0, 0), "generated-empty-equipment-overlay");
     }
+    return renderAtAnchor(anchor, spec, seed);
+  }
 
-    final double length = clamp(anchor.length * spec.targetWeapon.lengthScale * spec.size.getScale(), 10.0, 138.0);
+  /**
+   * Draws one shared-library equipment item at an explicit source-independent attachment point.
+   *
+   * @param gripWorldX     attachment x relative to the creature BAM center
+   * @param gripWorldY     attachment y relative to the creature BAM center
+   * @param angle          item direction in radians
+   * @param referenceLength neutral reference length before the selected item and size scales are applied
+   */
+  public static AnimationFrame renderStandalone(EquipmentSpec specification, double gripWorldX, double gripWorldY,
+      double angle, double referenceLength, long seed) {
+    if (!Double.isFinite(gripWorldX) || !Double.isFinite(gripWorldY) || !Double.isFinite(angle)
+        || !Double.isFinite(referenceLength) || referenceLength <= 0.0) {
+      throw new IllegalArgumentException("Equipment attachment coordinates, angle and length must be finite.");
+    }
+    return renderAtAnchor(new Anchor(gripWorldX, gripWorldY, angle, referenceLength),
+        Objects.requireNonNull(specification, "specification"), seed);
+  }
+
+  private static AnimationFrame renderAtAnchor(Anchor anchor, EquipmentSpec spec, long seed) {
+    final double length =
+        clamp(anchor.length * spec.targetWeapon.getLengthScale() * spec.size.getScale(), 10.0, 138.0);
     final BufferedImage work = new BufferedImage(WORK_SIZE, WORK_SIZE, BufferedImage.TYPE_INT_ARGB);
     final Graphics2D graphics = work.createGraphics();
     try {
