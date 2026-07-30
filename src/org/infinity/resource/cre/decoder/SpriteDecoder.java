@@ -409,6 +409,19 @@ public abstract class SpriteDecoder extends PseudoBamDecoder {
   public abstract boolean isSequenceAvailable(Sequence seq);
 
   /**
+   * Returns an independent snapshot of the resource and cycle definition used by the specified sequence.
+   *
+   * <p>This exposes the decoder's resolved engine layout without allowing callers to modify decoder state.</p>
+   *
+   * @param seq the animation sequence to inspect
+   * @return a cloned sequence definition, or {@code null} if the sequence is unavailable
+   */
+  public final SeqDef getSequenceDefinitionSnapshot(Sequence seq) {
+    final SeqDef definition = getSequenceDefinition(Objects.requireNonNull(seq));
+    return (definition != null) ? definition.clone() : null;
+  }
+
+  /**
    * Returns the closest available direction to the specified direction.
    *
    * @param dir the requested direction

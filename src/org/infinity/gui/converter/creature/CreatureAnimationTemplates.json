@@ -1,0 +1,227 @@
+{
+  "schemaVersion": 1,
+  "templates": [
+    {
+      "id": "humanoid-balanced",
+      "messageKey": "template.humanoidBalanced",
+      "topology": "BIPED",
+      "motionProfile": "HUMANOID",
+      "fit": { "width": 0.53, "height": 0.83, "ground": 0.92, "depthScale": 0.63 },
+      "motion": { "bob": 1.8, "stride": 4.8, "attackReach": 10.0, "fallAngle": 78.0, "wing": 0.0, "turnBias": 0.02 },
+      "mainHandSocket": [0.18, 0.43, -12.0],
+      "offHandSocket": [0.82, 0.43, -168.0]
+    },
+    {
+      "id": "humanoid-heavy",
+      "messageKey": "template.humanoidHeavy",
+      "topology": "BIPED",
+      "motionProfile": "HEAVY_HUMANOID",
+      "fit": { "width": 0.62, "height": 0.84, "ground": 0.92, "depthScale": 0.68 },
+      "motion": { "bob": 1.4, "stride": 3.8, "attackReach": 9.0, "fallAngle": 72.0, "wing": 0.0, "turnBias": 0.01 },
+      "mainHandSocket": [0.17, 0.45, -10.0],
+      "offHandSocket": [0.83, 0.45, -170.0]
+    },
+    {
+      "id": "humanoid-lithe",
+      "messageKey": "template.humanoidLithe",
+      "topology": "BIPED",
+      "motionProfile": "HUMANOID",
+      "fit": { "width": 0.47, "height": 0.85, "ground": 0.92, "depthScale": 0.58 },
+      "motion": { "bob": 2.2, "stride": 5.8, "attackReach": 12.0, "fallAngle": 82.0, "wing": 0.0, "turnBias": 0.04 },
+      "mainHandSocket": [0.17, 0.41, -14.0],
+      "offHandSocket": [0.83, 0.41, -166.0]
+    },
+    {
+      "id": "humanoid-small",
+      "messageKey": "template.humanoidSmall",
+      "topology": "BIPED",
+      "motionProfile": "HUMANOID",
+      "fit": { "width": 0.48, "height": 0.70, "ground": 0.92, "depthScale": 0.65 },
+      "motion": { "bob": 2.0, "stride": 5.2, "attackReach": 9.0, "fallAngle": 80.0, "wing": 0.0, "turnBias": 0.03 },
+      "mainHandSocket": [0.16, 0.44, -12.0],
+      "offHandSocket": [0.84, 0.44, -168.0]
+    },
+    {
+      "id": "giant-biped",
+      "messageKey": "template.giantBiped",
+      "topology": "BIPED",
+      "motionProfile": "GIANT",
+      "fit": { "width": 0.60, "height": 0.93, "ground": 0.94, "depthScale": 0.70 },
+      "motion": { "bob": 1.1, "stride": 3.4, "attackReach": 14.0, "fallAngle": 68.0, "wing": 0.0, "turnBias": 0.0 },
+      "mainHandSocket": [0.15, 0.45, -8.0],
+      "offHandSocket": [0.85, 0.45, -172.0]
+    },
+    {
+      "id": "winged-humanoid",
+      "messageKey": "template.wingedHumanoid",
+      "topology": "WINGED",
+      "motionProfile": "WINGED_HUMANOID",
+      "fit": { "width": 0.79, "height": 0.88, "ground": 0.88, "depthScale": 0.56 },
+      "motion": { "bob": 3.2, "stride": 3.6, "attackReach": 11.0, "fallAngle": 76.0, "wing": 14.0, "turnBias": 0.03 },
+      "mainHandSocket": [0.23, 0.48, -12.0],
+      "offHandSocket": [0.77, 0.48, -168.0]
+    },
+    {
+      "id": "avian-flyer",
+      "messageKey": "template.avianFlyer",
+      "topology": "WINGED",
+      "motionProfile": "AVIAN",
+      "fit": { "width": 0.92, "height": 0.78, "ground": 0.82, "depthScale": 0.48 },
+      "motion": { "bob": 5.0, "stride": 2.0, "attackReach": 13.0, "fallAngle": 48.0, "wing": 24.0, "turnBias": 0.08 }
+    },
+    {
+      "id": "bat-winged",
+      "messageKey": "template.batWinged",
+      "topology": "WINGED",
+      "motionProfile": "BAT",
+      "fit": { "width": 0.91, "height": 0.68, "ground": 0.78, "depthScale": 0.44 },
+      "motion": { "bob": 5.8, "stride": 1.6, "attackReach": 11.0, "fallAngle": 52.0, "wing": 27.0, "turnBias": -0.05 }
+    },
+    {
+      "id": "quadruped-canine",
+      "messageKey": "template.quadrupedCanine",
+      "topology": "QUADRUPED",
+      "motionProfile": "CANINE",
+      "fit": { "width": 0.78, "height": 0.59, "ground": 0.91, "depthScale": 0.47 },
+      "motion": { "bob": 2.4, "stride": 7.8, "attackReach": 13.0, "fallAngle": 66.0, "wing": 0.0, "turnBias": 0.08 }
+    },
+    {
+      "id": "quadruped-feline",
+      "messageKey": "template.quadrupedFeline",
+      "topology": "QUADRUPED",
+      "motionProfile": "FELINE",
+      "fit": { "width": 0.82, "height": 0.60, "ground": 0.91, "depthScale": 0.45 },
+      "motion": { "bob": 2.0, "stride": 9.2, "attackReach": 16.0, "fallAngle": 70.0, "wing": 0.0, "turnBias": 0.10 }
+    },
+    {
+      "id": "quadruped-ursine",
+      "messageKey": "template.quadrupedUrsine",
+      "topology": "QUADRUPED",
+      "motionProfile": "URSINE",
+      "fit": { "width": 0.82, "height": 0.68, "ground": 0.92, "depthScale": 0.56 },
+      "motion": { "bob": 1.5, "stride": 5.6, "attackReach": 12.0, "fallAngle": 62.0, "wing": 0.0, "turnBias": 0.04 }
+    },
+    {
+      "id": "quadruped-hoofed",
+      "messageKey": "template.quadrupedHoofed",
+      "topology": "QUADRUPED",
+      "motionProfile": "HOOFED",
+      "fit": { "width": 0.84, "height": 0.68, "ground": 0.92, "depthScale": 0.48 },
+      "motion": { "bob": 2.1, "stride": 8.8, "attackReach": 9.0, "fallAngle": 64.0, "wing": 0.0, "turnBias": 0.06 }
+    },
+    {
+      "id": "quadruped-low-reptile",
+      "messageKey": "template.quadrupedLowReptile",
+      "topology": "QUADRUPED",
+      "motionProfile": "LOW_REPTILE",
+      "fit": { "width": 0.90, "height": 0.48, "ground": 0.91, "depthScale": 0.42 },
+      "motion": { "bob": 1.0, "stride": 5.4, "attackReach": 15.0, "fallAngle": 48.0, "wing": 0.0, "turnBias": 0.12 }
+    },
+    {
+      "id": "quadruped-draconic",
+      "messageKey": "template.quadrupedDraconic",
+      "topology": "QUADRUPED",
+      "motionProfile": "DRACONIC",
+      "fit": { "width": 0.94, "height": 0.74, "ground": 0.92, "depthScale": 0.42 },
+      "motion": { "bob": 1.7, "stride": 6.0, "attackReach": 17.0, "fallAngle": 58.0, "wing": 11.0, "turnBias": 0.10 }
+    },
+    {
+      "id": "quadruped-aberrant",
+      "messageKey": "template.quadrupedAberrant",
+      "topology": "QUADRUPED",
+      "motionProfile": "LOW_ABERRATION",
+      "fit": { "width": 0.78, "height": 0.63, "ground": 0.91, "depthScale": 0.50 },
+      "motion": { "bob": 2.3, "stride": 7.0, "attackReach": 16.0, "fallAngle": 54.0, "wing": 0.0, "turnBias": 0.11 }
+    },
+    {
+      "id": "centauroid",
+      "messageKey": "template.centauroid",
+      "topology": "CENTAUROID",
+      "motionProfile": "CENTAUROID",
+      "fit": { "width": 0.85, "height": 0.84, "ground": 0.93, "depthScale": 0.49 },
+      "motion": { "bob": 2.0, "stride": 7.4, "attackReach": 12.0, "fallAngle": 60.0, "wing": 0.0, "turnBias": 0.06 },
+      "mainHandSocket": [0.30, 0.28, -12.0],
+      "offHandSocket": [0.62, 0.30, -168.0]
+    },
+    {
+      "id": "arachnid",
+      "messageKey": "template.arachnid",
+      "topology": "ARACHNID",
+      "motionProfile": "ARACHNID",
+      "fit": { "width": 0.92, "height": 0.57, "ground": 0.91, "depthScale": 0.46 },
+      "motion": { "bob": 1.4, "stride": 8.0, "attackReach": 12.0, "fallAngle": 38.0, "wing": 0.0, "turnBias": 0.08 }
+    },
+    {
+      "id": "scorpion",
+      "messageKey": "template.scorpion",
+      "topology": "ARACHNID",
+      "motionProfile": "SCORPION",
+      "fit": { "width": 0.92, "height": 0.68, "ground": 0.91, "depthScale": 0.45 },
+      "motion": { "bob": 1.2, "stride": 6.8, "attackReach": 18.0, "fallAngle": 42.0, "wing": 0.0, "turnBias": 0.10 }
+    },
+    {
+      "id": "hexapod-insect",
+      "messageKey": "template.hexapodInsect",
+      "topology": "HEXAPOD",
+      "motionProfile": "HEXAPOD",
+      "fit": { "width": 0.88, "height": 0.58, "ground": 0.90, "depthScale": 0.43 },
+      "motion": { "bob": 1.6, "stride": 7.2, "attackReach": 11.0, "fallAngle": 40.0, "wing": 5.0, "turnBias": 0.09 }
+    },
+    {
+      "id": "beetle-armored",
+      "messageKey": "template.beetleArmored",
+      "topology": "HEXAPOD",
+      "motionProfile": "BEETLE",
+      "fit": { "width": 0.86, "height": 0.61, "ground": 0.90, "depthScale": 0.50 },
+      "motion": { "bob": 1.1, "stride": 5.8, "attackReach": 9.0, "fallAngle": 36.0, "wing": 8.0, "turnBias": 0.06 }
+    },
+    {
+      "id": "serpentine",
+      "messageKey": "template.serpentine",
+      "topology": "SERPENT",
+      "motionProfile": "SERPENT",
+      "fit": { "width": 0.90, "height": 0.70, "ground": 0.91, "depthScale": 0.40 },
+      "motion": { "bob": 1.6, "stride": 9.5, "attackReach": 18.0, "fallAngle": 28.0, "wing": 0.0, "turnBias": 0.14 }
+    },
+    {
+      "id": "serpentine-multi-neck",
+      "messageKey": "template.serpentineMultiNeck",
+      "topology": "SERPENT",
+      "motionProfile": "MULTI_NECK",
+      "fit": { "width": 0.93, "height": 0.83, "ground": 0.92, "depthScale": 0.43 },
+      "motion": { "bob": 1.8, "stride": 7.8, "attackReach": 20.0, "fallAngle": 32.0, "wing": 0.0, "turnBias": 0.12 }
+    },
+    {
+      "id": "amorphous",
+      "messageKey": "template.amorphous",
+      "topology": "AMORPHOUS",
+      "motionProfile": "AMORPHOUS",
+      "fit": { "width": 0.82, "height": 0.58, "ground": 0.91, "depthScale": 0.72 },
+      "motion": { "bob": 3.0, "stride": 5.6, "attackReach": 13.0, "fallAngle": 12.0, "wing": 0.0, "turnBias": 0.02 }
+    },
+    {
+      "id": "floating",
+      "messageKey": "template.floating",
+      "topology": "FLOATING",
+      "motionProfile": "FLOATING",
+      "fit": { "width": 0.69, "height": 0.69, "ground": 0.78, "depthScale": 0.76 },
+      "motion": { "bob": 5.4, "stride": 3.0, "attackReach": 12.0, "fallAngle": 22.0, "wing": 0.0, "turnBias": 0.0 }
+    },
+    {
+      "id": "aquatic-tailed",
+      "messageKey": "template.aquaticTailed",
+      "topology": "AQUATIC",
+      "motionProfile": "AQUATIC",
+      "fit": { "width": 0.92, "height": 0.66, "ground": 0.82, "depthScale": 0.38 },
+      "motion": { "bob": 3.6, "stride": 10.0, "attackReach": 15.0, "fallAngle": 30.0, "wing": 0.0, "turnBias": 0.16 }
+    },
+    {
+      "id": "plant-rooted",
+      "messageKey": "template.plantRooted",
+      "topology": "ROOTED",
+      "motionProfile": "ROOTED",
+      "fit": { "width": 0.75, "height": 0.88, "ground": 0.93, "depthScale": 0.70 },
+      "motion": { "bob": 1.0, "stride": 1.4, "attackReach": 14.0, "fallAngle": 52.0, "wing": 0.0, "turnBias": 0.01 }
+    }
+  ]
+}

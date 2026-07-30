@@ -2,7 +2,9 @@
 <project name="NearInfinity" default="compile" basedir=".">
   <property name="jar.file" value="NearInfinity.jar"/>
   <property name="build.path" location="build/src"/>
+  <property name="test.build.path" location="build/test"/>
   <property name="src.path" location="src"/>
+  <property name="test.path" location="test"/>
   <property name="lib.path.rel" value="lib"/>
   <property name="lib.path.abs" location="${lib.path.rel}"/>
   <property name="tinylog-api.file" value="${lib.path.rel}/tinylog/tinylog-api-2.7.0.jar"/>
@@ -88,8 +90,43 @@
     <javacc target="${src.parser.path}/${parser.file}.jj" outputdirectory="${src.parser.path}" javacchome="${javacc.home}"/>
   </target>
 
+  <target name="test" depends="compile">
+    <mkdir dir="${test.build.path}"/>
+    <javac srcdir="${test.path}"
+           destdir="${test.build.path}"
+           encoding="UTF-8"
+           source="1.8"
+           target="1.8"
+           release="8"
+           includeantruntime="false"
+           deprecation="false"
+           debug="true"
+           classpath="${build.path}:${classpath}:${tinylog-api.file}:${tinylog-impl.file}:${jorbis.file}:${rsyntaxtextarea.file}:${jhexview.file}:${montemedia.file}:${apng_writer.file}:${json.file}:${commonmark.file}:${flatlaf.file}:${flatlafthemes.file}"/>
+    <java classname="org.infinity.gui.converter.creature.CreatureAnimationCoreTest"
+          fork="true"
+          failonerror="true">
+      <classpath>
+        <pathelement location="${test.build.path}"/>
+        <pathelement location="${build.path}"/>
+        <pathelement path="${classpath}"/>
+        <pathelement location="${tinylog-api.file}"/>
+        <pathelement location="${tinylog-impl.file}"/>
+        <pathelement location="${jorbis.file}"/>
+        <pathelement location="${rsyntaxtextarea.file}"/>
+        <pathelement location="${jhexview.file}"/>
+        <pathelement location="${montemedia.file}"/>
+        <pathelement location="${apng_writer.file}"/>
+        <pathelement location="${json.file}"/>
+        <pathelement location="${commonmark.file}"/>
+        <pathelement location="${flatlaf.file}"/>
+        <pathelement location="${flatlafthemes.file}"/>
+      </classpath>
+    </java>
+  </target>
+
   <target name="clean">
     <delete dir="${build.path}"/>
+    <delete dir="${test.build.path}"/>
     <delete file="${jar.file}"/>
     <delete>
       <fileset dir="${src.path}" includes="**/*.class"/>
