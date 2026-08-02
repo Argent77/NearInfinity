@@ -9,17 +9,25 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.infinity.datatype.AbstractBitmap;
 import org.infinity.datatype.DecNumber;
 import org.infinity.datatype.EffectType;
 import org.infinity.resource.effects.BaseOpcode;
+import org.infinity.resource.itm.ItmResource;
 import org.infinity.util.io.StreamUtils;
 
 public final class Effect extends AbstractStruct implements AddRemovable {
   // Effect-specific field labels
   public static final String EFFECT = "Effect";
 
+  private static final int TARGET_SELF = 1;
+  private static final int TIMING_MODE_INSTANT_WHILE_EQUIPPED = 2;
+
+  private boolean isNew;
+
   public Effect() throws Exception {
     super(null, EFFECT, StreamUtils.getByteBuffer(48), 0);
+    isNew = true;
     ((DecNumber) getAttribute(BaseOpcode.EFFECT_PROBABILITY_1)).setValue(100);
   }
 
@@ -39,6 +47,18 @@ public final class Effect extends AbstractStruct implements AddRemovable {
   }
 
   // --------------------- End Interface AddRemovable ---------------------
+
+  @Override
+  public void setParent(AbstractStruct parent) {
+    if (isNew && parent != null) {
+      if (parent instanceof ItmResource) {
+        setBitmapValue(EffectType.EFFECT_TYPE_TARGET, TARGET_SELF);
+        setBitmapValue(BaseOpcode.EFFECT_TIMING_MODE, TIMING_MODE_INSTANT_WHILE_EQUIPPED);
+      }
+      isNew = false;
+    }
+    super.setParent(parent);
+  }
 
   @Override
   public int read(ByteBuffer buffer, int offset) throws Exception {
@@ -120,5 +140,29 @@ public final class Effect extends AbstractStruct implements AddRemovable {
     }
 
     return retVal;
+  }
+
+  private void setBitmapValue(String attributeName, int value) {
+    final StructEntry entry = getAttribute(attributeName);
+    if (!(entry instanceof AbstractBitmap<?>)) {
+      throw new IllegalStateException("Effect attribute is not a bitmap: " + attributeName);
+    }
+
+    final AbstractBitmap<?> bitmap = (AbstractBitmap<?>) entry;
+    final ByteBuffer buffer = StreamUtils.getByteBuffer(bitmap.getSize());
+    switch (bitmap.getSize()) {
+      case 1:
+        buffer.put((byte) value);
+        break;
+      case 2:
+        buffer.putShort((short) value);
+        break;
+      case 4:
+        buffer.putInt(value);
+        break;
+      default:
+        throw new IllegalStateException("Unsupported bitmap size: " + bitmap.getSize());
+    }
+    bitmap.read(buffer, 0);
   }
 }
