@@ -20,6 +20,8 @@ public final class EffectType extends Bitmap implements UpdateListener {
   public static final String EFFECT_TYPE_TARGET = "Target";
   public static final String EFFECT_TYPE_POWER  = "Power";
 
+  public static final int TARGET_SELF = 1;
+
   private static final String[] TARGET_ARRAY = { "None", "Self", "Preset target", "Party", "Everyone",
       "Everyone except party", "Caster group", "Target group", "Everyone except self", "Original caster" };
 
