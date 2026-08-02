@@ -20,7 +20,6 @@ public final class Effect extends AbstractStruct implements AddRemovable {
   // Effect-specific field labels
   public static final String EFFECT = "Effect";
 
-  private static final int TARGET_SELF = 1;
   private static final int TIMING_MODE_INSTANT_WHILE_EQUIPPED = 2;
 
   private boolean isNew;
@@ -52,7 +51,7 @@ public final class Effect extends AbstractStruct implements AddRemovable {
   public void setParent(AbstractStruct parent) {
     if (isNew && parent != null) {
       if (parent instanceof ItmResource) {
-        setBitmapValue(EffectType.EFFECT_TYPE_TARGET, TARGET_SELF);
+        setBitmapValue(EffectType.EFFECT_TYPE_TARGET, EffectType.TARGET_SELF);
         setBitmapValue(BaseOpcode.EFFECT_TIMING_MODE, TIMING_MODE_INSTANT_WHILE_EQUIPPED);
       }
       isNew = false;
