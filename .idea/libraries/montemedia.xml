@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="montemedia">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/montemedia/montemedia.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/montemedia/MonteMedia-0.7.7.zip!/MonteMedia-0.7.7/src" />
+    </SOURCES>
+  </library>
+</component>

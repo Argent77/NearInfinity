@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="apng-writer-core">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/apng-writer/apng-writer-core.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/apng-writer/apng-writer-core-src.zip!/src/main/java" />
+    </SOURCES>
+  </library>
+</component>

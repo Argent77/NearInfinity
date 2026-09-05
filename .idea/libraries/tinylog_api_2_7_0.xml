@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="tinylog-api-2.7.0">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/tinylog/tinylog-api-2.7.0.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/tinylog/tinylog-api-2.7.0-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
