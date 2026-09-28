@@ -8,10 +8,12 @@ import java.nio.ByteBuffer;
 
 import org.infinity.datatype.Bitmap;
 import org.infinity.datatype.DecNumber;
+import org.infinity.datatype.Flag;
 import org.infinity.datatype.SpawnResourceRef;
 import org.infinity.datatype.StringRef;
 import org.infinity.datatype.TextString;
 import org.infinity.datatype.Unknown;
+import org.infinity.datatype.UnsignDecNumber;
 import org.infinity.resource.AbstractStruct;
 import org.infinity.resource.AddRemovable;
 import org.infinity.resource.Profile;
@@ -35,6 +37,13 @@ public final class RestSpawn extends AbstractStruct implements AddRemovable {
   public static final String ARE_RESTSPAWN_PROBABILITY_NIGHT      = "Probability (night)";
   public static final String ARE_RESTSPAWN_PROBABILITY_DAY_HOUR   = "Hourly probability (day)";
   public static final String ARE_RESTSPAWN_PROBABILITY_NIGHT_HOUR = "Hourly probability (night)";
+  public static final String ARE_RESTSPAWN_FLAGS                  = "Flags";
+  public static final String ARE_RESTSPAWN_WEIGHT_FMT             = "Creature %d";
+
+  public static final String[] FLAGS_ARRAY = { "No flags set", "", "Deactivate after interrupt",
+      "Successfully interrupted rest", "Scale # creatures and encounter difficulty with game difficulty", "",
+      "Use weights when picking random creatures", "Always reroll random creatures", "Add creature XP to difficulty",
+      "", "Scale probability with game difficulty", "Suppress Nightmare Mode extra creatures", };
 
   public RestSpawn() throws Exception {
     super(null, ARE_RESTSPAWN, StreamUtils.getByteBuffer(228), 0);
@@ -82,7 +91,15 @@ public final class RestSpawn extends AbstractStruct implements AddRemovable {
       addField(new DecNumber(buffer, offset + 168, 2, ARE_RESTSPAWN_PROBABILITY_DAY_HOUR));
       addField(new DecNumber(buffer, offset + 170, 2, ARE_RESTSPAWN_PROBABILITY_NIGHT_HOUR));
     }
-    addField(new Unknown(buffer, offset + 172, 56));
+    if (Profile.isEnhancedEdition()) {
+      addField(new Flag(buffer, offset + 172, 2, ARE_RESTSPAWN_FLAGS, FLAGS_ARRAY));
+      for (int i = 0; i < 10; i++) {
+        addField(new UnsignDecNumber(buffer, offset + 174 + i, 1, String.format(ARE_RESTSPAWN_WEIGHT_FMT, i + 1)));
+      }
+      addField(new Unknown(buffer, offset + 184, 44));
+    } else {
+      addField(new Unknown(buffer, offset + 172, 56));
+    }
     return offset + 228;
   }
 }
