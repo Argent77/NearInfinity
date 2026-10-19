@@ -195,6 +195,17 @@ public final class ItmResource extends AbstractStruct implements Resource, HasCh
     }
   }
 
+  public static String getDescString(InputStream is) throws IOException {
+    is.skip(80);
+    String defDesc = StringTable.getStringRef(StreamUtils.readInt(is)).trim();
+    String desc = StringTable.getStringRef(StreamUtils.readInt(is)).trim();
+    if (desc.isEmpty() || desc.equalsIgnoreCase(StringTable.DEFAULT_STRING)) {
+      return defDesc;
+    } else {
+      return desc;
+    }
+  }
+
   public ItmResource(ResourceEntry entry) throws Exception {
     super(entry);
   }
