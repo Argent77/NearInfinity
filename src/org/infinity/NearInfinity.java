@@ -79,6 +79,7 @@ import javax.swing.WindowConstants;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.plaf.FontUIResource;
 
+import org.infinity.cli.CommandLineTool;
 import org.infinity.datatype.IdsBitmap;
 import org.infinity.datatype.ProRef;
 import org.infinity.datatype.ResourceRef;
@@ -354,6 +355,8 @@ public final class NearInfinity extends JFrame implements ActionListener, Viewab
     System.out.println("  -h, -help         Display this help.");
     System.out.println("  -no-update        Disables the update check option in the menu bar.");
     System.out.println("  -no-launch-game   Hides the \"Launch game\" button.");
+    System.out.println("  --run-tool class file");
+    System.out.println("                    Runs a command-line tool from the org.infinity.cli package.");
     System.out.println("  -t type           Force the current or specified game to be of");
     System.out.println("                    specific type. (Use with care!)");
     System.out.println("                    Supported game types:");
@@ -396,6 +399,11 @@ public final class NearInfinity extends JFrame implements ActionListener, Viewab
   }
 
   public static void main(String[] args) {
+    if (args.length > 0 && "--run-tool".equalsIgnoreCase(args[0])) {
+      runTool(args);
+      return;
+    }
+
     Profile.Game forcedGame = null;
     Path gameOverride = null;
     boolean enableUpdate = true;
@@ -472,6 +480,28 @@ public final class NearInfinity extends JFrame implements ActionListener, Viewab
 
     final Options options = new Options(gameOverride, forcedGame, enableUpdate, showLaunchGame);
     new NearInfinity(options);
+  }
+
+  private static void runTool(String[] args) {
+    if (args.length != 3) {
+      System.err.println("Usage: java -jar NearInfinity.jar --run-tool <class> <file>");
+      System.exit(1);
+    }
+
+    String className = args[1];
+    String fileName = args[2];
+    try {
+      Class<?> toolClass = Class.forName("org.infinity.cli." + className);
+      if (!CommandLineTool.class.isAssignableFrom(toolClass)) {
+        throw new IllegalArgumentException("Class does not implement CommandLineTool: " + className);
+      }
+      CommandLineTool tool = (CommandLineTool) toolClass.getDeclaredConstructor().newInstance();
+      tool.run(fileName);
+    } catch (Exception e) {
+      System.err.println("Command-line tool failed: " + e.getMessage());
+      e.printStackTrace();
+      System.exit(1);
+    }
   }
 
   private NearInfinity(Options options) {

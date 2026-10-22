@@ -1,0 +1,9 @@
+{
+  "game": "C:/Games/Steam/steamapps/common/Rick_Mod_work/chitin.key",
+  "weidu": "C:/Games/Steam/steamapps/common/Rick_Mod_work/weidu.exe",
+  "resourceRegexp": [
+    "^.*\\.spl$"
+  ],
+  "output": "C:/Games/Steam/steamapps/common/Rick_Mod_work/game-objects",
+  "existingFolder": "create_overwrite"
+}
