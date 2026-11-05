@@ -8,6 +8,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Frame;
@@ -37,6 +38,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -1360,13 +1362,38 @@ public final class NearInfinity extends JFrame implements ActionListener, Viewab
     setIconImages(list);
   }
 
-  // Enables command-Q on OSX to trigger the window closing callback
-  @SuppressWarnings({ "unchecked", "rawtypes" })
+  // Workaround to trigger standard window closing callback on macOS when using command-Q.
+  // This method is only used on JRE 9 and higher, as the new macOS-specific API is not available in JRE 8 and lower.
   private void enableOSXQuitStrategy() {
-    // Doesn't work anymore on JRE 9 and higher:
-    // Java 9 introduced streamlined access to macOS-specific features,
-    //  e.g. menu bar integration, quit strategy, about dialog, ...
-    // TODO: Reimplement macOS-specific functionality if/when NI switches to Java 9+ compatibility
+    try {
+      Desktop desktop = Desktop.getDesktop();
+
+      Class<?> quitHandler = Class.forName("java.awt.desktop.QuitHandler");
+
+      Object handler = Proxy.newProxyInstance(quitHandler.getClassLoader(), new Class<?>[] { quitHandler },
+          (proxy, method, args) ->
+          {
+            if ("handleQuitRequestWith".equals(method.getName())) {
+              // Performing application shutdown
+              quit();
+              args[1].getClass().getMethod("performQuit").invoke(args[1]);
+            }
+            return null;
+          });
+
+      Desktop.class.getMethod("setQuitHandler", quitHandler).invoke(desktop, handler);
+
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException
+        | UnsupportedOperationException e) {
+      // fall back to using legacy handling of macOS closing behavior (needed for JRE 8 and lower)
+      enableOSXQuitStrategyLegacy();
+    }
+  }
+
+  // Legacy method for enabling command-Q on OSX to trigger the window closing callback
+  // This method is only used on JRE 8 and lower, as the new macOS-specific API is available starting with JRE 9.
+  @SuppressWarnings({ "unchecked", "rawtypes" })
+  private void enableOSXQuitStrategyLegacy() {
     try {
       Class application = Class.forName("com.apple.eawt.Application");
       Method getApplication = application.getMethod("getApplication");
