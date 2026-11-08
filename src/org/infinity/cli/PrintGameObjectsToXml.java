@@ -329,6 +329,39 @@ public final class PrintGameObjectsToXml implements CommandLineTool {
     return String.format(Locale.ROOT, "0x%0" + Math.max(2, digits) + "X", value);
   }
 
+  private static String encodeXmlControlChars(String value) {
+    if (value == null || value.isEmpty()) {
+      return value == null ? "" : value;
+    }
+    StringBuilder result = new StringBuilder(value.length() + 10);
+    boolean illegalFound = false;
+    for (int i = 0; i < value.length(); i++) {
+      char c = value.charAt(i);
+      if (isIllegalXmlChar(c)) {
+        if (!illegalFound) {
+          illegalFound = true;
+          if (result.length() > 0) {
+            result.append(' ');
+          }
+        }
+        result.append('[');
+        result.append(String.format(Locale.ROOT, "%02X", (int) c));
+        result.append(']');
+      } else {
+        result.append(c);
+      }
+    }
+    if (!illegalFound) {
+      return value;
+    }
+    return "ILLEGAL:" + result;
+  }
+
+  private static boolean isIllegalXmlChar(char c) {
+    return c == 0x0 || c == 0x1 || c == 0x7f || (c >= 0x00 && c <= 0x08) || (c >= 0x0b && c <= 0x0c)
+        || (c >= 0x0e && c <= 0x1f) || (c >= 0x7f && c <= 0x84) || (c >= 0x86 && c <= 0x9f);
+  }
+
   private static String xmlName(String name) {
     if (name == null || name.isEmpty()) {
       return "Field";
@@ -356,7 +389,12 @@ public final class PrintGameObjectsToXml implements CommandLineTool {
 
     @Override
     public void write(char[] cbuf, int off, int len) {
-      builder.append(cbuf, off, len);
+      builder.append(encodeXmlControlChars(new String(cbuf, off, len)));
+    }
+
+    @Override
+    public void write(String str, int off, int len) {
+      builder.append(encodeXmlControlChars(str.substring(off, off + len)));
     }
 
     @Override
