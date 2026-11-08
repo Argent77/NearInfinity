@@ -161,6 +161,11 @@ public final class SplResource extends AbstractStruct
     return StringTable.getStringRef(StreamUtils.readInt(is)).trim();
   }
 
+  public static String getDescString(InputStream is) throws IOException {
+    is.skip(80);
+    return StringTable.getStringRef(StreamUtils.readInt(is)).trim();
+  }
+
   public SplResource(ResourceEntry entry) throws Exception {
     super(entry);
   }

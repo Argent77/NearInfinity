@@ -79,6 +79,7 @@
       <zipgroupfileset dir="." includes="${flatlafthemes.file}"/>
       <manifest>
         <attribute name="Main-Class" value="org.infinity.NearInfinity"/>
+        <attribute name="Enable-Native-Access" value="ALL-UNNAMED"/>
       </manifest>
     </jar>
   </target>

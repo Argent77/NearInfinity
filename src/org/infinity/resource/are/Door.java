@@ -247,13 +247,15 @@ public final class Door extends AbstractStruct implements AddRemovable, HasVerti
     addField(new DecNumber(buffer, offset + 148, 2, ARE_DOOR_LOCATION_CLOSE_X));
     addField(new DecNumber(buffer, offset + 150, 2, ARE_DOOR_LOCATION_CLOSE_Y));
     addField(new StringRef(buffer, offset + 152, ARE_DOOR_UNLOCK_MESSAGE));
-    addField(new TextString(buffer, offset + 156, 24, ARE_DOOR_TRAVEL_TRIGGER_NAME));
-//    addField(new TextString(buffer, offset + 156, 32, ARE_DOOR_TRAVEL_TRIGGER_NAME));
-//    addField(new Unknown(buffer, offset + 192, 12));
-    // TODO: check whether following fields are valid
-    addField(new StringRef(buffer, offset + 180, ARE_DOOR_SPEAKER_NAME));
-    addField(new ResourceRef(buffer, offset + 184, ARE_DOOR_DIALOG, "DLG"));
-    addField(new Unknown(buffer, offset + 192, 8));
+    if (Profile.getGame() == Profile.Game.PSTEE) {
+      addField(new TextString(buffer, offset + 156, 24, ARE_DOOR_TRAVEL_TRIGGER_NAME));
+      addField(new StringRef(buffer, offset + 180, ARE_DOOR_SPEAKER_NAME));
+      addField(new ResourceRef(buffer, offset + 184, ARE_DOOR_DIALOG, "DLG"));
+      addField(new Unknown(buffer, offset + 192, 8));
+    } else {
+      addField(new TextString(buffer, offset + 156, 32, ARE_DOOR_TRAVEL_TRIGGER_NAME));
+      addField(new Unknown(buffer, offset + 188, 12));
+    }
     return offset + 200;
   }
 

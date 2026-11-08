@@ -72,6 +72,7 @@ public final class ProResource extends AbstractStruct implements Resource, HasCh
   public static final String PRO_CREATURE_TYPE        = "Creature type";
   public static final String PRO_SPELL_DEFAULT        = "Default spell";
   public static final String PRO_SPELL_SUCCESS        = "Success spell";
+  public static final String PRO_MAX_BOUNCES          = "Maximum bounces";
   public static final String PRO_SPELL_ANGLE_MIN      = "Angle increase minimum";
   public static final String PRO_SPELL_ANGLE_MAX      = "Angle increase maximum";
   public static final String PRO_SPELL_CURVE_MIN      = "Curve minimum";
@@ -283,7 +284,8 @@ public final class ProResource extends AbstractStruct implements Resource, HasCh
         addField(new DecNumber(buffer, 98, 2, PRO_SPELL_RADIUS_MAX));
         addField(new Unknown(buffer, offset + 100, 156));
       } else {
-        addField(new Unknown(buffer, offset + 84, 172));
+        addField(new DecNumber(buffer, offset + 84, 4, PRO_MAX_BOUNCES));
+        addField(new Unknown(buffer, offset + 88, 168));
       }
     } else {
       addField(new Unknown(buffer, offset + 42, 214));

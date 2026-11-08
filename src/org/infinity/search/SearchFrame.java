@@ -19,6 +19,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -53,7 +54,9 @@ import org.infinity.icon.Icons;
 import org.infinity.resource.ResourceFactory;
 import org.infinity.resource.Viewable;
 import org.infinity.resource.bcs.BcsResource;
+import org.infinity.resource.itm.ItmResource;
 import org.infinity.resource.key.ResourceEntry;
+import org.infinity.resource.spl.SplResource;
 import org.infinity.util.Logger;
 
 public final class SearchFrame extends ChildFrame
@@ -79,6 +82,7 @@ public final class SearchFrame extends ChildFrame
   private final JLabel lRegexHelp = ViewerUtil.createRegexpHelpLabel();
   private final JCheckBox cbInvert = new JCheckBox("Invert match");
   private final JCheckBox cbIncludeSymbols = new JCheckBox("Include symbols", true);
+  private final JCheckBox cbSearchDesc = new JCheckBox("Search description text", false);
 
   public SearchFrame() {
     super("Find");
@@ -89,6 +93,7 @@ public final class SearchFrame extends ChildFrame
     binsert.setMnemonic('r');
     rbcre.setMnemonic('c');
     rbitm.setMnemonic('i');
+    rbitm.addItemListener(this);
     rbspl.setMnemonic('s');
     rbspl.addItemListener(this);
     rbsto.setMnemonic('t');
@@ -147,7 +152,7 @@ public final class SearchFrame extends ChildFrame
     bpanel.add(progress, "Progress");
     cards.show(bpanel, "Button");
 
-    JPanel rbpanel = new JPanel();
+    final JPanel rbpanel = new JPanel();
     rbpanel.setLayout(new GridLayout(1, 4, 3, 3));
     rbpanel.add(rbcre);
     rbpanel.add(rbitm);
@@ -166,19 +171,41 @@ public final class SearchFrame extends ChildFrame
     cbIncludeSymbols.setMnemonic('y');
     cbIncludeSymbols.setToolTipText("Include symbolic names of SPL resources in the search.");
     cbIncludeSymbols.setEnabled(false);
+    cbSearchDesc.setMnemonic('d');
+    cbSearchDesc.setToolTipText("Search text is also matched against the description text of the resource.");
+    cbSearchDesc.setEnabled(false);
 
     JPanel regexpPanel = new JPanel(new FlowLayout(FlowLayout.LEADING, 0, 0));
     regexpPanel.add(cbRegex);
     regexpPanel.add(lRegexHelp);
 
-    JPanel optionsPanel = new JPanel(new FlowLayout(FlowLayout.LEADING, 8, 4));
+    final JPanel optionsPanel = new JPanel(new GridBagLayout());
     optionsPanel.setBorder(BorderFactory.createTitledBorder("Options:"));
-    optionsPanel.add(cbCaseSensitive);
-    optionsPanel.add(regexpPanel);
-    optionsPanel.add(cbInvert);
-    optionsPanel.add(cbIncludeSymbols);
 
-    JPanel pane = (JPanel) getContentPane();
+    final GridBagConstraints c = new GridBagConstraints();
+    ViewerUtil.setGBC(c, 0, 0, 1, 1, 0, 0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
+        new Insets(0, 0, 0, 0), 0, 0);
+    optionsPanel.add(cbCaseSensitive, c);
+    ViewerUtil.setGBC(c, 0, 1, 1, 1, 0, 0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
+        new Insets(4, 0, 0, 0), 0, 0);
+    optionsPanel.add(cbInvert, c);
+    ViewerUtil.setGBC(c, 1, 0, 1, 1, 0, 0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
+        new Insets(0, 16, 0, 0), 0, 0);
+    optionsPanel.add(regexpPanel, c);
+    ViewerUtil.setGBC(c, 1, 1, 1, 1, 0, 0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
+        new Insets(4, 16, 0, 0), 0, 0);
+    optionsPanel.add(cbIncludeSymbols, c);
+    ViewerUtil.setGBC(c, 2, 0, 1, 1, 0, 0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
+        new Insets(0, 16, 0, 0), 0, 0);
+    optionsPanel.add(cbSearchDesc, c);
+    ViewerUtil.setGBC(c, 2, 1, 1, 1, 0, 0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
+        new Insets(4, 16, 0, 0), 0, 0);
+    optionsPanel.add(new JPanel(), c);  // placeholder for alignment
+    ViewerUtil.setGBC(c, 3, 0, 1, 2, 1, 0, GridBagConstraints.LINE_START, GridBagConstraints.HORIZONTAL,
+        new Insets(0, 0, 0, 0), 0, 0);
+    optionsPanel.add(new JPanel(), c);
+
+    final JPanel pane = (JPanel) getContentPane();
     GridBagLayout gbl = new GridBagLayout();
     GridBagConstraints gbc = new GridBagConstraints();
     pane.setLayout(gbl);
@@ -242,6 +269,7 @@ public final class SearchFrame extends ChildFrame
     pane.add(bpanel);
 
     pack();
+    setMinimumSize(getSize());
     setSize(getSize().width, getSize().height * 3 / 2);
     Center.center(this, NearInfinity.getInstance().getBounds());
   }
@@ -279,9 +307,10 @@ public final class SearchFrame extends ChildFrame
 
   @Override
   public void itemStateChanged(ItemEvent e) {
-    if (e.getSource() == rbspl) {
-      cbIncludeSymbols.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
-    }
+    final boolean isIncludeSymbols = (e.getSource() == rbspl);
+    final boolean isSearchDesc = (e.getSource() == rbitm || e.getSource() == rbspl);
+    cbIncludeSymbols.setEnabled(isIncludeSymbols && (e.getStateChange() == ItemEvent.SELECTED));
+    cbSearchDesc.setEnabled(isSearchDesc && (e.getStateChange() == ItemEvent.SELECTED));
   }
 
   // --------------------- End Interface ItemListener ---------------------
@@ -330,6 +359,7 @@ public final class SearchFrame extends ChildFrame
       final boolean isCase = cbCaseSensitive.isSelected();
       final boolean isInverted = cbInvert.isSelected();
       final boolean includeSymbols = rbspl.isSelected() && cbIncludeSymbols.isSelected();
+      final boolean searchText = (rbitm.isSelected() || rbspl.isSelected()) && cbSearchDesc.isSelected();
       Pattern regex = null;
       if (cbRegex.isSelected()) {
         try {
@@ -364,6 +394,17 @@ public final class SearchFrame extends ChildFrame
           } else {
             String text = isCase ? string : string.toLowerCase(Locale.ROOT);
             isMatch = text.contains(expr);
+          }
+        }
+        if (!isMatch && searchText) {
+          final String descString = getDescString(entry);
+          if (descString != null && !descString.isEmpty()) {
+            if (regex != null) {
+              isMatch = regex.matcher(descString).find();
+            } else {
+              String text = isCase ? descString : descString.toLowerCase(Locale.ROOT);
+              isMatch = text.contains(expr);
+            }
           }
         }
 
@@ -411,6 +452,42 @@ public final class SearchFrame extends ChildFrame
   }
 
   // --------------------- End Interface Runnable ---------------------
+
+  /**
+   * Returns the description text of the given resource entry, if available.
+   *
+   * @param entry the resource entry
+   * @return the description text, or {@code null} if not available
+   */
+  private String getDescString(ResourceEntry entry) {
+    if (entry == null) {
+      return null;
+    }
+
+    try {
+      switch (entry.getExtension().toUpperCase(Locale.ROOT)) {
+        case "ITM":
+          try (final InputStream is = entry.getResourceDataAsStream()) {
+            if (is != null) {
+              return ItmResource.getDescString(is);
+            }
+          }
+          break;
+        case "SPL":
+          try (final InputStream is = entry.getResourceDataAsStream()) {
+            if (is != null) {
+              return SplResource.getDescString(is);
+            }
+          }
+          break;
+        default:
+      }
+    } catch (Exception e) {
+      Logger.warn(e);
+    }
+
+    return null;
+  }
 
   // -------------------------- INNER CLASSES --------------------------
 
