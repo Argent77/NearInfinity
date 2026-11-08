@@ -17,7 +17,7 @@ containing the input JSON file.
 {
   "game": "C:/Games/BaldursGate2/chitin.key",
   "weidu": "C:/Games/BaldursGate2/weidu.exe",
-  "resources": [
+  "resourceRegexp": [
     "^sw.*\\.itm$",
     "^spwi.*\\.spl$"
   ],
