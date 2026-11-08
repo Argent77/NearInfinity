@@ -50,6 +50,17 @@ ant parser-generate
 
 The JavaCC executable is already included in the Near Infinity sources.
 
+### Command-line tools
+
+Run a command-line tool from the `org.infinity.cli` package without starting the Swing application:
+
+```bash
+java -jar NearInfinity.jar --run-tool <tool-class> <file>
+```
+
+For tool-specific documentation and examples, see
+[`command_line_tools`](command_line_tools/README.md).
+
 ## Contributors
 
 This section contains information intended for those who contribute

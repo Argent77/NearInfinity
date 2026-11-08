@@ -1,0 +1,18 @@
+{
+  "sources": [
+    {
+      "file": "images/walk-0.gif",
+      "centerX": 16,
+      "centerY": 32
+    },
+    {
+      "file": "images/walk-1.gif",
+      "centerX": 16,
+      "centerY": 32
+    }
+  ],
+  "cycles": [
+    [0, 1]
+  ],
+  "output": "build/walk.bam"
+}
