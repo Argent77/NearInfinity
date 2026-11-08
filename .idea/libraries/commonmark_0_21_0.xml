@@ -1,0 +1,31 @@
+<component name="libraryTable">
+  <library name="commonmark-0.21.0">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-0.21.0.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-ext-autolink/src/main/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-ext-autolink/src/test/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-ext-gfm-strikethrough/src/main/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-ext-gfm-strikethrough/src/test/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-ext-gfm-tables/src/main/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-ext-gfm-tables/src/test/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-ext-heading-anchor/src/main/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-ext-heading-anchor/src/test/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-ext-image-attributes/src/main/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-ext-image-attributes/src/test/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-ext-ins/src/main/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-ext-ins/src/test/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-ext-task-list-items/src/main/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-ext-task-list-items/src/test/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-ext-yaml-front-matter/src/main/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-ext-yaml-front-matter/src/test/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-integration-test/src/main/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-integration-test/src/test/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark-test-util/src/main/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark/src/main/java" />
+      <root url="jar://$PROJECT_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/commonmark-java-commonmark-parent-0.21.0/commonmark/src/test/java" />
+    </SOURCES>
+  </library>
+</component>

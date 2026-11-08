@@ -1,163 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="JAVA_MODULE" version="4">
-  <component name="EclipseModuleManager">
-    <libelement value="jar://$MODULE_DIR$/lib/jorbis/jorbis.jar!/" />
-    <libelement value="jar://$MODULE_DIR$/lib/rsyntaxtextarea/rsyntaxtextarea.jar!/" />
-    <libelement value="jar://$MODULE_DIR$/lib/jhexview/jhexview.jar!/" />
-    <libelement value="jar://$MODULE_DIR$/lib/montemedia/montemedia.jar!/" />
-    <libelement value="jar://$MODULE_DIR$/lib/apng-writer/apng-writer-core.jar!/" />
-    <libelement value="jar://$MODULE_DIR$/lib/json/json-20230227.jar!/" />
-    <libelement value="jar://$MODULE_DIR$/lib/commonmark/commonmark-0.21.0.jar!/" />
-    <libelement value="jar://$MODULE_DIR$/lib/flatlaf/flatlaf-3.4.jar!/" />
-    <libelement value="jar://$MODULE_DIR$/lib/flatlaf/flatlaf-intellij-themes-3.4.jar!/" />
-    <libelement value="jar://$MODULE_DIR$/lib/tinylog/tinylog-api-2.7.0.jar!/" />
-    <libelement value="jar://$MODULE_DIR$/lib/tinylog/tinylog-impl-2.7.0.jar!/" />
-    <src_description expected_position="0">
-      <src_folder value="file://$MODULE_DIR$/src" expected_position="0" />
-    </src_description>
-  </component>
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
     </content>
-    <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module-library" exported="">
-      <library name="jorbis.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/jorbis/jorbis.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES>
-          <root url="jar://$MODULE_DIR$/lib/jorbis/jorbis-0.0.17.zip!/" />
-        </SOURCES>
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library" exported="">
-      <library name="rsyntaxtextarea.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/rsyntaxtextarea/rsyntaxtextarea.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES>
-          <root url="jar://$MODULE_DIR$/lib/rsyntaxtextarea/rsyntaxtextarea-3.4.0-sources.jar!/" />
-        </SOURCES>
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library" exported="">
-      <library name="jhexview.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/jhexview/jhexview.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES>
-          <root url="file://lib/jhexview/jhexview-current.zip" />
-        </SOURCES>
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library" exported="">
-      <library name="montemedia.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/montemedia/montemedia.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES>
-          <root url="jar://$MODULE_DIR$/lib/montemedia/MonteMedia-0.7.7.zip!/" />
-        </SOURCES>
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library" exported="">
-      <library name="apng-writer-core.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/apng-writer/apng-writer-core.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES>
-          <root url="jar://$MODULE_DIR$/lib/apng-writer/apng-writer-core-src.zip!/" />
-        </SOURCES>
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library" exported="">
-      <library name="json-20230227.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/json/json-20230227.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES>
-          <root url="jar://$MODULE_DIR$/lib/json/JSON-java-20230227.zip!/" />
-        </SOURCES>
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library" exported="">
-      <library name="commonmark-0.21.0.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/commonmark/commonmark-0.21.0.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES>
-          <root url="jar://$MODULE_DIR$/lib/commonmark/commonmark-java-commonmark-parent-0.21.0.zip!/" />
-        </SOURCES>
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library" exported="">
-      <library name="flatlaf-3.4.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/flatlaf/flatlaf-3.4.jar!/" />
-        </CLASSES>
-        <JAVADOC>
-          <root url="jar://$MODULE_DIR$/lib/flatlaf/flatlaf-3.4-javadoc.jar!/" />
-        </JAVADOC>
-        <SOURCES>
-          <root url="jar://$MODULE_DIR$/lib/flatlaf/flatlaf-3.4-sources.jar!/" />
-        </SOURCES>
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library" exported="">
-      <library name="flatlaf-intellij-themes-3.4.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/flatlaf/flatlaf-intellij-themes-3.4.jar!/" />
-        </CLASSES>
-        <JAVADOC>
-          <root url="jar://$MODULE_DIR$/lib/flatlaf/flatlaf-intellij-themes-3.4-javadoc.jar!/" />
-        </JAVADOC>
-        <SOURCES>
-          <root url="jar://$MODULE_DIR$/lib/flatlaf/flatlaf-intellij-themes-3.4-sources.jar!/" />
-        </SOURCES>
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library" exported="">
-      <library name="tinylog-api-2.7.0.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/tinylog/tinylog-api-2.7.0.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES>
-          <root url="jar://$MODULE_DIR$/lib/tinylog/tinylog-api-2.7.0-sources.jar!/" />
-        </SOURCES>
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library" exported="">
-      <library name="tinylog-impl-2.7.0.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/tinylog/tinylog-impl-2.7.0.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES>
-          <root url="jar://$MODULE_DIR$/lib/tinylog/tinylog-impl-2.7.0-sources.jar!/" />
-        </SOURCES>
-      </library>
-    </orderEntry>
     <orderEntry type="inheritedJdk" />
-    <orderEntry type="library" name="tinylog-impl-2.7.0" level="project" />
-    <orderEntry type="library" name="tinylog-impl-2.7.1" level="project" />
-    <orderEntry type="library" name="jorbis" level="project" />
-    <orderEntry type="library" name="rsyntaxtextarea" level="project" />
-    <orderEntry type="library" name="jhexview" level="project" />
-    <orderEntry type="library" name="montemedia" level="project" />
+    <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="apng-writer-core" level="project" />
-    <orderEntry type="library" name="json-20250517" level="project" />
     <orderEntry type="library" name="commonmark-0.21.0" level="project" />
     <orderEntry type="library" name="flatlaf-3.6" level="project" />
     <orderEntry type="library" name="flatlaf-intellij-themes-3.6" level="project" />
+    <orderEntry type="library" name="javacc" level="project" />
+    <orderEntry type="library" name="jhexview" level="project" />
+    <orderEntry type="library" name="jorbis" level="project" />
+    <orderEntry type="library" name="json-20250517" level="project" />
+    <orderEntry type="library" name="montemedia" level="project" />
+    <orderEntry type="library" name="rsyntaxtextarea" level="project" />
+    <orderEntry type="library" name="tinylog-api-2.7.0" level="project" />
+    <orderEntry type="library" name="tinylog-impl-2.7.0" level="project" />
   </component>
 </module>
