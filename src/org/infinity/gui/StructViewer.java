@@ -195,6 +195,8 @@ public final class StructViewer extends JPanel implements ListSelectionListener,
   private final JPanel lowerpanel = new JPanel(cards);
   private final JPanel editpanel = new JPanel();
   private final ButtonPanel buttonPanel = new ButtonPanel();
+  private final JButton moveUpButton = new JButton("Up", Icons.ICON_UP_16.getIcon());
+  private final JButton moveDownButton = new JButton("Down", Icons.ICON_DOWN_16.getIcon());
   private final JPopupMenu popupmenu = new JPopupMenu();
   private final InfinityTextArea tatext = new InfinityTextArea(true);
   private final HashMap<Integer, StructEntry> entryMap = new HashMap<>();
@@ -424,6 +426,15 @@ public final class StructViewer extends JPanel implements ListSelectionListener,
       }
     }
 
+    moveUpButton.setToolTipText("Move selected structures up one position");
+    moveUpButton.setEnabled(false);
+    moveUpButton.addActionListener(this);
+    buttonPanel.addControl(moveUpButton);
+    moveDownButton.setToolTipText("Move selected structures down one position");
+    moveDownButton.setEnabled(false);
+    moveDownButton.addActionListener(this);
+    buttonPanel.addControl(moveDownButton);
+
     ButtonPopupMenu bpmFind = (ButtonPopupMenu) buttonPanel.addControl(ButtonPanel.Control.FIND_MENU);
     bpmFind.addItemListener(this);
     if (struct instanceof DlgResource) {
@@ -547,7 +558,20 @@ public final class StructViewer extends JPanel implements ListSelectionListener,
 
     if (event.getSource() instanceof JComponent
         && buttonPanel.getControlPosition((JComponent) event.getSource()) >= 0) {
-      if (buttonPanel.getControlByType(ButtonPanel.Control.VIEW_EDIT) == event.getSource()) {
+      if (event.getSource() == moveUpButton || event.getSource() == moveDownButton) {
+        final int[] rows = table.getSelectedRows();
+        if (rows.length > 0) {
+          final StructEntry selectedEntry = (StructEntry) table.getModel().getValueAt(rows[0], 1);
+          final boolean moveUp = event.getSource() == moveUpButton;
+          if (struct.moveDatatypeRange(rows[0], rows[rows.length - 1], moveUp)) {
+            final int newIndex = struct.getFields().indexOf(selectedEntry);
+            if (newIndex >= 0) {
+              table.setRowSelectionInterval(newIndex, newIndex + rows.length - 1);
+              updateMoveButtons();
+            }
+          }
+        }
+      } else if (buttonPanel.getControlByType(ButtonPanel.Control.VIEW_EDIT) == event.getSource()) {
         Viewable selected = (Viewable) table.getModel().getValueAt(min, 1);
         createViewFrame(getTopLevelAncestor(), selected);
       } else if (buttonPanel.getControlByType(ButtonPanel.Control.REMOVE) == event.getSource()) {
@@ -757,6 +781,7 @@ public final class StructViewer extends JPanel implements ListSelectionListener,
       return;
     }
     considerMenuEnabled();
+    updateMoveButtons();
     ListSelectionModel lsm = (ListSelectionModel) event.getSource();
     if (lsm.isSelectionEmpty() || lsm.getMaxSelectionIndex() != lsm.getMinSelectionIndex()) {
       tatext.setText("");
@@ -891,6 +916,13 @@ public final class StructViewer extends JPanel implements ListSelectionListener,
         cards.show(lowerpanel, CARD_TEXT);
       }
     }
+  }
+
+  private void updateMoveButtons() {
+    final int[] rows = table.getSelectedRows();
+    final boolean validSelection = rows.length > 0 && rows[rows.length - 1] - rows[0] + 1 == rows.length;
+    moveUpButton.setEnabled(validSelection && struct.canMoveDatatypeRange(rows[0], rows[rows.length - 1], true));
+    moveDownButton.setEnabled(validSelection && struct.canMoveDatatypeRange(rows[0], rows[rows.length - 1], false));
   }
 
   // --------------------- End Interface ListSelectionListener ---------------------

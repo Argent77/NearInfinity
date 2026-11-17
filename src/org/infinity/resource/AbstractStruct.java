@@ -549,6 +549,100 @@ public abstract class AbstractStruct extends AbstractTableModel
         && viewer.getSelectedEntry().getClass() == addedEntry.getClass();
   }
 
+  /**
+   * Determines whether the specified range of fields can be moved by one sibling position.
+   *
+   * @param firstIndex The first field index in the range.
+   * @param lastIndex  The last field index in the range.
+   * @param moveUp     Whether to move the range toward the beginning.
+   * @return {@code true} if the range can be moved.
+   */
+  public boolean canMoveDatatypeRange(int firstIndex, int lastIndex, boolean moveUp) {
+    if (firstIndex < 0 || lastIndex < firstIndex || lastIndex >= fields.size()) {
+      return false;
+    }
+
+    final int neighborIndex = moveUp ? firstIndex - 1 : lastIndex + 1;
+    if (neighborIndex < 0 || neighborIndex >= fields.size()) {
+      return false;
+    }
+
+    final StructEntry firstEntry = fields.get(firstIndex);
+    if (!(firstEntry instanceof AbstractStruct) || !(firstEntry instanceof AddRemovable)) {
+      return false;
+    }
+
+    final Class<?> entryClass = firstEntry.getClass();
+    int expectedOffset = firstEntry.getOffset();
+    for (int i = firstIndex; i <= lastIndex; i++) {
+      final StructEntry entry = fields.get(i);
+      if (!(entry instanceof AbstractStruct) || !(entry instanceof AddRemovable) || entry.getClass() != entryClass
+          || entry.getParent() != this || entry.getOffset() != expectedOffset) {
+        return false;
+      }
+      expectedOffset += entry.getSize();
+    }
+
+    final StructEntry neighbor = fields.get(neighborIndex);
+    if (!(neighbor instanceof AbstractStruct) || !(neighbor instanceof AddRemovable) || neighbor.getClass() != entryClass
+        || neighbor.getParent() != this) {
+      return false;
+    }
+
+    return moveUp ? neighbor.getOffset() + neighbor.getSize() == firstEntry.getOffset()
+        : expectedOffset == neighbor.getOffset();
+  }
+
+  /**
+   * Moves a contiguous range of child structures one sibling position up or down.
+   *
+   * @param firstIndex The first field index in the range.
+   * @param lastIndex  The last field index in the range.
+   * @param moveUp     Whether to move the range toward the beginning.
+   * @return {@code true} if the range was moved.
+   */
+  public boolean moveDatatypeRange(int firstIndex, int lastIndex, boolean moveUp) {
+    if (!canMoveDatatypeRange(firstIndex, lastIndex, moveUp)) {
+      return false;
+    }
+
+    final List<StructEntry> movingEntries = new ArrayList<>(fields.subList(firstIndex, lastIndex + 1));
+    final int movingSize = movingEntries.stream().mapToInt(StructEntry::getSize).sum();
+    final int neighborIndex = moveUp ? firstIndex - 1 : lastIndex + 1;
+    final StructEntry neighbor = fields.get(neighborIndex);
+    final int neighborSize = neighbor.getSize();
+
+    if (moveUp) {
+      for (final StructEntry entry : movingEntries) {
+        shiftEntryOffsets(entry, -neighborSize);
+      }
+      shiftEntryOffsets(neighbor, movingSize);
+      fields.remove(neighborIndex);
+      fields.add(lastIndex, neighbor);
+    } else {
+      for (final StructEntry entry : movingEntries) {
+        shiftEntryOffsets(entry, neighborSize);
+      }
+      shiftEntryOffsets(neighbor, -movingSize);
+      fields.remove(neighborIndex);
+      fields.add(firstIndex, neighbor);
+    }
+
+    updateRemovableIndices(((AddRemovable) movingEntries.get(0)).getClass());
+    setStructChanged(true);
+    fireTableDataChanged();
+    return true;
+  }
+
+  private static void shiftEntryOffsets(StructEntry entry, int delta) {
+    entry.setOffset(entry.getOffset() + delta);
+    if (entry instanceof AbstractStruct) {
+      for (final StructEntry child : ((AbstractStruct) entry).fields) {
+        shiftEntryOffsets(child, delta);
+      }
+    }
+  }
+
   public int addDatatype(AddRemovable addedEntry) {
     return addDatatype(addedEntry, getDatatypeIndex(addedEntry));
   }
