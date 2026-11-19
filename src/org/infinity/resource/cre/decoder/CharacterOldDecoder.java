@@ -6,11 +6,13 @@ package org.infinity.resource.cre.decoder;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 import org.infinity.resource.ResourceFactory;
 import org.infinity.resource.cre.CreResource;
@@ -160,6 +162,21 @@ public class CharacterOldDecoder extends CharacterBaseDecoder {
 
   public CharacterOldDecoder(CreResource cre) throws Exception {
     super(ANIMATION_TYPE, cre);
+  }
+
+  /** Returns the decoder's exact avatar suffix and cycle schema. */
+  public Map<Sequence, Couple<String, Integer>> getAvatarSequenceMap() {
+    return getSequenceMap();
+  }
+
+  /** Returns the canonical legacy-character suffix and cycle schema. */
+  public static Map<Sequence, Couple<String, Integer>> getSequenceMap() {
+    return Collections.unmodifiableMap(SUFFIX_MAP);
+  }
+
+  /** Returns the canonical legacy-character suffix and cycle offset for the additional walk directions. */
+  public static Couple<String, Integer> getAdditionalWalkSequence() {
+    return WALK_EXTRA;
   }
 
   /** Returns whether weapon animation overlays are suppressed. */

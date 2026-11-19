@@ -28,7 +28,8 @@ public class AnimationInfo {
       Profile.Game.Tutu);
   private static final EnumSet<Profile.Game> TYPE_GAME_IWD      = EnumSet.of(Profile.Game.IWD);
   private static final EnumSet<Profile.Game> TYPE_GAME_IWD_HOW  = EnumSet.of(Profile.Game.IWDHoW, Profile.Game.IWDHowTotLM);
-  private static final EnumSet<Profile.Game> TYPE_GAME_IWD2     = EnumSet.of(Profile.Game.IWD2);
+  private static final EnumSet<Profile.Game> TYPE_GAME_IWD2     =
+      EnumSet.of(Profile.Game.IWD2, Profile.Game.IWD2EE);
   private static final EnumSet<Profile.Game> TYPE_GAME_PST      = EnumSet.of(Profile.Game.PST);
   // all EE games
   private static final EnumSet<Profile.Game> TYPE_GAME_EE       = EnumSet.of(Profile.Game.BG1EE, Profile.Game.BG1SoD, Profile.Game.BG2EE,
@@ -259,6 +260,12 @@ public class AnimationInfo {
       return sectionName;
     }
 
+    /** Returns whether this animation family defines at least one slot range for the specified game profile. */
+    public boolean isSupported(Profile.Game game) {
+      final List<NumberRange> ranges = rangeMap.get(game);
+      return ranges != null && !ranges.isEmpty();
+    }
+
     /** Returns the first available base animation type associated with the enum instance. */
     public int getType() {
       return animationTypes[0];
@@ -300,7 +307,7 @@ public class AnimationInfo {
       retVal = (type == this);
 
       if (!retVal) {
-        retVal = contains(value, rangeMap.get(Profile.getGame()));
+        retVal = contains(value, rangeMap.get(game));
       }
       return retVal;
     }
@@ -323,7 +330,8 @@ public class AnimationInfo {
      */
     public static Type containsInfinityAnimations(int value) {
       Type retVal = null;
-      if (Profile.<Integer>getProperty(Profile.Key.GET_INFINITY_ANIMATIONS) > 0) {
+      final Integer infinityAnimations = Profile.getProperty(Profile.Key.GET_INFINITY_ANIMATIONS);
+      if (infinityAnimations != null && infinityAnimations > 0) {
         for (Type type : Type.values()) {
           if (contains(value, type.iaRanges)) {
             retVal = type;
